@@ -6,38 +6,38 @@ import {
   type ViewUpdate,
 } from "@codemirror/view";
 
-// Matches a run of 30 or more consecutive half-width alphanumeric
-// characters (e.g. a long URL, hash, or token with no spaces to break
-// at). Under `white-space: pre-wrap`, the browser only wraps at
-// whitespace, so a run this long simply overflows the editor's width
-// instead of wrapping. Marking it with `word-break: break-all` lets
-// the browser insert a break anywhere inside the run, keeping it
-// within the editor's width.
-const LONG_ALNUM_RUN_RE = /[A-Za-z0-9]{30,}/g;
+// EXPERIMENT: inverted approach. editorTheme.ts sets `.cm-line` to
+// word-break: break-all by default, so any run of non-whitespace text
+// can wrap at any character. This plugin marks every "short" run
+// (under 30 chars) with word-break: normal, restoring ordinary
+// word-boundary wrapping for it -- only a run of 30+ chars (a long
+// URL, hash, token, ...) is left to break-all's arbitrary mid-run
+// wrapping.
+//
+// Deliberately does NOT set white-space here (unlike the previous
+// long-run-marking version): word-break works fine under the ambient
+// white-space: pre-wrap, and setting white-space: normal would
+// collapse consecutive spaces, which this app relies on distinguishing
+// (see collapseGridTitleWhitespace / titleToSlug's one-to-one space
+// mapping).
+const NON_WHITESPACE_RUN_RE = /\S+/g;
+const NORMAL_BREAK_MAX_LENGTH = 30;
 
-// A single shared mark spec: allows breaking anywhere inside the
-// range it wraps, overriding the ambient `white-space: pre-wrap`
-// (which never breaks mid-word) for just that range.
-const breakAllMark = Decoration.mark({
-  attributes: {
-    style: "white-space: normal; word-break: break-all;",
-  },
+const normalBreakMark = Decoration.mark({
+  attributes: { style: "word-break: normal;" },
 });
 
-// Scans every visible line for runs matching LONG_ALNUM_RUN_RE and
-// wraps each one in breakAllMark, so only those long runs gain
-// break-all behavior -- everything else in the line still wraps
-// normally at whitespace.
 function buildDecorations(view: EditorView): DecorationSet {
   const decorations = [];
   for (const { from, to } of view.visibleRanges) {
     let pos = from;
     while (pos <= to) {
       const line = view.state.doc.lineAt(pos);
-      for (const match of line.text.matchAll(LONG_ALNUM_RUN_RE)) {
+      for (const match of line.text.matchAll(NON_WHITESPACE_RUN_RE)) {
+        if (match[0].length >= NORMAL_BREAK_MAX_LENGTH) continue; // leave break-all
         const start = line.from + match.index!;
         const end = start + match[0].length;
-        decorations.push(breakAllMark.range(start, end));
+        decorations.push(normalBreakMark.range(start, end));
       }
       pos = line.to + 1;
     }

@@ -27,6 +27,9 @@ export const editorTheme = EditorView.theme({
   },
   ".cm-line": {
     lineHeight: "1.7",
+    // Experiment: break-all by default, overridden back to "normal"
+    // per short word by noWrapAfterIndent.ts's inverted marking.
+    wordBreak: "break-all",
   },
   ".cm-line.cm-title-line": {
     fontFamily: "var(--font-sans)",
