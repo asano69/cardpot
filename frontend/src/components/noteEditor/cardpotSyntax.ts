@@ -1,5 +1,9 @@
 import { parser } from "@lezer/markdown";
-import { LRLanguage, LanguageSupport } from "@codemirror/language";
+import {
+  Language,
+  defineLanguageFacet,
+  LanguageSupport,
+} from "@codemirror/language";
 import { cardpotBracketSyntax } from "./brackets/bracketInlineParser";
 import { cardpotTagSyntax } from "./tags/tagInlineParser";
 // Built on @lezer/markdown's CommonMark grammar, but most of
@@ -34,10 +38,21 @@ const extendedParser = parser.configure([
   cardpotTagSyntax,
 ]);
 
-export const cardpotSyntaxLanguage = LRLanguage.define({
-  parser: extendedParser,
-  languageData: { commentTokens: {} },
-});
+// @lezer/markdown's parser is a MarkdownParser, not an LRParser, so
+// LRLanguage.define (which assumes an LRParser) silently produced a
+// broken parser object here -- CodeMirror's own language-data lookup
+// (used by closeBrackets' insertBracket) then crashed with
+// "this.parser.hasWrappers is not a function". The plain Language
+// class works with any @lezer/common Parser, including MarkdownParser,
+// so it's the correct wrapper for this grammar.
+const cardpotLanguageData = defineLanguageFacet({ commentTokens: {} });
+
+export const cardpotSyntaxLanguage = new Language(
+  cardpotLanguageData,
+  extendedParser,
+  [],
+  "cardpot",
+);
 
 export function cardpotSyntax(): LanguageSupport {
   return new LanguageSupport(cardpotSyntaxLanguage);
