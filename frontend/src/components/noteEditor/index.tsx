@@ -1,6 +1,7 @@
 import { onCleanup, Show, createSignal } from "solid-js";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, drawSelection } from "@codemirror/view";
+import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { hangingIndent } from "./hangingIndent";
 import { wordBreak } from "./wordBreak";
 import { insertNewlineKeepingBullet } from "./bulletEnter";
@@ -199,6 +200,13 @@ export default function NoteEditor(props: NoteEditorProps) {
         // CodeMirror's own caret is computed fresh from the current
         // position mapping every time, so it never shows that lag.
         drawSelection(),
+        // Auto-closes (), [], {}, '', "", `` and types over an
+        // existing closer instead of duplicating it. Also handles
+        // nested brackets on its own -- "[" twice in a row produces
+        // "[[|]]" -- so this is what makes typing "[[Some Page]]"
+        // (see cardpotSyntax.ts's WikiLink) feel natural, with no
+        // custom handling needed for the double-bracket case.
+        closeBrackets(),
         yCollab(ytext, null),
         titleCandidateExtension(handleSlugCandidate),
         titleLineHighlight,
@@ -242,7 +250,11 @@ export default function NoteEditor(props: NoteEditorProps) {
         // UndoManager -- CM6's own history() extension is
         // deliberately not added, to avoid two undo stacks fighting
         // each other.
-        keymap.of([...yUndoManagerKeymap, ...defaultKeymap]),
+        keymap.of([
+          ...closeBracketsKeymap,
+          ...yUndoManagerKeymap,
+          ...defaultKeymap,
+        ]),
       ],
     });
 
