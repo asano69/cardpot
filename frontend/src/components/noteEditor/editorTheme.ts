@@ -27,8 +27,13 @@ export const editorTheme = EditorView.theme({
   },
   ".cm-line": {
     lineHeight: "1.7",
-    // Experiment: break-all by default, overridden back to "normal"
-    // per short word by noWrapAfterIndent.ts's inverted marking.
+    // Baseline: any boundary in the line is breakable, including the
+    // boundary next to an atomic non-text inline element (a
+    // hanging-indent "pad" widget today, or a future inline image).
+    // wordBreak.ts then marks ordinary short text runs back to
+    // word-break: normal, so this only actually applies to long
+    // unbroken runs and widget boundaries. See wordBreak.ts's own
+    // comment for the full rationale.
     wordBreak: "break-all",
   },
   ".cm-line.cm-title-line": {
