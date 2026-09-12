@@ -6,45 +6,38 @@ import {
   type ViewUpdate,
 } from "@codemirror/view";
 
-// Matches a line's leading run of tab / half-width space / full-width
-// space characters (mirrors hangingIndent.ts's own regex).
-const LEADING_INDENT_RUN_RE = /^[\t \u3000]+/;
+// Matches a run of 30 or more consecutive half-width alphanumeric
+// characters (e.g. a long URL, hash, or token with no spaces to break
+// at). Under `white-space: pre-wrap`, the browser only wraps at
+// whitespace, so a run this long simply overflows the editor's width
+// instead of wrapping. Marking it with `word-break: break-all` lets
+// the browser insert a break anywhere inside the run, keeping it
+// within the editor's width.
+const LONG_ALNUM_RUN_RE = /[A-Za-z0-9]{30,}/g;
 
-// A single shared mark spec: forbids a line break inside the range it
-// wraps.
-const noWrapMark = Decoration.mark({
+// A single shared mark spec: allows breaking anywhere inside the
+// range it wraps, overriding the ambient `white-space: pre-wrap`
+// (which never breaks mid-word) for just that range.
+const breakAllMark = Decoration.mark({
   attributes: {
     style: "white-space: normal; word-break: break-all;",
   },
 });
 
-// Wraps the character immediately after a line's leading indent run
-// together with the character after THAT into one nowrap span, so the
-// browser never inserts a soft-wrap break right at the indent/text
-// boundary -- which would otherwise leave a wrapped continuation line
-// starting with a visible, orphaned indent gap.
-//
-// Deliberately does NOT include the last indent character itself:
-// hangingIndent.ts already replaces every leading indent character
-// with its own widget via Decoration.replace(), and a Decoration.mark
-// covering a range that's already been replaced has no effect (the
-// replace wins). Starting this mark right after the indent run avoids
-// that overlap entirely, so this can run alongside hangingIndent.
+// Scans every visible line for runs matching LONG_ALNUM_RUN_RE and
+// wraps each one in breakAllMark, so only those long runs gain
+// break-all behavior -- everything else in the line still wraps
+// normally at whitespace.
 function buildDecorations(view: EditorView): DecorationSet {
   const decorations = [];
   for (const { from, to } of view.visibleRanges) {
     let pos = from;
     while (pos <= to) {
       const line = view.state.doc.lineAt(pos);
-      const match = LEADING_INDENT_RUN_RE.exec(line.text);
-      // Needs at least one indent char AND two following characters
-      // to pair -- a line with only one character after the indent
-      // has nothing to protect a boundary between.
-      if (match && match[0].length + 1 < line.text.length) {
-        const depth = match[0].length;
-        const start = line.from + depth; // first real character
-        const end = line.from + depth + 2; // + the character after it
-        decorations.push(noWrapMark.range(start, end));
+      for (const match of line.text.matchAll(LONG_ALNUM_RUN_RE)) {
+        const start = line.from + match.index!;
+        const end = start + match[0].length;
+        decorations.push(breakAllMark.range(start, end));
       }
       pos = line.to + 1;
     }
