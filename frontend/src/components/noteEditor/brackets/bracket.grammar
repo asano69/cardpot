@@ -1,0 +1,25 @@
+// Grammar for Cardpot's own bracket notation. Brackets nest freely;
+// the *meaning* of a given nesting depth (wikilink at depth 1, bold
+// at depth 2, ...) is NOT encoded here -- that mapping lives in
+// bracketDepthStyle.ts, which walks the resulting tree and looks at
+// each Bracket node's nesting depth. Keeping the grammar depth-
+// agnostic means adding a new depth's meaning never requires
+// touching this file.
+
+@top Document { (Bracket | BoldMarker | ItalicMarker | Word | Space)* }
+
+Bracket { OpenBracket (Bracket | Word | Space)* CloseBracket }
+
+// [* text] -- bold via explicit marker, distinct from depth-based
+// bold ([[text]]). Can still nest ordinary Brackets inside.
+BoldMarker { OpenBracket "*" Space (Bracket | Word | Space)* CloseBracket }
+
+// [/ text] -- italic via explicit marker.
+ItalicMarker { OpenBracket "/" Space (Bracket | Word | Space)* CloseBracket }
+
+@tokens {
+  OpenBracket { "[" }
+  CloseBracket { "]" }
+  Space { $[ \t]+ }
+  Word { ![\[\]\/\* \t\n]+ }
+}
