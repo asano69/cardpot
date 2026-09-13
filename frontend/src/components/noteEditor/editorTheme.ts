@@ -91,4 +91,14 @@ export const editorTheme = EditorView.theme({
   ".cm-bold": {
     fontWeight: "bold",
   },
+
+  // Inline code span (see parser/cardpot's Code node): a monospace
+  // font plus GitHub's own subtle code-background tint.
+  ".cm-inline-code": {
+    fontFamily: "monospace",
+    backgroundColor:
+      "light-dark(rgba(175, 184, 193, 0.2), rgba(110, 118, 129, 0.4))",
+    borderRadius: "6px",
+    padding: "0.15em 0.35em",
+  },
 });

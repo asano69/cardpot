@@ -55,6 +55,18 @@ export const BoldMark = NodeType.define({
   props: [[isMark, true]],
 });
 
+export const Code = NodeType.define({
+  id: 3,
+  name: "Code",
+  props: [[revealStyle, "cm-inline-code"]],
+});
+
+export const CodeMark = NodeType.define({
+  id: 4,
+  name: "CodeMark",
+  props: [[isMark, true]],
+});
+
 // This regular expression matches text enclosed in `[* ...]` with the following rules:
 // - The sequence must start with `[* ` (an opening bracket, an asterisk, and a space).
 // - It must contain at least one character after the space.
@@ -62,27 +74,83 @@ export const BoldMark = NodeType.define({
 // - It must end with a closing `]`.
 const BOLD_RE = /\[\* ([^[\]\n]+)\]/g;
 
+// This regular expression matches an inline code span enclosed in a
+// pair of backticks. The content may be empty and must not contain a
+// backtick or a newline character, so a code span never spans
+// multiple lines.
+const CODE_RE = /`([^`\n]*)`/g;
+
+// A single regex match, tagged with which syntax produced it and how
+// many characters its open/close delimiters occupy -- enough
+// information for parseDocument below to build the matching node
+// without caring which regex the match came from.
+interface SyntaxMatch {
+  from: number;
+  length: number;
+  nodeType: NodeType;
+  markType: NodeType;
+  openLen: number;
+  closeLen: number;
+}
+
+function findMatches(
+  regex: RegExp,
+  text: string,
+  nodeType: NodeType,
+  markType: NodeType,
+  openLen: number,
+  closeLen: number,
+): SyntaxMatch[] {
+  const matches: SyntaxMatch[] = [];
+  regex.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(text))) {
+    matches.push({
+      from: match.index,
+      length: match[0].length,
+      nodeType,
+      markType,
+      openLen,
+      closeLen,
+    });
+  }
+  return matches;
+}
+
 function parseDocument(text: string): Tree {
+  // Bold's open mark is always 3 chars ("[* ", including the required
+  // space); code's open mark is always 1 char ("`"). Both syntaxes'
+  // close marks are a single character ("]" or "`").
+  const matches = [
+    ...findMatches(BOLD_RE, text, Bold, BoldMark, 3, 1),
+    ...findMatches(CODE_RE, text, Code, CodeMark, 1, 1),
+  ].sort((a, b) => a.from - b.from);
+
   const children: Tree[] = [];
   const positions: number[] = [];
+  // End position of the last accepted match, used to skip any later
+  // match that overlaps it. Nesting (e.g. code inside bold) isn't
+  // supported -- whichever match comes first simply wins.
+  let cursor = 0;
 
-  BOLD_RE.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = BOLD_RE.exec(text))) {
-    const from = match.index;
-    const length = match[0].length;
+  for (const match of matches) {
+    if (match.from < cursor) continue;
 
-    // Bold's own two children are positioned relative to Bold's own
-    // start (0), per Tree's constructor contract -- not absolute
-    // document positions. The open mark is always 3 chars ("[* ",
-    // including the required space); the close mark is always the
-    // last 1 char ("]").
-    const openMark = new Tree(BoldMark, [], [], 3);
-    const closeMark = new Tree(BoldMark, [], [], 1);
-    const bold = new Tree(Bold, [openMark, closeMark], [0, length - 1], length);
+    // A node's own two children are positioned relative to the
+    // node's own start (0), per Tree's constructor contract -- not
+    // absolute document positions.
+    const openMark = new Tree(match.markType, [], [], match.openLen);
+    const closeMark = new Tree(match.markType, [], [], match.closeLen);
+    const node = new Tree(
+      match.nodeType,
+      [openMark, closeMark],
+      [0, match.length - match.closeLen],
+      match.length,
+    );
 
-    children.push(bold);
-    positions.push(from); // absolute -- Document itself starts at 0
+    children.push(node);
+    positions.push(match.from); // absolute -- Document itself starts at 0
+    cursor = match.from + match.length;
   }
 
   return new Tree(Document, children, positions, text.length);
