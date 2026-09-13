@@ -1,22 +1,23 @@
-// Cardpot's own inline syntax parser, built from scratch on
+// Cardpot's own inline/block syntax parser, built from scratch on
 // @lezer/common's Parser/Tree primitives -- NOT @lezer/markdown. This
 // intentionally does not reuse CommonMark's grammar: Cardpot's bracket
-// notation ("[* bold text]", eventually wiki links, tags, icons, ...)
-// is a different syntax entirely, and forcing it through a markdown
-// grammar meant constantly subtracting CommonMark rules that were
-// never wanted in the first place (see the old cardpotSyntax.ts's
-// `disabledForNow` list, now deleted).
+// notation ("[* bold text]", wiki links, tags, icons, ...) is a
+// different syntax entirely, and forcing it through a markdown grammar
+// meant constantly subtracting CommonMark rules that were never wanted
+// in the first place (see the old cardpotSyntax.ts's `disabledForNow`
+// list, now deleted).
 //
 // Structure, loosely modeled on @lezer/markdown's own architecture:
-//   - Each notation is a `Rule`: a NodeType/markType pair plus a
-//     `match` function that checks whether that notation starts at a
-//     given text position. Adding a new notation (wiki links, tags,
-//     ...) means adding one Rule to the `rules` array below -- the
-//     scanning and tree-building code never needs to change.
+//   - Each notation is a `Rule` (see nodeProps.ts): a NodeType/
+//     markType pair plus a `match` function that checks whether that
+//     notation starts at a given text position. Adding a new notation
+//     means adding one Rule in its own file under rules/ and listing
+//     it in the `rules` array below -- the scanning and tree-building
+//     code in this file never needs to change.
 //   - scanRange() does a single left-to-right pass over a range of
 //     text, trying every rule at each position (first match wins) and
-//     skipping over whatever it consumes -- no separate per-rule
-//     regex passes to merge and de-overlap afterwards.
+//     skipping over whatever it consumes -- no separate per-rule regex
+//     passes to merge and de-overlap afterwards.
 //   - buildTree() supports incremental reparsing: it reuses whichever
 //     previously parsed nodes still fall inside a "safe" fragment (see
 //     collectReusableMatches) and only calls scanRange() on the gaps
@@ -24,7 +25,7 @@
 //     edited, not the whole document. A brand-new document (no
 //     fragments yet) falls back to scanning start-to-end, same as
 //     before.
-import { NodeType, Parser, Tree, NodeProp } from "@lezer/common";
+import { NodeType, Parser, Tree } from "@lezer/common";
 import type { Input, PartialParser, TreeFragment } from "@lezer/common";
 import {
   Language,
@@ -32,148 +33,52 @@ import {
   defineLanguageFacet,
 } from "@codemirror/language";
 
-// Applied to a "container" node type (Bold, future WikiLink, ...) to
-// mark it as revealable: shown as styled text with its delimiter
-// marks hidden, until the cursor touches it, at which point the raw
-// markup is shown instead. The prop's value is the CSS class applied
-// to the node's full range at all times (see syntaxReveal.ts).
-export const revealStyle = new NodeProp<string>();
+import { revealStyle, isMark, type Rule } from "./nodeProps";
+import { Bold, BoldMark, boldRule } from "./rules/bold";
+import { Code, CodeMark, inlineCodeRule } from "./rules/inlineCode";
+import { WikiLink, WikiLinkMark, wikiLinkRule } from "./rules/wikiLink";
+import {
+  FencedCode,
+  FencedCodeMark,
+  fencedCodeRule,
+} from "./rules/fencedCode";
 
-// Applied to a delimiter/mark node type (BoldMark, future
-// WikiLinkMark, ...) so syntaxReveal.ts can find and hide it
-// generically, without knowing which specific syntax it belongs to.
-export const isMark = new NodeProp<true>();
+// Re-exported for callers outside this package: wikiLinkNavigation.ts
+// needs WikiLink, syntaxReveal.ts needs revealStyle/isMark, and each
+// NodeType is exported for completeness even where nothing outside
+// this parser currently references it directly.
+export {
+  revealStyle,
+  isMark,
+  Bold,
+  BoldMark,
+  Code,
+  CodeMark,
+  WikiLink,
+  WikiLinkMark,
+  FencedCode,
+  FencedCodeMark,
+};
 
 // The tree's root node. `top: true` is required by Lezer for whatever
 // node type createParse's Tree is rooted at.
 export const Document = NodeType.define({ id: 0, name: "Document", top: true });
 
-export const Bold = NodeType.define({
-  id: 1,
-  name: "Bold",
-  props: [[revealStyle, "cm-bold"]],
-});
-
-export const BoldMark = NodeType.define({
-  id: 2,
-  name: "BoldMark",
-  props: [[isMark, true]],
-});
-
-export const Code = NodeType.define({
-  id: 3,
-  name: "Code",
-  props: [[revealStyle, "cm-inline-code"]],
-});
-
-export const CodeMark = NodeType.define({
-  id: 4,
-  name: "CodeMark",
-  props: [[isMark, true]],
-});
-
-export const WikiLink = NodeType.define({
-  id: 5,
-  name: "WikiLink",
-  props: [[revealStyle, "cm-wikilink"]],
-});
-
-export const WikiLinkMark = NodeType.define({
-  id: 6,
-  name: "WikiLinkMark",
-  props: [[isMark, true]],
-});
-
-// What a Rule's match() returns: how many characters the whole match
-// consumes, split into its opening and closing delimiter lengths (the
-// content in between is everything else). Kept separate from the
-// actual Tree-building code below, so a Rule only ever has to answer
-// "does my notation start here, and how long is it" -- nothing about
-// NodeType/Tree construction leaks into individual rules.
-interface RuleMatch {
-  length: number;
-  openLen: number;
-  closeLen: number;
-}
-
-interface Rule {
-  nodeType: NodeType;
-  markType: NodeType;
-  // Checks whether this rule's notation starts at exactly `pos` in
-  // `text`. Must not look at any text before `pos`, and must not
-  // match across a newline -- both scanRange's gap-splitting and
-  // collectReusableMatches's fragment-boundary checks below assume a
-  // match never straddles those.
-  match(text: string, pos: number): RuleMatch | null;
-}
-
-// "[* text]": an opening "[* " (bracket, asterisk, space), one or
-// more characters that aren't "[", "]", or a newline, then a closing
-// "]".
-function matchBold(text: string, pos: number): RuleMatch | null {
-  if (!text.startsWith("[* ", pos)) return null;
-  let i = pos + 3;
-  const contentStart = i;
-  while (
-    i < text.length &&
-    text[i] !== "[" &&
-    text[i] !== "]" &&
-    text[i] !== "\n"
-  ) {
-    i++;
-  }
-  if (i === contentStart || text[i] !== "]") return null; // empty content, or ran off the line unterminated
-  return { length: i + 1 - pos, openLen: 3, closeLen: 1 };
-}
-
-// "[title]": a "[", one or more characters that aren't "[", "]", or a
-// newline, then a closing "]". Content that is empty or made up
-// entirely of whitespace does not count as a title, so "[]" and
-// "[ ]" don't match. Checked after matchBold above, so "[* text]"
-// is still recognized as Bold rather than a WikiLink.
-function matchWikiLink(text: string, pos: number): RuleMatch | null {
-  if (text[pos] !== "[") return null;
-  let i = pos + 1;
-  const contentStart = i;
-  while (
-    i < text.length &&
-    text[i] !== "[" &&
-    text[i] !== "]" &&
-    text[i] !== "\n"
-  ) {
-    i++;
-  }
-  if (text[i] !== "]") return null; // ran off the line unterminated
-  if (text.slice(contentStart, i).trim() === "") return null; // whitespace-only content isn't a title
-  return { length: i + 1 - pos, openLen: 1, closeLen: 1 };
-}
-
-// An inline code span enclosed in a pair of backticks. The content
-// may be empty and must not contain a backtick or a newline, so a
-// code span never spans multiple lines.
-function matchCode(text: string, pos: number): RuleMatch | null {
-  if (text[pos] !== "`") return null;
-  let i = pos + 1;
-  while (i < text.length && text[i] !== "`" && text[i] !== "\n") {
-    i++;
-  }
-  if (text[i] !== "`") return null; // ran off the line unterminated
-  return { length: i + 1 - pos, openLen: 1, closeLen: 1 };
-}
-
 // Every notation this language recognizes, in priority order: at a
-// given position, the first rule whose match() succeeds wins. Add a
-// new notation by adding a NodeType/markType pair above and one entry
-// here -- nothing else in this file needs to change.
-const rules: Rule[] = [
-  { nodeType: Bold, markType: BoldMark, match: matchBold },
-  { nodeType: WikiLink, markType: WikiLinkMark, match: matchWikiLink },
-  { nodeType: Code, markType: CodeMark, match: matchCode },
-];
+// given position, the first rule whose match() succeeds wins.
+//   - boldRule is tried before wikiLinkRule so "[* text]" is
+//     recognized as Bold rather than a WikiLink.
+//   - fencedCodeRule is tried before inlineCodeRule so an opening
+//     "```" fence is recognized as a code block rather than falling
+//     through to inline Code's single-backtick matching.
+// Add a new notation by adding a NodeType/markType pair + match() in
+// its own file under rules/, then listing its Rule here -- nothing
+// else in this file needs to change.
+const rules: Rule[] = [boldRule, wikiLinkRule, fencedCodeRule, inlineCodeRule];
 
 // Looks up which Rule produced a given node type, used by
 // collectReusableMatches below to rebuild a reused node's mark
-// lengths without hardcoding a Bold/Code-specific switch.
+// lengths without hardcoding a per-rule switch.
 const ruleByNodeId = new Map(rules.map((rule) => [rule.nodeType.id, rule]));
 
 // A single matched (or reused) node, positioned in the current
@@ -184,7 +89,10 @@ interface ScannedNode {
   tree: Tree;
 }
 
-function buildMatchTree(rule: Rule, match: RuleMatch): Tree {
+function buildMatchTree(
+  rule: Rule,
+  match: { length: number; openLen: number; closeLen: number },
+): Tree {
   const openMark = new Tree(rule.markType, [], [], match.openLen);
   const closeMark = new Tree(rule.markType, [], [], match.closeLen);
   return new Tree(
