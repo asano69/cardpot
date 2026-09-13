@@ -94,4 +94,11 @@ export const editorTheme = EditorView.theme({
   ".cm-bracket-italic": {
     fontStyle: "italic",
   },
+  // Depth-1 bracket (see bracketDepthStyle.ts): a plain wikilink.
+  // Matches the note editor's old ProseMirror link color
+  // (see styles/components.css's ".ProseMirror a").
+  ".cm-bracket-link": {
+    color: "light-dark(#0969da, #58a6ff)",
+    textDecoration: "underline",
+  },
 });

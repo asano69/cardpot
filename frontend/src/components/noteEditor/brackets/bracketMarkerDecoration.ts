@@ -22,12 +22,17 @@ import { RangeSetBuilder, type EditorState } from "@codemirror/state";
 const MARKER_CLASS: Record<string, string> = {
   BoldMarker: "cm-bracket-bold",
   ItalicMarker: "cm-bracket-italic",
+  BoldItalicMarker: "cm-bracket-bold cm-bracket-italic",
 };
 
-// Fixed prefix length for every marker: "[" + one marker char ("*"
-// or "/") + one space = 3 characters, per the grammar's
-// `OpenBracket marker Space` shape.
-const PREFIX_LENGTH = 3;
+// Prefix length per marker node: "[" + the marker itself (one
+// character for Bold/ItalicMarker, two for the combined
+// BoldItalicMarker, "*/" or "/*") + one space.
+const MARKER_PREFIX_LENGTH: Record<string, number> = {
+  BoldMarker: 3,
+  ItalicMarker: 3,
+  BoldItalicMarker: 4,
+};
 
 // A marker is "touching" the selection when the (empty) cursor sits
 // anywhere from its opening "[" through its closing "]", inclusive of
@@ -72,7 +77,7 @@ function buildDecorations(view: EditorView): DecorationSet {
 
         // Caret is elsewhere: hide the "[X " prefix and trailing "]",
         // showing only the styled inner text.
-        const contentFrom = node.from + PREFIX_LENGTH;
+        const contentFrom = node.from + MARKER_PREFIX_LENGTH[node.name];
         const contentTo = node.to - 1; // exclude trailing "]"
 
         entries.push({

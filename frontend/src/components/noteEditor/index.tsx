@@ -23,6 +23,7 @@ import {
 } from "@codemirror/language";
 import { bracketSyntax } from "./brackets/bracketLanguage";
 import { bracketMarkerDecoration } from "./brackets/bracketMarkerDecoration";
+import { bracketDepthStyle } from "./brackets/bracketDepthStyle";
 
 import { createCard, updateCardTitle } from "../../lib/cardApi";
 import type { TitleCandidate } from "../../lib/titleCandidate";
@@ -227,6 +228,7 @@ export default function NoteEditor(props: NoteEditorProps) {
         // those tags into colored text.
          bracketSyntax(),
           bracketMarkerDecoration,
+          bracketDepthStyle,
         //cardpotSyntax(),
         syntaxHighlighting(defaultHighlightStyle),
         // A single real tab character per indent level, not spaces --

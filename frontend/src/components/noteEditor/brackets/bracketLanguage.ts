@@ -8,6 +8,7 @@ import { styleTags, tags as t } from "@lezer/highlight";
 const highlighting = styleTags({
   BoldMarker: t.strong,
   ItalicMarker: t.emphasis,
+  BoldItalicMarker: [t.strong, t.emphasis],
 });
 
 export const bracketLanguage = LRLanguage.define({
