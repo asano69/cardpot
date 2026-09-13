@@ -87,20 +87,11 @@ export const editorTheme = EditorView.theme({
     borderRadius: "50%",
     backgroundColor: "var(--color-line-text)",
   },
-  // Bold markup ("[* text]" -- see boldReveal.ts): the delimiters
-  // collapse to zero width via font-size:0 (same technique as
-  // hangingIndent's hidden-tab marks) rather than display:none, so
-  // they stay part of CodeMirror's own editing model instead of being
-  // invisible to it.
-  ".cm-bold-mark": {
+
+  ".cm-mark-hidden": {
     fontSize: "0",
   },
-  ".cm-bold-text": {
-    fontWeight: "bold",
-  },
-  // Cursor is touching the node (see boldReveal.ts): show the raw
-  // "[* text]" markup, still bold, so it can be edited directly.
-  ".cm-bold-raw": {
+  ".cm-bold": {
     fontWeight: "bold",
   },
 });

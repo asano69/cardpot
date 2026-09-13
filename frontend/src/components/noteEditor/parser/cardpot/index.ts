@@ -19,7 +19,7 @@
 // generated (lezer-generator) or hand-written. Cards are only a few
 // hundred lines at most, so a full rescan on every keystroke is cheap
 // enough to not matter yet. Revisit only if profiling shows otherwise.
-import { NodeType, Parser, Tree } from "@lezer/common";
+import { NodeType, Parser, Tree, NodeProp } from "@lezer/common";
 import type { Input, PartialParser, TreeFragment } from "@lezer/common";
 import {
   Language,
@@ -27,20 +27,33 @@ import {
   defineLanguageFacet,
 } from "@codemirror/language";
 
+// Applied to a "container" node type (Bold, future WikiLink, ...) to
+// mark it as revealable: shown as styled text with its delimiter
+// marks hidden, until the cursor touches it, at which point the raw
+// markup is shown instead. The prop's value is the CSS class applied
+// to the node's full range at all times (see syntaxReveal.ts).
+export const revealStyle = new NodeProp<string>();
+
+// Applied to a delimiter/mark node type (BoldMark, future
+// WikiLinkMark, ...) so syntaxReveal.ts can find and hide it
+// generically, without knowing which specific syntax it belongs to.
+export const isMark = new NodeProp<true>();
+
 // The tree's root node. `top: true` is required by Lezer for whatever
 // node type createParse's Tree is rooted at.
 export const Document = NodeType.define({ id: 0, name: "Document", top: true });
 
-// "[* text]" as a whole, spanning from the opening "[" through the
-// closing "]".
-export const Bold = NodeType.define({ id: 1, name: "Bold" });
+export const Bold = NodeType.define({
+  id: 1,
+  name: "Bold",
+  props: [[revealStyle, "cm-bold"]],
+});
 
-// One of Bold's two delimiters: the opening "[*" (2 chars) or the
-// closing "]" (1 char). Not split into separate Open/Close node types
-// -- callers that need to tell them apart use their position within
-// Bold's children (first vs. last) instead, since nothing so far
-// needs to style them differently.
-export const BoldMark = NodeType.define({ id: 2, name: "BoldMark" });
+export const BoldMark = NodeType.define({
+  id: 2,
+  name: "BoldMark",
+  props: [[isMark, true]],
+});
 
 // Matches "[* text]": no nested brackets, no newlines inside (bold
 // never spans multiple lines). `text` may be empty ("[*]" still

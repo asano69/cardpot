@@ -18,7 +18,7 @@ import { titleLineHighlight } from "./titleLineHighlight";
 import { editorTheme } from "./editorTheme";
 import { indentUnit } from "@codemirror/language";
 import { cardpotSyntax } from "./parser/cardpot";
-import { boldReveal } from "./boldReveal";
+import { syntaxReveal } from "./syntaxReveal";
 import { createCard, updateCardTitle } from "../../lib/cardApi";
 import type { TitleCandidate } from "../../lib/titleCandidate";
 import { cardsById, mergeCards } from "../../lib/cardsStore";
@@ -223,11 +223,11 @@ export default function NoteEditor(props: NoteEditorProps) {
         wordBreak,
         // Cardpot's own inline syntax parser (see
         // parser/cardpot/index.ts) -- currently just "[* text]" ->
-        // Bold. boldReveal reads this same syntax tree to decide when
+        // Bold. syntaxReveal reads this same syntax tree to decide when
         // to hide/show the raw markup around the cursor, Obsidian-
-        // style (see boldReveal.ts).
+        // style (see syntaxReveal.ts).
         cardpotSyntax(),
-        boldReveal,
+        syntaxReveal,
         // A single real tab character per indent level, not spaces --
         // indentMore/indentLess (bound below) both insert/remove
         // whatever this unit is. Matches bulletLineDecoration.ts's own
