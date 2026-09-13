@@ -5,6 +5,7 @@ import { EditorView, keymap, drawSelection } from "@codemirror/view";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { hangingIndent } from "./hangingIndent";
 import { wordBreak } from "./wordBreak";
+import { codeBlockLines } from "./codeBlockLines";
 import { insertNewlineKeepingBullet } from "./bulletEnter";
 import { defaultKeymap, indentMore, indentLess } from "@codemirror/commands";
 import { yCollab, yUndoManagerKeymap } from "y-codemirror.next";
@@ -227,6 +228,7 @@ export default function NoteEditor(props: NoteEditorProps) {
         // runs, so neither a widget boundary nor a long unbroken run
         // forces an unnatural break elsewhere in the line.
         wordBreak,
+        codeBlockLines,
         // Cardpot's own inline syntax parser (see
         // parser/cardpot/index.ts) -- currently just "[* text]" ->
         // Bold. syntaxReveal reads this same syntax tree to decide when

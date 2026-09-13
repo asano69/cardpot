@@ -1,11 +1,14 @@
 import { NodeType } from "@lezer/common";
-import { revealStyle, type Rule, type RuleMatch } from "../nodeProps";
+import { type Rule, type RuleMatch } from "../nodeProps";
 
-// Styling only -- see editorTheme.ts's ".cm-code-block" rule.
+// No revealStyle prop here: unlike Bold/Code/WikiLink, a code block's
+// background is applied per-line by codeBlockLines.ts (Decoration.line
+// on every line the block spans), not as an inline Decoration.mark --
+// see codeBlockLines.ts's own comment for why a mark alone can't fill
+// a block's full width, including blank lines and inter-line gaps.
 export const FencedCode = NodeType.define({
   id: 7,
   name: "FencedCode",
-  props: [[revealStyle, "cm-code-block"]],
 });
 
 // Unlike BoldMark/CodeMark/WikiLinkMark, this does NOT carry the

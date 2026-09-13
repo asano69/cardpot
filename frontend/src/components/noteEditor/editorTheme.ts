@@ -102,11 +102,11 @@ export const editorTheme = EditorView.theme({
     padding: "0.15em 0.35em",
   },
 
-  // Fenced code block (see parser/cardpot/rules/fencedCode.ts):
-  // spans potentially many lines via a single Decoration.mark, so
-  // unlike inline code this skips border-radius/padding -- those
-  // render awkwardly once a mark wraps across line breaks.
-  ".cm-code-block": {
+  // Fenced code block (see codeBlockLines.ts): every line the block
+  // spans gets this class via Decoration.line, which fills the
+  // line's full width -- including blank lines and the gap past the
+  // last character -- unlike an inline Decoration.mark.
+  ".cm-line.cm-code-block-line": {
     fontFamily: "monospace",
     backgroundColor:
       "light-dark(rgba(175, 184, 193, 0.2), rgba(110, 118, 129, 0.4))",
