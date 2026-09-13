@@ -55,17 +55,13 @@ export const BoldMark = NodeType.define({
   props: [[isMark, true]],
 });
 
-// Matches "[* text]": no nested brackets, no newlines inside (bold
-// never spans multiple lines). `text` may be empty ("[*]" still
-// matches) -- an empty bold span is harmless and simpler to allow
-// than to special-case out.
-const BOLD_RE = /\[\*([^[\]\n]*)\]/g;
+// This regular expression matches text enclosed in `[* ...]` with the following rules:
+// - The sequence must start with `[* ` (an opening bracket, an asterisk, and a space).
+// - It must contain at least one character after the space.
+// - The content cannot contain `[`, `]`, or a newline character.
+// - It must end with a closing `]`.
+const BOLD_RE = /\[\* ([^[\]\n]+)\]/g;
 
-// Scans `text` for every BOLD_RE match and returns the resulting
-// top-level nodes, in document order, as a Document tree. No nesting
-// is attempted yet -- Bold is a leaf notation for now, so a "[*"
-// inside another "[* ]" simply won't match (BOLD_RE's own
-// [^[\]\n]* excludes brackets from the inner text).
 function parseDocument(text: string): Tree {
   const children: Tree[] = [];
   const positions: number[] = [];
