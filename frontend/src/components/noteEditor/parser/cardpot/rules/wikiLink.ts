@@ -1,17 +1,4 @@
-import { NodeType } from "@lezer/common";
-import { revealStyle, isMark, type Rule, type RuleMatch } from "../nodeProps";
-
-export const WikiLink = NodeType.define({
-  id: 5,
-  name: "WikiLink",
-  props: [[revealStyle, "cm-wikilink"]],
-});
-
-export const WikiLinkMark = NodeType.define({
-  id: 6,
-  name: "WikiLinkMark",
-  props: [[isMark, true]],
-});
+import type { InlineContext } from "@lezer/markdown";
 
 // "[title]": a "[", one or more characters that aren't "[", "]", or a
 // newline, then a closing "]". Content that is empty or made up
@@ -19,25 +6,27 @@ export const WikiLinkMark = NodeType.define({
 // "[ ]" don't match. Checked after Bold's own rule, so "[* text]"
 // is still recognized as Bold rather than a WikiLink (see the `rules`
 // array order in index.ts).
-function matchWikiLink(text: string, pos: number): RuleMatch | null {
-  if (text[pos] !== "[") return null;
+export function parseWikiLink(
+  cx: InlineContext,
+  next: number,
+  pos: number,
+): number {
+  if (next !== 91) return -1;
   let i = pos + 1;
   const contentStart = i;
   while (
-    i < text.length &&
-    text[i] !== "[" &&
-    text[i] !== "]" &&
-    text[i] !== "\n"
+    i < cx.end &&
+    cx.char(i) !== 91 &&
+    cx.char(i) !== 93 &&
+    cx.char(i) !== 10
   ) {
     i++;
   }
-  if (text[i] !== "]") return null; // ran off the line unterminated
-  if (text.slice(contentStart, i).trim() === "") return null; // whitespace-only content isn't a title
-  return { length: i + 1 - pos, openLen: 1, closeLen: 1 };
+  if (cx.char(i) !== 93 || cx.slice(contentStart, i).trim() === "") return -1;
+  return cx.addElement(
+    cx.elt("WikiLink", pos, i + 1, [
+      cx.elt("WikiLinkMark", pos, pos + 1),
+      cx.elt("WikiLinkMark", i, i + 1),
+    ]),
+  );
 }
-
-export const wikiLinkRule: Rule = {
-  nodeType: WikiLink,
-  markType: WikiLinkMark,
-  match: matchWikiLink,
-};

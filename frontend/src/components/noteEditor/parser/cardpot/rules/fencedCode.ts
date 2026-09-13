@@ -1,30 +1,7 @@
-import { NodeType } from "@lezer/common";
-import { type Rule, type RuleMatch } from "../nodeProps";
-
-// No revealStyle prop here: unlike Bold/Code/WikiLink, a code block's
-// background is applied per-line by codeBlockLines.ts (Decoration.line
-// on every line the block spans), not as an inline Decoration.mark --
-// see codeBlockLines.ts's own comment for why a mark alone can't fill
-// a block's full width, including blank lines and inter-line gaps.
-export const FencedCode = NodeType.define({
-  id: 7,
-  name: "FencedCode",
-});
-
-// Unlike BoldMark/CodeMark/WikiLinkMark, this does NOT carry the
-// `isMark` prop: a code block's opening/closing fences should stay
-// visible at all times, so it's always clear where the block starts
-// and ends, instead of only revealing them once the cursor moves
-// inside (see syntaxReveal.ts, which hides only nodes tagged isMark).
-export const FencedCodeMark = NodeType.define({
-  id: 8,
-  name: "FencedCodeMark",
-});
+import type { BlockContext, Line } from "@lezer/markdown";
 
 // A closing fence line: "```" optionally followed by trailing
 // horizontal whitespace, and nothing else.
-const CLOSE_FENCE_RE = /^```[ \t]*$/;
-
 // Matches a Markdown-style fenced code block: an opening line
 // starting with "```" (optionally followed by a language tag, e.g.
 // "```js" -- consumed as part of the opening fence, not used for
@@ -39,33 +16,40 @@ const CLOSE_FENCE_RE = /^```[ \t]*$/;
 // the rest of the document) does not match at all and is left as
 // plain text, the same "give up rather than guess" behavior as inline
 // Code.
-function matchFencedCode(text: string, pos: number): RuleMatch | null {
-  if (!text.startsWith("```", pos)) return null;
-  if (pos > 0 && text[pos - 1] !== "\n") return null; // fence must start a line
+export function parseFencedCode(cx: BlockContext, line: Line): boolean {
+  if (line.pos !== 0 || !line.text.startsWith("```")) return false;
 
-  const firstLineEnd = text.indexOf("\n", pos);
-  if (firstLineEnd === -1) return null; // no room for a closing fence on a later line
-  const openLen = firstLineEnd + 1 - pos;
-
-  let searchFrom = firstLineEnd + 1;
-  while (searchFrom <= text.length) {
-    const lineEnd = text.indexOf("\n", searchFrom);
-    const lineText = text.slice(
-      searchFrom,
-      lineEnd === -1 ? text.length : lineEnd,
-    );
-    if (CLOSE_FENCE_RE.test(lineText)) {
-      const to = searchFrom + lineText.length;
-      return { length: to - pos, openLen, closeLen: lineText.length };
-    }
-    if (lineEnd === -1) return null; // reached end of document, never closed
-    searchFrom = lineEnd + 1;
+  // An eager block parser must not advance the context unless it owns the
+  // block. Check for the closing fence first so an unfinished fence retains
+  // the legacy behavior of being parsed as ordinary paragraph text.
+  const input = cx as unknown as {
+    input: { length: number; read(from: number, to: number): string };
+  };
+  const remainingLines = input.input
+    .read(cx.lineStart, input.input.length)
+    .split("\n");
+  if (
+    !remainingLines.slice(1).some((candidate) => /^```[ \t]*$/.test(candidate))
+  ) {
+    return false;
   }
-  return null;
-}
 
-export const fencedCodeRule: Rule = {
-  nodeType: FencedCode,
-  markType: FencedCodeMark,
-  match: matchFencedCode,
-};
+  const from = cx.lineStart;
+  const openingTo = from + line.text.length;
+  const children = [cx.elt("FencedCodeMark", from, openingTo)];
+
+  while (cx.nextLine()) {
+    if (/^```[ \t]*$/.test(line.text)) {
+      children.push(
+        cx.elt("FencedCodeMark", cx.lineStart, cx.lineStart + line.text.length),
+      );
+      cx.addElement(
+        cx.elt("FencedCode", from, cx.lineStart + line.text.length, children),
+      );
+      cx.nextLine();
+      return true;
+    }
+  }
+
+  return false;
+}

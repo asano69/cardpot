@@ -1,39 +1,29 @@
-import { NodeType } from "@lezer/common";
-import { revealStyle, isMark, type Rule, type RuleMatch } from "../nodeProps";
-
-export const Bold = NodeType.define({
-  id: 1,
-  name: "Bold",
-  props: [[revealStyle, "cm-bold"]],
-});
-
-export const BoldMark = NodeType.define({
-  id: 2,
-  name: "BoldMark",
-  props: [[isMark, true]],
-});
+import type { InlineContext } from "@lezer/markdown";
 
 // "[* text]": an opening "[* " (bracket, asterisk, space), one or
 // more characters that aren't "[", "]", or a newline, then a closing
 // "]".
-function matchBold(text: string, pos: number): RuleMatch | null {
-  if (!text.startsWith("[* ", pos)) return null;
+export function parseBold(
+  cx: InlineContext,
+  _next: number,
+  pos: number,
+): number {
+  if (cx.slice(pos, pos + 3) !== "[* ") return -1;
   let i = pos + 3;
   const contentStart = i;
   while (
-    i < text.length &&
-    text[i] !== "[" &&
-    text[i] !== "]" &&
-    text[i] !== "\n"
+    i < cx.end &&
+    cx.char(i) !== 91 &&
+    cx.char(i) !== 93 &&
+    cx.char(i) !== 10
   ) {
     i++;
   }
-  if (i === contentStart || text[i] !== "]") return null; // empty content, or ran off the line unterminated
-  return { length: i + 1 - pos, openLen: 3, closeLen: 1 };
+  if (i === contentStart || cx.char(i) !== 93) return -1;
+  return cx.addElement(
+    cx.elt("Bold", pos, i + 1, [
+      cx.elt("BoldMark", pos, pos + 3),
+      cx.elt("BoldMark", i, i + 1),
+    ]),
+  );
 }
-
-export const boldRule: Rule = {
-  nodeType: Bold,
-  markType: BoldMark,
-  match: matchBold,
-};
