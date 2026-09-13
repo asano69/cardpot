@@ -18,6 +18,7 @@ import { useTitle } from "../../lib/useTitle";
 import { useTopBarActions } from "../../lib/topBarSlot";
 import { computePosition } from "../../lib/position";
 import { deriveCardGridTitle } from "../../lib/cardGridTitle";
+import { randomKey } from "../../lib/randomKey";
 import { usePot } from "../pots/PotContext";
 import type { CardTitle } from "../../lib/cardTitle";
 
@@ -105,6 +106,25 @@ export default function CardForm() {
     params.cardSlug ? { kind: "loading" } : { kind: "draft" },
   );
 
+  // Identity key for the mounted NoteEditor instance (see the keyed
+  // <Show> below). router.tsx deliberately keeps "/new" and
+  // "/:cardSlug" on the same Route so a draft resolving into a real
+  // card doesn't get its still-connecting NoteEditor torn down mid-
+  // handshake -- but that also means Solid Router alone never remounts
+  // NoteEditor when the user opens a *different* card while one is
+  // already open (pressing "add card" while editing, or clicking a
+  // WikiLink). This signal is what actually drives that remount: it
+  // only changes when the effect below detects a genuine navigation to
+  // a different note, never when a draft quietly becomes an existing
+  // record under the same note (see the "echo" check there).
+  // Starts undefined for a cardSlug route -- nothing to key off of
+  // until the lookup below resolves -- and a fresh random key for
+  // "/new", since a bare "/new" should always start from an empty
+  // draft.
+  const [editorKey, setEditorKey] = createSignal<string | undefined>(
+    params.cardSlug ? undefined : `new:${randomKey()}`,
+  );
+
   // Derived accessor for the id of an already-existing record, used
   // by every piece of chrome (pin/delete, tab title, URL sync) that
   // only makes sense once a real "cards" record exists. undefined
@@ -121,20 +141,44 @@ export default function CardForm() {
   // server route on every open, adding a needless network round-trip
   // for data the client already has. Waits for cardsLoaded() (the
   // store's initial fetch) and `pot` to resolve first.
+  //
+  // Also owns editorKey (see its own comment above): urlSegment (below)
+  // tracks whatever URL this page itself last wrote via the slug-sync
+  // effect further down, so "params.cardSlug !== urlSegment" means the
+  // URL changed for a reason other than that sync -- i.e. an actual
+  // navigation to a different note (a fresh mount, "add card", or a
+  // WikiLink click), which is when editorKey should change. When they
+  // match, this run is just the echo of a draft's own title resolving
+  // into a real slug, and editorKey is left untouched so NoteEditor's
+  // still-connecting WebsocketProvider is never torn down mid-handshake.
+  // editorKey() === undefined additionally covers this effect's very
+  // first run for a cardSlug route, where urlSegment already equals
+  // params.cardSlug (both seeded from the same initial value) but a key
+  // still needs to be assigned once.
   createEffect(() => {
-    if (!params.cardSlug) return;
+    if (!params.cardSlug) {
+      // A bare "/new" always starts a brand-new, empty draft -- no
+      // echo case to guard against here, since there's no card of any
+      // kind to resolve.
+      setState({ kind: "draft" });
+      setEditorKey(`new:${randomKey()}`);
+      return;
+    }
     const potId = pot()?.id;
     if (!potId || !cardsLoaded()) return;
 
     const targetSlug = segmentToSlug(params.cardSlug);
+    const isNewNavigation = editorKey() === undefined || params.cardSlug !== urlSegment;
     const record = findCardByPotAndSlug(potId, targetSlug);
     if (record) {
+      if (isNewNavigation) setEditorKey(record.id);
       setState({ kind: "existing", cardId: record.id });
     } else {
       // No card matches this slug yet -- open a draft pre-filled with
       // the slug's title instead of "not found", so visiting e.g.
       // /:pot/test creates a new card titled "test" once its header
       // is confirmed (same flow as /:pot/new -- see NoteEditor).
+      if (isNewNavigation) setEditorKey(`draft:${potId}:${targetSlug}`);
       setState({ kind: "draft", initialTitle: slugToTitle(targetSlug) });
     }
   });
@@ -299,19 +343,30 @@ export default function CardForm() {
               "{mergeTarget()}" already exists.
             </Alert>
           </Show>
-          <NoteEditor
-            cardId={cardId}
-            potId={() => pot()?.id}
-            potSlug={() => params.slug}
-            initialTitle={
-              state().kind === "draft"
-                ? (state() as { kind: "draft"; initialTitle?: string })
-                    .initialTitle
-                : undefined
-            }
-            onCardCreated={handleCardCreated}
-            onMergeTarget={setMergeTarget}
-          />
+          {/* Keyed on editorKey (see its own comment above), so
+              opening a genuinely different note -- "add card" while
+              one is already open, or clicking a WikiLink -- tears down
+              and rebuilds NoteEditor from scratch instead of reusing
+              the same instance with a stale Y.Doc/WebsocketProvider
+              still pointed at the old room. A draft resolving into its
+              own real record does NOT change editorKey (see the
+              createEffect above), so that transition still remounts
+              nothing, preserving router.tsx's single-Route design. */}
+          <Show when={editorKey()} keyed>
+            <NoteEditor
+              cardId={cardId}
+              potId={() => pot()?.id}
+              potSlug={() => params.slug}
+              initialTitle={
+                state().kind === "draft"
+                  ? (state() as { kind: "draft"; initialTitle?: string })
+                      .initialTitle
+                  : undefined
+              }
+              onCardCreated={handleCardCreated}
+              onMergeTarget={setMergeTarget}
+            />
+          </Show>
         </div>
       </Show>
     </Show>
