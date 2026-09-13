@@ -1418,7 +1418,10 @@ func init() {
 					}
 				],
 				"id": "pbc_449060851",
-				"indexes": [],
+				"indexes": [
+					"CREATE INDEX ` + "`" + `idx_xpwo6k1rx9` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (` + "`" + `source` + "`" + `)",
+					"CREATE INDEX ` + "`" + `idx_20y61pbb9s` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (` + "`" + `target` + "`" + `)"
+				],
 				"listRule": null,
 				"name": "card_links",
 				"system": false,
