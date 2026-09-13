@@ -74,9 +74,10 @@ function parseDocument(text: string): Tree {
 
     // Bold's own two children are positioned relative to Bold's own
     // start (0), per Tree's constructor contract -- not absolute
-    // document positions. The open mark is always 2 chars ("[*");
-    // the close mark is always the last 1 char ("]").
-    const openMark = new Tree(BoldMark, [], [], 2);
+    // document positions. The open mark is always 3 chars ("[* ",
+    // including the required space); the close mark is always the
+    // last 1 char ("]").
+    const openMark = new Tree(BoldMark, [], [], 3);
     const closeMark = new Tree(BoldMark, [], [], 1);
     const bold = new Tree(Bold, [openMark, closeMark], [0, length - 1], length);
 

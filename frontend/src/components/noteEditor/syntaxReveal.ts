@@ -8,9 +8,17 @@ import {
 import { syntaxTree } from "@codemirror/language";
 import { revealStyle, isMark } from "./parser/cardpot";
 
-// Hides a delimiter/mark node (e.g. "[*" or "]") by collapsing it to
-// zero width, the same technique hangingIndent.ts uses for hidden tabs.
-const hiddenMark = Decoration.mark({ class: "cm-mark-hidden" });
+// Hides a delimiter/mark node (e.g. "[* " or "]") using a replacing
+// decoration rather than a font-size:0 mark. Decoration.replace()
+// collapses the range into a single atomic unit for cursor motion and
+// selection, so arrow keys / shift-selection step over the whole
+// delimiter at once instead of landing inside its individual
+// (invisible) characters. A plain Decoration.mark only restyles the
+// existing characters -- they stay non-atomic, which let a selection
+// anchor land inside a hidden character, making selection look like
+// it silently failed and shifting the copied text by the delimiter's
+// own length.
+const hiddenMark = Decoration.replace({});
 
 // Generic Obsidian-style live preview: any node type tagged with
 // revealStyle (see parser/cardpot) gets its full range styled with
@@ -36,9 +44,14 @@ function buildDecorations(view: EditorView): DecorationSet {
       const { from, to } = node;
       decorations.push(Decoration.mark({ class: styleClass }).range(from, to));
 
-      // "Touching" means the (empty) cursor sits anywhere from the
-      // node's start through its end, inclusive of both edges.
-      const touching = main.empty && main.from >= from && main.from <= to;
+      // "Touching" means the current selection overlaps the node's
+      // range at all -- not just an empty cursor inside it. Without
+      // this, extending a selection into the node (e.g. shift+Left)
+      // makes the selection non-empty first, which used to hide the
+      // marks mid-selection and desync the rendered content from the
+      // document positions the browser's native selection was
+      // tracking.
+      const touching = main.from <= to && main.to >= from;
       if (touching) return; // leave marks visible for editing
 
       for (let child = node.node.firstChild; child; child = child.nextSibling) {

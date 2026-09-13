@@ -88,9 +88,6 @@ export const editorTheme = EditorView.theme({
     backgroundColor: "var(--color-line-text)",
   },
 
-  ".cm-mark-hidden": {
-    fontSize: "0",
-  },
   ".cm-bold": {
     fontWeight: "bold",
   },
