@@ -16,12 +16,9 @@ import {
 } from "./titleCandidatePlugin";
 import { titleLineHighlight } from "./titleLineHighlight";
 import { editorTheme } from "./editorTheme";
-import {
-  syntaxHighlighting,
-  defaultHighlightStyle,
-  indentUnit,
-} from "@codemirror/language";
-import { cardpotSyntax } from "./cardpotSyntax";
+import { indentUnit } from "@codemirror/language";
+import { cardpotSyntax } from "./parser/cardpot";
+import { boldReveal } from "./boldReveal";
 import { createCard, updateCardTitle } from "../../lib/cardApi";
 import type { TitleCandidate } from "../../lib/titleCandidate";
 import { cardsById, mergeCards } from "../../lib/cardsStore";
@@ -224,12 +221,13 @@ export default function NoteEditor(props: NoteEditorProps) {
         // runs, so neither a widget boundary nor a long unbroken run
         // forces an unnatural break elsewhere in the line.
         wordBreak,
-        // Cardpot's own inline syntax (wiki links, brackets, tags --
-        // see cardpotSyntax.ts). Needs syntaxHighlighting() alongside
-        // it: the parser only tags nodes, this is what actually turns
-        // those tags into colored text.
+        // Cardpot's own inline syntax parser (see
+        // parser/cardpot/index.ts) -- currently just "[* text]" ->
+        // Bold. boldReveal reads this same syntax tree to decide when
+        // to hide/show the raw markup around the cursor, Obsidian-
+        // style (see boldReveal.ts).
         cardpotSyntax(),
-        syntaxHighlighting(defaultHighlightStyle),
+        boldReveal,
         // A single real tab character per indent level, not spaces --
         // indentMore/indentLess (bound below) both insert/remove
         // whatever this unit is. Matches bulletLineDecoration.ts's own
