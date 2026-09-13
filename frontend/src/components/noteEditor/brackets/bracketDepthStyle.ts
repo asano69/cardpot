@@ -46,6 +46,25 @@ function bracketDepth(node: SyntaxNode): number {
   return bracketDepth(content) + 1;
 }
 
+// True when `node` is the sole content of its immediate parent Bracket
+// (a "pure chain" link, e.g. the inner Bracket in "[[text]]"). Such a
+// node contributes no styling of its own -- the chain's head (the
+// outermost non-absorbed Bracket) already accounts for it via
+// bracketDepth and hides its bracket characters as part of the whole
+// chain. Comparing by position (from/to) rather than node identity,
+// since syntaxTree() can hand out fresh SyntaxNode wrappers on each
+// call.
+function isAbsorbedByParent(node: SyntaxNode): boolean {
+  const parent = node.parent;
+  if (!parent || parent.name !== "Bracket") return false;
+  const content = bracketContent(parent);
+  return (
+    typeof content !== "string" &&
+    content.from === node.from &&
+    content.to === node.to
+  );
+}
+
 // No entry for depth 4+: those stay fully unstyled, literal brackets.
 const DEPTH_CLASS: Record<number, string> = {
   1: "cm-bracket-link",
@@ -62,17 +81,27 @@ function buildDecorations(view: EditorView): DecorationSet {
       to,
       enter: (ref) => {
         if (ref.name !== "Bracket") return;
+        // Absorbed nodes are pure-chain links (see isAbsorbedByParent):
+        // their own bracket characters are hidden by the chain's head
+        // below, so nothing to do here. Don't return false -- the walk
+        // still needs to descend into this node's own children, since
+        // a chain can terminate in "mixed" content holding independent
+        // Brackets of its own (e.g. "[[a [b] c]]").
+        if (isAbsorbedByParent(ref.node)) return;
 
-        const cls = DEPTH_CLASS[bracketDepth(ref.node)];
+        const depth = bracketDepth(ref.node);
+        const cls = DEPTH_CLASS[depth];
         if (!cls) return; // depth 4+ -- nothing to hide or style
 
-        // A Bracket node's own opening/closing characters are always
-        // its very first and last character (see bracket.grammar):
-        // hide just those two, and style the text in between. A
-        // nested layer hides its own bracket characters independently,
-        // the next time this same walk reaches its own Bracket node.
-        const openTo = ref.from + 1;
-        const closeFrom = ref.to - 1;
+        // The head of a pure chain of length `depth` is wrapped by
+        // exactly `depth` opening characters and `depth` closing
+        // characters (one per absorbed layer -- see bracket.grammar),
+        // so the whole chain's brackets are hidden in one go here
+        // instead of the absorbed nodes hiding their own one-at-a-time.
+        const openTo = ref.from + depth;
+        const closeFrom = ref.to - depth;
+        if (openTo >= closeFrom) return; // no content left to mark -- avoid an empty (crashing) mark range
+
         decorations.push(Decoration.replace({}).range(ref.from, openTo));
         decorations.push(
           Decoration.mark({ class: cls }).range(openTo, closeFrom),
