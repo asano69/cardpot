@@ -29,6 +29,7 @@ from flask import Flask
 - 全コードを書き直すときは、古いファイルをSearch/Replaceせずに削除して、新規ファイルとして出力する。
 - Tailwindを使っており、marginのような親/兄弟レイアウトに影響を及ぼすスタイルは親コンポーネントから使うようにするべき。
 - jsxにおいて、return の先頭にコメント（{/*...*/} ）を置く場合は Fragment （<>...</>）で囲まなければならない。
+- Cardpotパーサの開発は、cache/lezer-mdの設計を参考にすること
 
 
 ## Tech Stack
