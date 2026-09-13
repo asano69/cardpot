@@ -11,7 +11,7 @@ const highlighting = styleTags({
 });
 
 export const bracketLanguage = LRLanguage.define({
-  parser: parser.configure({ props: [highlighting] }),
+  parser,
   languageData: { commentTokens: {} },
 });
 

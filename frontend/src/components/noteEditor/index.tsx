@@ -21,7 +21,9 @@ import {
   defaultHighlightStyle,
   indentUnit,
 } from "@codemirror/language";
-import { cardpotSyntax } from "./cardpotSyntax";
+import { bracketSyntax } from "./brackets/bracketLanguage";
+import { bracketMarkerDecoration } from "./brackets/bracketMarkerDecoration";
+
 import { createCard, updateCardTitle } from "../../lib/cardApi";
 import type { TitleCandidate } from "../../lib/titleCandidate";
 import { cardsById, mergeCards } from "../../lib/cardsStore";
@@ -228,7 +230,9 @@ export default function NoteEditor(props: NoteEditorProps) {
         // see cardpotSyntax.ts). Needs syntaxHighlighting() alongside
         // it: the parser only tags nodes, this is what actually turns
         // those tags into colored text.
-        cardpotSyntax(),
+         bracketSyntax(),
+          bracketMarkerDecoration,
+        //cardpotSyntax(),
         syntaxHighlighting(defaultHighlightStyle),
         // A single real tab character per indent level, not spaces --
         // indentMore/indentLess (bound below) both insert/remove

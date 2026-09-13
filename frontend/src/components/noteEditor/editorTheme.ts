@@ -87,4 +87,11 @@ export const editorTheme = EditorView.theme({
     borderRadius: "50%",
     backgroundColor: "var(--color-line-text)",
   },
+  // == Lazer Syntax==
+  ".cm-bracket-bold": {
+    fontWeight: "bold",
+  },
+  ".cm-bracket-italic": {
+    fontStyle: "italic",
+  },
 });
