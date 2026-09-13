@@ -1,7 +1,22 @@
 import type { Command } from "@codemirror/view";
-import { EditorSelection } from "@codemirror/state";
+import { EditorSelection, type EditorState } from "@codemirror/state";
+import { syntaxTree } from "@codemirror/language";
+import { FencedCode } from "./parser/cardpot";
 
 const LEADING_TABS_RE = /^\t+/;
+
+// Whether `pos` falls inside a fenced code block (see
+// codeBlockLines.ts / hangingIndent.ts for the same FencedCode
+// lookup). Leading whitespace there is code content, not a bullet to
+// continue or release.
+function isInFencedCode(state: EditorState, pos: number): boolean {
+  let node = syntaxTree(state).resolveInner(pos, -1);
+  while (node) {
+    if (node.type === FencedCode) return true;
+    node = node.parent;
+  }
+  return false;
+}
 
 // Enter behavior for bulleted (tab-indented) lines, mirroring common
 // outliner UX (Workflowy/Scrapbox-style):
@@ -16,6 +31,17 @@ const LEADING_TABS_RE = /^\t+/;
 export const insertNewlineKeepingBullet: Command = (view) => {
   const { state } = view;
   const changes = state.changeByRange((range) => {
+    // Inside a fenced code block, Enter always inserts a plain
+    // newline -- indentation here is code content, not a bullet to
+    // continue or release (see hangingIndent.ts's own FencedCode
+    // guard for the display-side counterpart of this fix).
+    if (isInFencedCode(state, range.from)) {
+      return {
+        changes: { from: range.from, to: range.to, insert: "\n" },
+        range: EditorSelection.cursor(range.from + 1),
+      };
+    }
+
     const line = state.doc.lineAt(range.from);
     const match = LEADING_TABS_RE.exec(line.text);
     const depth = match ? match[0].length : 0;

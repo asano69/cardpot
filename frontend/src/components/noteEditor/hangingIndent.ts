@@ -6,6 +6,8 @@ import {
   type DecorationSet,
   type ViewUpdate,
 } from "@codemirror/view";
+import { syntaxTree } from "@codemirror/language";
+import { FencedCode } from "./parser/cardpot";
 
 // Width of one indent level's mark element, in pixels (see
 // IndentMarkWidget below). Also used by editorTheme.ts to size the
@@ -85,10 +87,29 @@ class IndentMarkWidget extends WidgetType {
 //     our own control.
 function buildDecorations(view: EditorView): DecorationSet {
   const decorations = [];
+
+  // Fenced code block ranges (see codeBlockLines.ts for the same
+  // pattern): a line's leading whitespace inside one of these is code
+  // content, not a bullet indent, so it must never be replaced with a
+  // "pad" widget below.
+  const codeBlockRanges: { from: number; to: number }[] = [];
+  syntaxTree(view.state).iterate({
+    enter(node) {
+      if (node.type !== FencedCode) return;
+      codeBlockRanges.push({ from: node.from, to: node.to });
+    },
+  });
+  const inCodeBlock = (pos: number) =>
+    codeBlockRanges.some((range) => pos >= range.from && pos < range.to);
+
   for (const { from, to } of view.visibleRanges) {
     let pos = from;
     while (pos <= to) {
       const line = view.state.doc.lineAt(pos);
+      if (inCodeBlock(line.from)) {
+        pos = line.to + 1;
+        continue;
+      }
       const match = LEADING_INDENT_RUN_RE.exec(line.text);
       if (match) {
         const depth = match[0].length;
