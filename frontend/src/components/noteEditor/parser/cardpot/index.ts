@@ -7,18 +7,23 @@
 // never wanted in the first place (see the old cardpotSyntax.ts's
 // `disabledForNow` list, now deleted).
 //
-// Starting point: the single simplest rule, "[* text]" -> Bold.
-// Future notations get added here the same way -- a new NodeType plus
-// a scan function, wired into parseDocument.
-//
-// This parser ignores the `fragments` argument entirely and re-scans
-// the whole document on every parse (see createParse below). That's a
-// deliberate simplification for now, not a permanent constraint --
-// Lezer's incremental reuse is a property of how `fragments` is
-// consumed inside createParse, not of whether the parser was
-// generated (lezer-generator) or hand-written. Cards are only a few
-// hundred lines at most, so a full rescan on every keystroke is cheap
-// enough to not matter yet. Revisit only if profiling shows otherwise.
+// Structure, loosely modeled on @lezer/markdown's own architecture:
+//   - Each notation is a `Rule`: a NodeType/markType pair plus a
+//     `match` function that checks whether that notation starts at a
+//     given text position. Adding a new notation (wiki links, tags,
+//     ...) means adding one Rule to the `rules` array below -- the
+//     scanning and tree-building code never needs to change.
+//   - scanRange() does a single left-to-right pass over a range of
+//     text, trying every rule at each position (first match wins) and
+//     skipping over whatever it consumes -- no separate per-rule
+//     regex passes to merge and de-overlap afterwards.
+//   - buildTree() supports incremental reparsing: it reuses whichever
+//     previously parsed nodes still fall inside a "safe" fragment (see
+//     collectReusableMatches) and only calls scanRange() on the gaps
+//     between them -- normally just the few characters actually
+//     edited, not the whole document. A brand-new document (no
+//     fragments yet) falls back to scanning start-to-end, same as
+//     before.
 import { NodeType, Parser, Tree, NodeProp } from "@lezer/common";
 import type { Input, PartialParser, TreeFragment } from "@lezer/common";
 import {
@@ -67,103 +72,224 @@ export const CodeMark = NodeType.define({
   props: [[isMark, true]],
 });
 
-// This regular expression matches text enclosed in `[* ...]` with the following rules:
-// - The sequence must start with `[* ` (an opening bracket, an asterisk, and a space).
-// - It must contain at least one character after the space.
-// - The content cannot contain `[`, `]`, or a newline character.
-// - It must end with a closing `]`.
-const BOLD_RE = /\[\* ([^[\]\n]+)\]/g;
-
-// This regular expression matches an inline code span enclosed in a
-// pair of backticks. The content may be empty and must not contain a
-// backtick or a newline character, so a code span never spans
-// multiple lines.
-const CODE_RE = /`([^`\n]*)`/g;
-
-// A single regex match, tagged with which syntax produced it and how
-// many characters its open/close delimiters occupy -- enough
-// information for parseDocument below to build the matching node
-// without caring which regex the match came from.
-interface SyntaxMatch {
-  from: number;
+// What a Rule's match() returns: how many characters the whole match
+// consumes, split into its opening and closing delimiter lengths (the
+// content in between is everything else). Kept separate from the
+// actual Tree-building code below, so a Rule only ever has to answer
+// "does my notation start here, and how long is it" -- nothing about
+// NodeType/Tree construction leaks into individual rules.
+interface RuleMatch {
   length: number;
-  nodeType: NodeType;
-  markType: NodeType;
   openLen: number;
   closeLen: number;
 }
 
-function findMatches(
-  regex: RegExp,
-  text: string,
-  nodeType: NodeType,
-  markType: NodeType,
-  openLen: number,
-  closeLen: number,
-): SyntaxMatch[] {
-  const matches: SyntaxMatch[] = [];
-  regex.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(text))) {
-    matches.push({
-      from: match.index,
-      length: match[0].length,
-      nodeType,
-      markType,
-      openLen,
-      closeLen,
-    });
-  }
-  return matches;
+interface Rule {
+  nodeType: NodeType;
+  markType: NodeType;
+  // Checks whether this rule's notation starts at exactly `pos` in
+  // `text`. Must not look at any text before `pos`, and must not
+  // match across a newline -- both scanRange's gap-splitting and
+  // collectReusableMatches's fragment-boundary checks below assume a
+  // match never straddles those.
+  match(text: string, pos: number): RuleMatch | null;
 }
 
-function parseDocument(text: string): Tree {
-  // Bold's open mark is always 3 chars ("[* ", including the required
-  // space); code's open mark is always 1 char ("`"). Both syntaxes'
-  // close marks are a single character ("]" or "`").
-  const matches = [
-    ...findMatches(BOLD_RE, text, Bold, BoldMark, 3, 1),
-    ...findMatches(CODE_RE, text, Code, CodeMark, 1, 1),
-  ].sort((a, b) => a.from - b.from);
+// "[* text]": an opening "[* " (bracket, asterisk, space), one or
+// more characters that aren't "[", "]", or a newline, then a closing
+// "]".
+function matchBold(text: string, pos: number): RuleMatch | null {
+  if (!text.startsWith("[* ", pos)) return null;
+  let i = pos + 3;
+  const contentStart = i;
+  while (
+    i < text.length &&
+    text[i] !== "[" &&
+    text[i] !== "]" &&
+    text[i] !== "\n"
+  ) {
+    i++;
+  }
+  if (i === contentStart || text[i] !== "]") return null; // empty content, or ran off the line unterminated
+  return { length: i + 1 - pos, openLen: 3, closeLen: 1 };
+}
+
+// An inline code span enclosed in a pair of backticks. The content
+// may be empty and must not contain a backtick or a newline, so a
+// code span never spans multiple lines.
+function matchCode(text: string, pos: number): RuleMatch | null {
+  if (text[pos] !== "`") return null;
+  let i = pos + 1;
+  while (i < text.length && text[i] !== "`" && text[i] !== "\n") {
+    i++;
+  }
+  if (text[i] !== "`") return null; // ran off the line unterminated
+  return { length: i + 1 - pos, openLen: 1, closeLen: 1 };
+}
+
+// Every notation this language recognizes, in priority order: at a
+// given position, the first rule whose match() succeeds wins. Add a
+// new notation by adding a NodeType/markType pair above and one entry
+// here -- nothing else in this file needs to change.
+const rules: Rule[] = [
+  { nodeType: Bold, markType: BoldMark, match: matchBold },
+  { nodeType: Code, markType: CodeMark, match: matchCode },
+];
+
+// Looks up which Rule produced a given node type, used by
+// collectReusableMatches below to rebuild a reused node's mark
+// lengths without hardcoding a Bold/Code-specific switch.
+const ruleByNodeId = new Map(rules.map((rule) => [rule.nodeType.id, rule]));
+
+// A single matched (or reused) node, positioned in the current
+// document.
+interface ScannedNode {
+  from: number;
+  to: number;
+  tree: Tree;
+}
+
+function buildMatchTree(rule: Rule, match: RuleMatch): Tree {
+  const openMark = new Tree(rule.markType, [], [], match.openLen);
+  const closeMark = new Tree(rule.markType, [], [], match.closeLen);
+  return new Tree(
+    rule.nodeType,
+    [openMark, closeMark],
+    [0, match.length - match.closeLen],
+    match.length,
+  );
+}
+
+// Scans exactly [from, to) of `text`, trying every rule at each
+// position in turn. A match that would extend past `to` is rejected,
+// so a caller can safely scan one gap and trust that no match
+// straddles into whatever sits right after `to` (e.g. a reused node
+// -- see buildTree).
+function scanRange(text: string, from: number, to: number): ScannedNode[] {
+  const results: ScannedNode[] = [];
+  let pos = from;
+  while (pos < to) {
+    let consumed = false;
+    for (const rule of rules) {
+      const match = rule.match(text, pos);
+      if (match && pos + match.length <= to) {
+        results.push({
+          from: pos,
+          to: pos + match.length,
+          tree: buildMatchTree(rule, match),
+        });
+        pos += match.length;
+        consumed = true;
+        break;
+      }
+    }
+    if (!consumed) pos++;
+  }
+  return results;
+}
+
+// Walks every "safe" fragment from the previous parse and rebuilds
+// its top-level nodes as fresh Trees at their current document
+// positions, so buildTree can skip re-scanning that text entirely.
+// Rebuilt from the TreeCursor API rather than lifted directly out of
+// the old Tree object, since Lezer may have compacted small subtrees
+// into an internal buffer representation that doesn't expose a plain
+// Tree per node.
+//
+// A fragment is only used if:
+//   - it has no open edge (openStart/openEnd): an open edge means the
+//     previous parse couldn't guarantee a clean node boundary there,
+//     so nothing touching it is safe to reuse.
+//   - the candidate node's own span sits strictly inside the
+//     fragment's [from, to) range: a node whose span was clipped by
+//     the fragment boundary (because the edit landed inside it) fails
+//     this check and is correctly dropped instead of reused.
+function collectReusableMatches(
+  fragments: readonly TreeFragment[],
+): ScannedNode[] {
+  const reused: ScannedNode[] = [];
+
+  for (const fragment of fragments) {
+    if (fragment.openStart || fragment.openEnd) continue;
+
+    const cursor = fragment.tree.cursor();
+    if (!cursor.firstChild()) continue; // this fragment's Document had no children
+
+    do {
+      const rule = ruleByNodeId.get(cursor.type.id);
+      if (!rule) continue; // not a node type this parser produces -- skip defensively
+
+      // fragment.offset translates a position in the fragment's own
+      // (old) tree into the corresponding position in the current
+      // document.
+      const from = cursor.from + fragment.offset;
+      const to = cursor.to + fragment.offset;
+      if (from < fragment.from || to > fragment.to) continue;
+
+      let openLen = 0;
+      let closeLen = 0;
+      if (cursor.firstChild()) {
+        openLen = cursor.to - cursor.from;
+        if (cursor.nextSibling()) closeLen = cursor.to - cursor.from;
+        cursor.parent(); // back to the top-level node before continuing nextSibling() below
+      }
+
+      reused.push({
+        from,
+        to,
+        tree: buildMatchTree(rule, { length: to - from, openLen, closeLen }),
+      });
+    } while (cursor.nextSibling());
+  }
+
+  return reused;
+}
+
+// Builds the Document tree for `text`. Reused nodes (see
+// collectReusableMatches) are placed first, sorted by position; any
+// gap before, between, or after them is filled in by scanning just
+// that gap. On the very first parse (no fragments yet), there is
+// nothing to reuse and this scans the whole document once, same as a
+// plain non-incremental parser would.
+function buildTree(text: string, fragments: readonly TreeFragment[]): Tree {
+  const reused = collectReusableMatches(fragments).sort(
+    (a, b) => a.from - b.from,
+  );
 
   const children: Tree[] = [];
   const positions: number[] = [];
-  // End position of the last accepted match, used to skip any later
-  // match that overlaps it. Nesting (e.g. code inside bold) isn't
-  // supported -- whichever match comes first simply wins.
-  let cursor = 0;
+  let pos = 0;
 
-  for (const match of matches) {
-    if (match.from < cursor) continue;
+  const place = (node: ScannedNode) => {
+    children.push(node.tree);
+    positions.push(node.from);
+    pos = node.to;
+  };
 
-    // A node's own two children are positioned relative to the
-    // node's own start (0), per Tree's constructor contract -- not
-    // absolute document positions.
-    const openMark = new Tree(match.markType, [], [], match.openLen);
-    const closeMark = new Tree(match.markType, [], [], match.closeLen);
-    const node = new Tree(
-      match.nodeType,
-      [openMark, closeMark],
-      [0, match.length - match.closeLen],
-      match.length,
-    );
-
-    children.push(node);
-    positions.push(match.from); // absolute -- Document itself starts at 0
-    cursor = match.from + match.length;
+  for (const node of reused) {
+    if (node.from < pos) continue; // overlaps something already placed -- drop it
+    if (node.from > pos) {
+      for (const scanned of scanRange(text, pos, node.from)) place(scanned);
+    }
+    place(node);
+  }
+  if (pos < text.length) {
+    for (const scanned of scanRange(text, pos, text.length)) place(scanned);
   }
 
   return new Tree(Document, children, positions, text.length);
 }
 
-// Non-incremental: every parse reads the whole document once and
-// produces the whole tree in a single advance() call. See this file's
-// own top comment for why fragments-based reuse is deferred rather
-// than skipped for some structural reason.
+// Single-shot parser: buildTree() above already parses (and reuses)
+// the whole document in one call, so advance() has nothing left to
+// chunk across multiple ticks. That's a deliberate simplification --
+// cards are only a few hundred lines at most, so even a full rescan
+// is cheap; incremental reuse (see buildTree) is what actually keeps
+// per-keystroke cost down, not chunked parsing.
 class CardpotParser extends Parser {
   createParse(
     input: Input,
-    _fragments: readonly TreeFragment[],
+    fragments: readonly TreeFragment[],
     _ranges: readonly { from: number; to: number }[],
   ): PartialParser {
     let done = false;
@@ -172,14 +298,14 @@ class CardpotParser extends Parser {
       advance() {
         if (done) return null;
         done = true;
-        const tree = parseDocument(input.read(0, input.length));
+        const tree = buildTree(input.read(0, input.length), fragments);
         parse.parsedPos = input.length;
         return tree;
       },
       stopAt(_pos: number) {
-        // Not supported yet -- this parser always parses the whole
-        // document in one shot (see the class comment above), so
-        // there's no partial-parse position to actually stop at.
+        // Not supported: this parser always finishes in one
+        // advance() call (see the class comment above), so there is
+        // no partial-parse position to stop at.
       },
       stoppedAt: null,
     };
