@@ -101,4 +101,13 @@ export const editorTheme = EditorView.theme({
     borderRadius: "6px",
     padding: "0.15em 0.35em",
   },
+
+  // WikiLink node (see parser/cardpot's WikiLink node and
+  // wikiLinkNavigation.ts): styled like the old ProseMirror editor's
+  // autolinks (see components.css's ".ProseMirror a") so it reads as
+  // clickable.
+  ".cm-wikilink": {
+    color: "light-dark(#0969da, #58a6ff)",
+    cursor: "pointer",
+  },
 });

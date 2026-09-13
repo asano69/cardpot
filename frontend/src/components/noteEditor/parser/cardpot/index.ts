@@ -72,6 +72,18 @@ export const CodeMark = NodeType.define({
   props: [[isMark, true]],
 });
 
+export const WikiLink = NodeType.define({
+  id: 5,
+  name: "WikiLink",
+  props: [[revealStyle, "cm-wikilink"]],
+});
+
+export const WikiLinkMark = NodeType.define({
+  id: 6,
+  name: "WikiLinkMark",
+  props: [[isMark, true]],
+});
+
 // What a Rule's match() returns: how many characters the whole match
 // consumes, split into its opening and closing delimiter lengths (the
 // content in between is everything else). Kept separate from the
@@ -114,6 +126,28 @@ function matchBold(text: string, pos: number): RuleMatch | null {
   return { length: i + 1 - pos, openLen: 3, closeLen: 1 };
 }
 
+// "[title]": a "[", one or more characters that aren't "[", "]", or a
+// newline, then a closing "]". Content that is empty or made up
+// entirely of whitespace does not count as a title, so "[]" and
+// "[ ]" don't match. Checked after matchBold above, so "[* text]"
+// is still recognized as Bold rather than a WikiLink.
+function matchWikiLink(text: string, pos: number): RuleMatch | null {
+  if (text[pos] !== "[") return null;
+  let i = pos + 1;
+  const contentStart = i;
+  while (
+    i < text.length &&
+    text[i] !== "[" &&
+    text[i] !== "]" &&
+    text[i] !== "\n"
+  ) {
+    i++;
+  }
+  if (text[i] !== "]") return null; // ran off the line unterminated
+  if (text.slice(contentStart, i).trim() === "") return null; // whitespace-only content isn't a title
+  return { length: i + 1 - pos, openLen: 1, closeLen: 1 };
+}
+
 // An inline code span enclosed in a pair of backticks. The content
 // may be empty and must not contain a backtick or a newline, so a
 // code span never spans multiple lines.
@@ -133,6 +167,7 @@ function matchCode(text: string, pos: number): RuleMatch | null {
 // here -- nothing else in this file needs to change.
 const rules: Rule[] = [
   { nodeType: Bold, markType: BoldMark, match: matchBold },
+  { nodeType: WikiLink, markType: WikiLinkMark, match: matchWikiLink },
   { nodeType: Code, markType: CodeMark, match: matchCode },
 ];
 

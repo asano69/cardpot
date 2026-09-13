@@ -1,4 +1,5 @@
 import { onCleanup, Show, createSignal } from "solid-js";
+import { useNavigate } from "@solidjs/router";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, drawSelection } from "@codemirror/view";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
@@ -19,6 +20,7 @@ import { editorTheme } from "./editorTheme";
 import { indentUnit } from "@codemirror/language";
 import { cardpotSyntax } from "./parser/cardpot";
 import { syntaxReveal } from "./syntaxReveal";
+import { wikiLinkNavigation } from "./wikiLinkNavigation";
 import { createCard, updateCardTitle } from "../../lib/cardApi";
 import type { TitleCandidate } from "../../lib/titleCandidate";
 import { cardsById, mergeCards } from "../../lib/cardsStore";
@@ -36,6 +38,9 @@ export interface NoteEditorProps {
   // backing record (see handleSlugCandidate below). Ignored once
   // cardId already resolves to a real record.
   potId?: () => string | undefined;
+  // The parent pot's URL slug, used to build a WikiLink's navigation
+  // target (see wikiLinkNavigation.ts).
+  potSlug: () => string;
   // Pre-fills the document's first line (the header) with this text
   // when starting a brand-new draft -- e.g. opening /:pot/:cardSlug
   // with no matching card seeds this from the URL's slug instead of
@@ -66,6 +71,7 @@ export interface NoteEditorProps {
 // ProseMirror editor had are intentionally not reimplemented yet --
 // see this project's CLAUDE.md for the migration's current phase.
 export default function NoteEditor(props: NoteEditorProps) {
+  const navigate = useNavigate();
   const ydoc = new Y.Doc();
   const ytext = ydoc.getText("content");
 
@@ -228,6 +234,7 @@ export default function NoteEditor(props: NoteEditorProps) {
         // style (see syntaxReveal.ts).
         cardpotSyntax(),
         syntaxReveal,
+        wikiLinkNavigation(props.potSlug, navigate),
         // A single real tab character per indent level, not spaces --
         // indentMore/indentLess (bound below) both insert/remove
         // whatever this unit is. Matches bulletLineDecoration.ts's own

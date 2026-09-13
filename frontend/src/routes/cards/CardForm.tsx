@@ -302,6 +302,7 @@ export default function CardForm() {
           <NoteEditor
             cardId={cardId}
             potId={() => pot()?.id}
+            potSlug={() => params.slug}
             initialTitle={
               state().kind === "draft"
                 ? (state() as { kind: "draft"; initialTitle?: string })
