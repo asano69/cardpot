@@ -58,6 +58,12 @@ export interface NoteEditorProps {
   // (create or update), so the caller (CardForm) can display it. null
   // clears any previously shown alert.
   onMergeTarget?: (target: string | null) => void;
+  // Fired synchronously (no debounce) with the raw, unresolved
+  // candidate text on every edit to line 1 (see
+  // titleCandidatePlugin.ts). Lets the caller (CardForm) keep the
+  // URL's slug segment in sync with line 1 in real time, independent
+  // of the debounced server-confirmation round trip.
+  onLiveTitleChange?: (candidate: TitleCandidate) => void;
 }
 
 // A single Yjs-synced CodeMirror editor covering both title and body,
@@ -213,7 +219,7 @@ export default function NoteEditor(props: NoteEditorProps) {
         // custom handling needed for the double-bracket case.
         closeBrackets(),
         yCollab(ytext, null),
-        titleCandidateExtension(handleSlugCandidate),
+        titleCandidateExtension(handleSlugCandidate, props.onLiveTitleChange),
         titleLineHighlight,
         editorTheme,
         // Hanging indent for wrapped lines, and the Scrapbox/Cosense-

@@ -14,6 +14,7 @@ import {
   findCardByPotAndSlug,
 } from "../../lib/cardsStore";
 import { titleToSegment, segmentToSlug, slugToTitle } from "../../lib/slugify";
+import type { TitleCandidate } from "../../lib/titleCandidate";
 import { useTitle } from "../../lib/useTitle";
 import { useTopBarActions } from "../../lib/topBarSlot";
 import { computePosition } from "../../lib/position";
@@ -167,6 +168,17 @@ export default function CardForm() {
     const potId = pot()?.id;
     if (!potId || !cardsLoaded()) return;
 
+    // Our own replaceState calls (see handleLiveTitleChange and the
+    // URL-sync effect below) update `urlSegment` before navigating --
+    // this run is just the echo of that navigation, not a genuine
+    // move to a different card. Re-deriving state from the URL here
+    // would look this card up by its *old* slug (the rename hasn't
+    // reached cardsById yet), fail to find it, and incorrectly fall
+    // back to draft mode.
+    if (params.cardSlug === urlSegment && state().kind === "existing") {
+      return;
+    }
+
     const targetSlug = segmentToSlug(params.cardSlug);
     const isNewNavigation = editorKey() === undefined || params.cardSlug !== urlSegment;
     const record = findCardByPotAndSlug(potId, targetSlug);
@@ -188,6 +200,24 @@ export default function CardForm() {
   // page's card stops being a draft and becomes a real, existing one.
   const handleCardCreated = (id: string) => {
     setState({ kind: "existing", cardId: id });
+  };
+
+  // Fired synchronously (no debounce) by NoteEditor on every edit to
+  // line 1 (see titleCandidatePlugin.ts). Reflects the raw candidate's
+  // slug into the address bar immediately instead of waiting for the
+  // debounced server round-trip to update cardsById -- this is what
+  // keeps a header edit from ever finding "no card matches this slug"
+  // and falling back to draft mode before the rename resolves (see
+  // the echo guard in the cardSlug-resolving effect above). Only
+  // matters once a real record exists to have a URL of its own; a
+  // still-drafting card's URL is left untouched.
+  const handleLiveTitleChange = (candidate: TitleCandidate) => {
+    const id = cardId();
+    if (!id || !candidate) return;
+    const segment = titleToSegment(candidate);
+    if (segment === urlSegment) return;
+    urlSegment = segment;
+    navigate(`/${params.slug}/${segment}`, { replace: true });
   };
 
   // Keeps the address bar's slug segment in sync as the card's slug
@@ -365,6 +395,7 @@ export default function CardForm() {
               }
               onCardCreated={handleCardCreated}
               onMergeTarget={setMergeTarget}
+              onLiveTitleChange={handleLiveTitleChange}
             />
           </Show>
         </div>
