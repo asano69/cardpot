@@ -71,9 +71,17 @@ func initYjsServer(app core.App) {
 		// constructed and before any peer can touch it (see ygo's
 		// OnLoadDocument doc comment).
 		yjsServer.OnLoadDocument = func(_ context.Context, room string, doc *crdt.Doc) error {
+			// Tracks the room's line0 across observer calls so a change
+			// elsewhere in the document (line0 unaffected) doesn't produce
+			// a misleading "line0 changed" log entry.
+			lastLine0 := firstLine(doc.GetText("content").ToString())
 			doc.GetText("content").Observe(func(_ crdt.YTextEvent) {
-				text := doc.GetText("content").ToString()
-				slog.Debug("line0 changed", "room", room, "line0", firstLine(text))
+				line0 := firstLine(doc.GetText("content").ToString())
+				if line0 == lastLine0 {
+					return
+				}
+				lastLine0 = line0
+				slog.Debug("line0 changed", "room", room, "line0", line0)
 			})
 			return nil
 		}
