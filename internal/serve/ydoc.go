@@ -59,6 +59,25 @@ func initYjsServer(app core.App) {
 	initYjsServerOnce.Do(func() {
 		yjsServer = yjsws.NewServerWithPersistence(&ydocPersistence{app: app})
 
+		// Observes the room's live "content" YText directly, independent
+		// of StoreUpdate's persistence coalescing
+		// (Server.PersistCoalesceWindow / PersistCoalesceMaxWait). This
+		// fires synchronously on every applied Yjs transaction -- i.e.
+		// essentially the instant a peer types -- so it's useful for
+		// low-latency debug logging of line 0 (the title candidate),
+		// unlike the periodic snapshot logging in store() below, which
+		// only runs once the debounced persistence flush happens.
+		// Registered once per room, right after the room's crdt.Doc is
+		// constructed and before any peer can touch it (see ygo's
+		// OnLoadDocument doc comment).
+		yjsServer.OnLoadDocument = func(_ context.Context, room string, doc *crdt.Doc) error {
+			doc.GetText("content").Observe(func(_ crdt.YTextEvent) {
+				text := doc.GetText("content").ToString()
+				slog.Debug("line0 changed", "room", room, "line0", firstLine(text))
+			})
+			return nil
+		}
+
 		// Deleting a card should stop tracking (and drop) its live
 		// room too, so a deleted card doesn't linger in memory here
 		// once it no longer exists in PocketBase.
@@ -255,6 +274,17 @@ func (p *ydocPersistence) updatePreview(room, text string) error {
 	}
 	record.Set("description", description)
 	return p.app.Save(record)
+}
+
+// firstLine returns the text up to (but excluding) the first newline
+// -- the document's line 0, which doubles as the title candidate (see
+// slug.go's resolveTitle). Returns the whole string when there is no
+// newline yet (e.g. a brand-new, single-line draft).
+func firstLine(text string) string {
+	if i := strings.IndexByte(text, '\n'); i >= 0 {
+		return text[:i]
+	}
+	return text
 }
 
 // descriptionMaxRunes caps how much text buildPreview keeps, counted
