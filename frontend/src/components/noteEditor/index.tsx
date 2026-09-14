@@ -20,6 +20,7 @@ import { titleLineHighlight } from "./titleLineHighlight";
 import { editorTheme } from "./editorTheme";
 import { indentUnit } from "@codemirror/language";
 import { cardpotSyntax } from "./parser/cardpot";
+import { syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language";
 import { syntaxReveal } from "./syntaxReveal";
 import { wikiLinkNavigation } from "./wikiLinkNavigation";
 import { createCard, updateCardTitle } from "../../lib/cardApi";
@@ -235,6 +236,9 @@ export default function NoteEditor(props: NoteEditorProps) {
         // to hide/show the raw markup around the cursor, Obsidian-
         // style (see syntaxReveal.ts).
         cardpotSyntax(),
+        // Colors tokens inside fenced code blocks once their
+        // language has resolved (see parser/cardpot/codeLanguages.ts).
+        syntaxHighlighting(defaultHighlightStyle),
         syntaxReveal,
         wikiLinkNavigation(props.potSlug, navigate),
         // A single real tab character per indent level, not spaces --

@@ -9,6 +9,7 @@ import {
 import { NodeType } from "@lezer/common";
 import { parser } from "@lezer/markdown";
 
+import { codeLanguageWrap } from "./codeLanguages";
 import { isMark, revealStyle } from "./nodeProps";
 import { parseBold } from "./rules/bold";
 import { parseFencedCode } from "./rules/fencedCode";
@@ -66,6 +67,10 @@ const cardpotParser = parser.configure({
     { name: "CardpotWikiLink", parse: parseWikiLink },
     { name: "CardpotInlineCode", parse: parseInlineCode },
   ],
+  // Nests a fenced code block's content in whatever language its
+  // info string (e.g. "```ts") resolves to, loaded on demand -- see
+  // codeLanguages.ts.
+  wrap: codeLanguageWrap,
 });
 
 function node(name: string): NodeType {
