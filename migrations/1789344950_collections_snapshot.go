@@ -1463,15 +1463,15 @@ func init() {
 						"type": "relation"
 					},
 					{
-						"help": "",
+						"help": "line number",
 						"hidden": false,
 						"id": "number1177347317",
-						"max": null,
-						"min": null,
-						"name": "position",
+						"max": 9007199254740991,
+						"min": 0,
+						"name": "ln",
 						"onlyInt": false,
 						"presentable": false,
-						"required": false,
+						"required": true,
 						"system": false,
 						"type": "number"
 					},
