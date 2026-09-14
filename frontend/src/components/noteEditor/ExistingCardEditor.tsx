@@ -1,4 +1,4 @@
-import { createSignal } from "solid-js";
+import { createSignal, onCleanup } from "solid-js";
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 import { IndexeddbPersistence } from "y-indexeddb";
@@ -13,7 +13,7 @@ export interface ExistingCardEditorProps {
   initialUpdate?: Uint8Array;
   onMergeTarget?: (target: string | null) => void;
   onLiveTitleChange?: (candidate: TitleCandidate) => void;
-  onTitleResolved?: (candidate: TitleCandidate) => void;
+  existingTitle?: string;
 }
 
 // Existing cards own the network lifecycle. Applying a just-created draft
@@ -42,7 +42,6 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
       lastResolved = candidate;
       mergeCards([result.card]);
       props.onMergeTarget?.(result.mergeTarget);
-      props.onTitleResolved?.(candidate);
     } catch (error) {
       console.error("[existing-card-editor] failed to save title:", error);
       setSaveError(true);
@@ -65,6 +64,12 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
     void send(candidate);
   };
 
+  onCleanup(() => {
+    provider.destroy();
+    idbProvider.destroy();
+    ydoc.destroy();
+  });
+
   return (
     <>
       {saveError() && (
@@ -75,13 +80,11 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
       )}
       <NoteEditor
         ydoc={ydoc}
-        cardId={props.cardId}
         provider={provider}
-        idbProvider={idbProvider}
         potSlug={props.potSlug}
         onConfirmedTitle={confirm}
-        onMergeTarget={props.onMergeTarget}
         onLiveTitleChange={props.onLiveTitleChange}
+        existingTitle={props.existingTitle}
       />
     </>
   );

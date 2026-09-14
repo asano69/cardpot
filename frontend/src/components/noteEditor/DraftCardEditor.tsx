@@ -1,12 +1,13 @@
-import { createSignal } from "solid-js";
+import { createSignal, onCleanup } from "solid-js";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
 import NoteEditor from "./index";
 import { createCard } from "../../lib/cardApi";
 import type { TitleCandidate } from "../../lib/titleCandidate";
+import { mergeCards } from "../../lib/cardsStore";
 
 export interface DraftCardEditorProps {
-  potId: string;
+  potId: () => string | undefined;
   potSlug: () => string;
   initialTitle?: string;
   draftKey: string;
@@ -28,7 +29,10 @@ export default function DraftCardEditor(props: DraftCardEditorProps) {
     if (creating || created) return;
     creating = true;
     try {
-      const result = await createCard(props.potId, candidate);
+      const potId = props.potId();
+      if (!potId) return;
+      const result = await createCard(potId, candidate);
+      mergeCards([result.card]);
       created = true;
       setSaveError(false);
       props.onMergeTarget?.(result.mergeTarget);
@@ -41,21 +45,25 @@ export default function DraftCardEditor(props: DraftCardEditorProps) {
     }
   };
 
+  onCleanup(() => {
+    idbProvider.destroy();
+    ydoc.destroy();
+  });
+
   return (
     <>
       {saveError() && (
         <p class="mb-4 text-sm text-[#dc3545]">
-          Failed to create this card. Your text is saved locally; edit the title again to retry.
+          Failed to create this card. Your text is saved locally; edit the title
+          again to retry.
         </p>
       )}
       <NoteEditor
         ydoc={ydoc}
-        idbProvider={idbProvider}
         potSlug={props.potSlug}
         initialTitle={props.initialTitle}
         autofocus
         onConfirmedTitle={create}
-        onMergeTarget={props.onMergeTarget}
       />
     </>
   );
