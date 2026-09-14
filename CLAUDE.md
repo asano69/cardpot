@@ -46,6 +46,7 @@ from flask import Flask
 - clauderic/dnd-kit v0.5.0
 - CodeMirror6
 - yjs
+- googlechrome/workbox
 
 
 ## Work in progress
