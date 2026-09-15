@@ -125,6 +125,120 @@ Lezer/Cardpot パーサでの設計:
 
 - Lezerにおいては、型（クラス）そのものを組み合わせで動的生成することはできない。型名のリストは静的に固定されている制約がある。
 
+そのためこの部分の設計はsb-spec/cahce/lezer-mdの設計を参考にする必要がある。
+そこでは、おそらく ネストノードを使っていると思う
+```
+Italic {
+  "*" InlineContent "*"
+}
+
+Bold {
+  "**" InlineContent "**"
+}
+```
+結果
+```
+Italic
+  Bold
+    Text
+```
+ASTを後段で解釈すると
+```
+{
+  text: "hello",
+  marks: ["italic", "bold"]
+}
+```
+へ変換できます。これがlezerらしいやり方だと思う。
+その方向性で正しいと思います。実際、これは Lezer/CodeMirror 6 の設計思想そのもの（`@lezer/markdown` の Emphasis/StrongEmphasis も同じ発想）で、CommonMark の ATXHeading1〜6 が「level を動的属性にせず固定個の型で列挙する」のと同じパターンです。ただし cosy/scrapbox の Decoration は CommonMark の emphasis とは構造が少し違うので、そこを踏まえて設計すると詰まらずに済むと思います。
+
+## CommonMark の Emphasis とは前提が違う点
+
+`**a *b* c**` は「別々のデリミタ対」が実際にソース上に複数存在するので、ネストは自然に生まれます（`resolveMarkers` が delimiter を後からマッチングして入れ子にする）。
+
+一方 scrapbox の Decoration は `[*/ text]` のように **1個のブラケットに複数のdeco文字をまとめて書く**記法なので、ソース上のデリミタトークンは実質1個（`"[*/  "` と `"]"`）しかありません。つまりご提案の「ネスト」は、ソースに複数の区切り文字があるから生まれるのではなく、**parse関数側が意図的に合成する**ものです。ここは lezer-markdown の Emphasis とは動機が違うので、コメントに残しておいたほうが後で読む人（未来の自分）が混乱しないと思います。
+
+## だとすると Mark(開始/終了トークン) はどこに付けるか
+
+この違いから、素直に「各マーク型に個別の open/close mark を持たせる」のは無理です（区切り文字が1個しかないので）。設計としては:
+
+- **最も外側のノードだけ**が実際の開始/終了マーカー（`isMark` 付き）を持つ
+- **内側にネストしたラッパー型**はマーカーを持たず、同じ range を再度ラップして自分の `revealStyle` クラスを乗せるだけ
+
+`syntaxReveal.ts` は revealStyle が付いたノードを個別に処理するので、内側ラッパーは「マークを持たないノード」として扱われ、常時スタイルが乗った状態になります（＝装飾効果自体は常に見える。cursor で reveal/hide されるのは一番外側のマーカーだけ）。これは既存の実装とも整合します。
+
+## 内部のインライン再帰
+
+現状の `parseBold` は中身を再帰パースしていません（`[* [Link]]` の `[Link]` は解釈されない）。scrapbox 完全対応を優先するなら、cosy の `parse_nodes_no_deco` に相当する処理が必要で、Lezer 的には ATXHeading や Table セルが使っている手法（`cx.parser.parseInline(text.slice(...), offset)` を呼んで子要素配列を得る）がそのまま使えます。
+
+## ラフなスケッチ
+
+```ts
+// rules/decoration.ts
+// Cosense's visually-defined decoration characters, in a fixed canonical
+// nesting order (outermost first). This list is static by design -- Lezer
+// node types can't be synthesized per combination, so every recognized
+// deco char gets its own node type and combinations are expressed by
+// nesting these types around the same source range.
+const MARKS = [
+  { char: "*", node: "Bold" },
+  { char: "/", node: "Italic" },
+  { char: "-", node: "Strikethrough" },
+  { char: "_", node: "Underline" },
+] as const;
+
+export function parseDecoration(cx: InlineContext, next: number, pos: number): number {
+  if (next !== 91 /* [ */) return -1;
+
+  let i = pos + 1;
+  while (i < cx.end && cx.char(i) !== 32 && cx.char(i) !== 93 && cx.char(i) !== 10) i++;
+  const decos = cx.slice(pos + 1, i);
+  if (decos === "" || cx.char(i) !== 32) return -1;
+
+  const contentFrom = i + 1;
+  let end = contentFrom;
+  while (end < cx.end && cx.char(end) !== 93 && cx.char(end) !== 10) end++;
+  if (cx.char(end) !== 93) return -1;
+
+  const active = MARKS.filter((m) => decos.includes(m.char));
+  if (active.length === 0) return -1; // no recognized char -> fall through (e.g. to WikiLink)
+
+  // Recurse so nested WikiLink/Code/etc. inside the decoration still parse,
+  // mirroring cosy's parse_nodes_no_deco.
+  let children = cx.parser.parseInline(cx.slice(contentFrom, end), contentFrom);
+
+  // Nest innermost -> outermost. Inner wrappers carry no marks of their own;
+  // they exist purely so their own revealStyle CSS class applies.
+  for (let k = active.length - 1; k > 0; k--) {
+    children = [cx.elt(active[k].node, contentFrom, end, children)];
+  }
+  const outer = active[0].node;
+  return cx.addElement(
+    cx.elt(outer, pos, end + 1, [
+      cx.elt(`${outer}Mark`, pos, contentFrom),
+      ...children,
+      cx.elt(`${outer}Mark`, end, end + 1),
+    ]),
+  );
+}
+```
+
+`index.ts` 側は `defineNodes` に `Italic`/`ItalicMark`/`Strikethrough`/`StrikethroughMark`/`Underline`/`UnderlineMark` を足し、`revealStyle`/`isMark` も同様に登録すれば既存の仕組みにそのまま乗ります。
+
+## `*` の連続数（サイズレベル）について
+
+`***text***` のようなレベルは、`Bold1`〜`Bold10` のような型を10個作るのではなく、**単一の `Bold` 型のまま**にして、実際の `*` の個数はビュー層で `view.state.sliceDoc(open.from, open.to)` からその場で数えてCSSに反映するのが良いと思います。型を静的に保つという制約とも相性が良く、シンプルさも保てます。
+
+## 進め方について
+
+`plan.md` の Phase 2 の記述どおり、いきなり全部やると組み合わせ数でテストケースが爆発するので、
+
+1. まず `*` 単体の一般化（decosが `*` のみのケースを Bold として通す。ネスト機構はまだ不要）
+2. 2つ目のマーク（`/` など）を追加するタイミングで、上記のネスト機構を導入
+
+という順序が安全だと思います。ネストの複雑さは「同時に組み合わせるマークが2種類以上必要になった瞬間」に初めて要る話なので、それまで持ち込まない方が保守しやすいはずです。
+
+
 ### Phase 3: 角括弧の多義性解決
 
 最難関。`[...]` の中身によって WikiLink / 外部リンク / 画像 / リンク+ラベル / Icon / `[[...]]` の Strong 系に化ける。**ここは 0章で述べた通り、scrapbox-parser の正規表現優先順位配列ではなく、cosy の `parser/bracket.rs` 一式（`bracket_content.rs`, `bracket/links_and_pages.rs`, `bracket/icon.rs`, `bracket/coordinate.rs`, `bracket/math.rs`, `bracket/project_link.rs`）のロジック構造を移植元にする。**
