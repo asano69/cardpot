@@ -54,7 +54,7 @@ cosy のディスパッチ順序をそのまま「要件一覧」として転記
 | HashTag `#tag` | `HashTagNode.ts` | ✅ 実装済み | — |
 | Blank `[ ]` | `BlankNode.ts` | ✅ 実装済み | — |
 | NumberList `1. text` | `NumberListNode.ts` | ❌ 未実装（行頭パターンなので block 寄り） | Phase 4 |
-| Decoration `[* x]` `[/ x]` ... | `DecorationNode.ts` | ⚠️ `*` のみ実装済み（`Bold` 固定） | Phase 2 |
+| Decoration `[* x]` `[/ x]` ... | `DecorationNode.ts` | ✅ 実装済み（`rules/decoration.ts`。`*`/`/` の組み合わせとネストに対応） | — |
 | Formula `[$ x]` | `FormulaNode.ts` | ❌ 未実装 | Phase 3 以降（優先度低。角括弧ディスパッチャの1分岐として追加） |
 | StrongImage / StrongIcon / Strong `[[...]]` | `StrongImageNode.ts` / `StrongIconNode.ts` / `StrongNode.ts` | ❌ 未実装 | Phase 3 |
 | Image `[url]` | `ImageNode.ts` | ❌ 未実装 | Phase 3 |
@@ -65,7 +65,6 @@ cosy のディスパッチ順序をそのまま「要件一覧」として転記
 
 この表が唯一のソース・オブ・トゥルースになる。新しい記法に着手する前に、この表の該当行のステータスを更新すること。
 
-- rules/bold.ts はまだ削除していません（ステップ4の後片付けで対応予定、doc内にもその旨明記されています）。
 
 ## 3. 実装フェーズ（統合ロードマップ）
 
