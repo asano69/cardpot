@@ -70,6 +70,24 @@ describe("Cardpot Lezer syntax", () => {
     );
   });
 
+  it("nests multiple decoration characters in MARKS' canonical order", () => {
+    expect(tree("[*/ text]")).toBe(
+      "Document(Paragraph(Bold(BoldMark,Italic,BoldMark)))",
+    );
+  });
+
+  it("nests the same way regardless of the characters' order in the source", () => {
+    expect(tree("[/* text]")).toBe(
+      "Document(Paragraph(Bold(BoldMark,Italic,BoldMark)))",
+    );
+  });
+
+  it("recurses into a combined decoration's content", () => {
+    expect(tree("[*/ [Link]]")).toBe(
+      "Document(Paragraph(Bold(BoldMark,Italic(WikiLink(WikiLinkMark,WikiLinkMark)),BoldMark)))",
+    );
+  });
+
   it("recursively parses a decoration's content so a nested WikiLink still resolves", () => {
     // Unlike the old parseBold, which stopped scanning at the first "[",
     // the shared decoration dispatcher tracks bracket depth and re-parses

@@ -1,21 +1,30 @@
 import type { InlineContext } from "@lezer/markdown";
 
-// Generic decoration dispatcher: replaces the old "[* text]"-only Bold rule.
-// At this step only a single decoration character (repeated any number of
-// times, e.g. "***" or "//") is recognized -- combining distinct characters
-// in one bracket (e.g. "[*/ text]") requires the nesting mechanism
-// introduced in a later step (see docs/parser/plan-phase2.md, step 3).
+// Combining decoration characters in a single bracket (e.g. "[*/
+// text]") requires nesting: Lezer node types are static, so there is
+// no way to synthesize a "Bold+Italic" type per combination. Instead
+// every recognized character gets its own node type, and the active
+// marks are nested around the same source range in this fixed
+// canonical order (outermost first) -- regardless of the order the
+// characters actually appear in the source, so "[*/ text]" and
+// "[/* text]" nest identically. Only the outermost nesting level
+// carries the real open/close mark elements (isMark); every inner
+// wrapper exists purely to apply its own revealStyle CSS class to
+// that same range.
 const MARKS = [
-  { code: 42 /* * */, node: "Bold" },
-  { code: 47 /* / */, node: "Italic" },
+  { char: "*", node: "Bold" },
+  { char: "/", node: "Italic" },
 ] as const;
 
-// "[<mark>+ text]": an opening "[", one or more of the same decoration
-// character, a space, then content (recursively parsed as inline so nested
-// WikiLink/Code/etc. still resolve -- unlike the old Bold rule, which never
-// recursed), then a closing "]". Bracket depth is tracked while scanning for
-// the closing "]" so nested brackets in the content (e.g. "[Link]") don't
-// prematurely end the decoration.
+const MARK_CODES = new Set(MARKS.map((m) => m.char.charCodeAt(0)));
+
+// "[<marks>+ text]": an opening "[", one or more characters drawn
+// from the recognized decoration set (any mix, e.g. "*/" or "//*"), a
+// space, then content (recursively parsed as inline so nested
+// WikiLink/Code/etc. still resolve), then a closing "]". Bracket
+// depth is tracked while scanning for the closing "]" so nested
+// brackets in the content (e.g. "[Link]") don't prematurely end the
+// decoration.
 export function parseDecoration(
   cx: InlineContext,
   next: number,
@@ -23,14 +32,11 @@ export function parseDecoration(
 ): number {
   if (next !== 91 /* [ */) return -1;
 
-  const markCode = cx.char(pos + 1);
-  const mark = MARKS.find((m) => m.code === markCode);
-  if (!mark) return -1;
-
   let i = pos + 1;
-  while (cx.char(i) === mark.code) i++;
-  if (cx.char(i) !== 32 /* space */) return -1;
+  while (i < cx.end && MARK_CODES.has(cx.char(i))) i++;
+  if (i === pos + 1 || cx.char(i) !== 32 /* space */) return -1;
 
+  const decos = cx.slice(pos + 1, i);
   const contentFrom = i + 1;
 
   let depth = 0;
@@ -47,17 +53,25 @@ export function parseDecoration(
   }
   if (end === contentFrom || cx.char(end) !== 93) return -1;
 
-  const children = cx.parser.parseInline(
-    cx.slice(contentFrom, end),
-    contentFrom,
-  );
+  // Active marks, in MARKS' canonical order -- not the order their
+  // characters appeared in `decos`.
+  const active = MARKS.filter((m) => decos.includes(m.char));
 
-  const markName = `${mark.node}Mark`;
+  // Recurse so nested WikiLink/Code/etc. inside the decoration still
+  // resolve. Only the innermost wrapper actually holds these parsed
+  // children; every wrapper around it just re-nests the same range.
+  let children = cx.parser.parseInline(cx.slice(contentFrom, end), contentFrom);
+  for (let k = active.length - 1; k > 0; k--) {
+    children = [cx.elt(active[k].node, contentFrom, end, children)];
+  }
+
+  const outer = active[0].node;
+  const outerMark = `${outer}Mark`;
   return cx.addElement(
-    cx.elt(mark.node, pos, end + 1, [
-      cx.elt(markName, pos, contentFrom),
+    cx.elt(outer, pos, end + 1, [
+      cx.elt(outerMark, pos, contentFrom),
       ...children,
-      cx.elt(markName, end, end + 1),
+      cx.elt(outerMark, end, end + 1),
     ]),
   );
 }

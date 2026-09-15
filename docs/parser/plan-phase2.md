@@ -44,6 +44,13 @@
   - 単一マークのみのケース（ステップ2で追加したテスト）が壊れていないこと。
   - `syntaxReveal.ts` 側でカーソルが触れていない時に外側のマークだけ隠れ、内側ラッパーは常時スタイルが乗っている状態になること（手動確認 or 可能ならユニットテスト）。
 
+### 作業報告
+**補足:**
+- `syntaxReveal.ts` / `editorTheme.ts` / `index.ts`（`defineNodes`, `revealStyle`, `isMark`）は変更不要です。ノード型（`Bold`/`Italic`）自体は既に登録済みで、`syntaxReveal.ts` は木を走査して各ノードに `revealStyle` を適用する汎用実装のため、ネストした `Italic` にも自動的に `.cm-italic` が乗ります。
+- 内側の `Italic` はマーク（`isMark` 要素）を持たないため、`syntaxReveal` は隠す対象を見つけず常に表示されたままになり、plan通りの「一番外側だけカーソルで reveal/hide」という挙動になります。
+- Phase 2 のスコープ通り、対応する記号は引き続き `*`（Bold）と `/`（Italic）のみです（`-`/`_` など他の DECO_CHARS への拡張は見送り済み）。
+
+
 ## ステップ4: 後片付け・ドキュメント更新
 - `docs/parser/plan.md` の該当チェックリスト（記法カバレッジ表・Phase 2 セクション）のステータスを更新。
 - `rules/bold.ts` が `decoration.ts` に吸収され不要になった場合は削除し、`index.ts` の import を整理。
