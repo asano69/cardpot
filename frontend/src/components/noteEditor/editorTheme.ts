@@ -120,4 +120,16 @@ export const editorTheme = EditorView.theme({
     color: "light-dark(#0969da, #58a6ff)",
     cursor: "pointer",
   },
+
+  // HashTag and Blank are always visible syntax nodes. Their colors make the
+  // tokens scannable without opting them into syntaxReveal's hidden-mark flow.
+  ".cm-hashtag": {
+    color: "light-dark(#8250df, #d2a8ff)",
+    cursor: "pointer",
+  },
+  ".cm-blank": {
+    backgroundColor:
+      "light-dark(rgba(234, 179, 8, 0.18), rgba(250, 204, 21, 0.24))",
+    borderRadius: "3px",
+  },
 });

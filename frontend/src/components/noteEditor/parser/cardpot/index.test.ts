@@ -16,6 +16,20 @@ describe("Cardpot Lezer syntax", () => {
     );
   });
 
+  it("parses Scrapbox-compatible hashtags at whitespace boundaries", () => {
+    expect(tree("#tag #hash#Tag This is a #second .")).toBe(
+      "Document(Paragraph(HashTag,HashTag,HashTag))",
+    );
+    expect(tree("# →#notTag←")).toBe("Document(Paragraph)");
+  });
+
+  it("parses whitespace-only brackets as blanks before WikiLinks", () => {
+    expect(tree("[ ] [　] [\t] [ 　 \t　\t ] [page]")).toBe(
+      "Document(Paragraph(Blank,Blank,Blank,Blank,WikiLink(WikiLinkMark,WikiLinkMark)))",
+    );
+    expect(tree("[] [*** [ ]]")).toBe("Document(Paragraph(Blank))");
+  });
+
   it("recognizes a fenced block line by line and excludes its content from inline parsing", () => {
     expect(tree("before\n```ts\n[not-a-link]\n```\nafter")).toBe(
       "Document(Paragraph,FencedCode(FencedCodeMark,FencedCodeMark),Paragraph)",
@@ -32,13 +46,13 @@ describe("Cardpot Lezer syntax", () => {
     expect(tree("> [* bold] [page] `code`")).toBe(
       "Document(Quote(QuoteMark,Bold(BoldMark,BoldMark),WikiLink(WikiLinkMark,WikiLinkMark),Code(CodeMark,CodeMark)))",
     );
-    expect(tree(">no separating space")).toBe(
-      "Document(Quote(QuoteMark))",
-    );
+    expect(tree(">no separating space")).toBe("Document(Quote(QuoteMark))");
   });
 
   it("only recognizes quote prefixes after space indentation", () => {
     expect(tree("  > indented quote")).toBe("Document(Quote(QuoteMark))");
-    expect(tree("\t> not a cosy-style indented quote")).toBe("Document(Paragraph)");
+    expect(tree("\t> not a cosy-style indented quote")).toBe(
+      "Document(Paragraph)",
+    );
   });
 });

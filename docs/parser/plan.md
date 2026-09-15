@@ -51,8 +51,8 @@ cosy のディスパッチ順序をそのまま「要件一覧」として転記
 | 記法 | scrapbox-parser 実装 | Cardpot 現状 | 対応フェーズ |
 |---|---|---|---|
 | InlineCode `` `x` `` | `CodeNode.ts` | ✅ 実装済み（`rules/inlineCode.ts`） | — |
-| HashTag `#tag` | `HashTagNode.ts` | ❌ 未実装 | Phase 1 |
-| Blank `[ ]` | `BlankNode.ts` | ❌ 未実装 | Phase 1 |
+| HashTag `#tag` | `HashTagNode.ts` | ✅ 実装済み | — |
+| Blank `[ ]` | `BlankNode.ts` | ✅ 実装済み | — |
 | NumberList `1. text` | `NumberListNode.ts` | ❌ 未実装（行頭パターンなので block 寄り） | Phase 4 |
 | Decoration `[* x]` `[/ x]` ... | `DecorationNode.ts` | ⚠️ `*` のみ実装済み（`Bold` 固定） | Phase 2 |
 | Formula `[$ x]` | `FormulaNode.ts` | ❌ 未実装 | Phase 3 以降（優先度低。角括弧ディスパッチャの1分岐として追加） |

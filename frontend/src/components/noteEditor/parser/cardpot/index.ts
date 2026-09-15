@@ -11,8 +11,10 @@ import { parser } from "@lezer/markdown";
 
 import { codeLanguageWrap } from "./codeLanguages";
 import { isMark, revealStyle } from "./nodeProps";
+import { parseBlank } from "./rules/blank";
 import { parseBold } from "./rules/bold";
 import { parseFencedCode } from "./rules/fencedCode";
+import { parseHashTag } from "./rules/hashTag";
 import { parseInlineCode } from "./rules/inlineCode";
 import { parseQuote } from "./rules/quote";
 import { parseWikiLink } from "./rules/wikiLink";
@@ -55,12 +57,16 @@ const cardpotParser = parser.configure({
     "CodeMark",
     "WikiLink",
     "WikiLinkMark",
+    "HashTag",
+    "Blank",
   ],
   props: [
     revealStyle.add({
       Bold: "cm-bold",
       Code: "cm-inline-code",
       WikiLink: "cm-wikilink",
+      HashTag: "cm-hashtag",
+      Blank: "cm-blank",
     }),
     isMark.add({ BoldMark: true, CodeMark: true, WikiLinkMark: true }),
   ],
@@ -70,8 +76,10 @@ const cardpotParser = parser.configure({
   ],
   parseInline: [
     { name: "CardpotBold", parse: parseBold },
+    { name: "CardpotBlank", parse: parseBlank },
     { name: "CardpotWikiLink", parse: parseWikiLink },
     { name: "CardpotInlineCode", parse: parseInlineCode },
+    { name: "CardpotHashTag", parse: parseHashTag },
   ],
   // Nests a fenced code block's content in whatever language its
   // info string (e.g. "```ts") resolves to, loaded on demand -- see
@@ -95,6 +103,8 @@ export const Code = node("Code");
 export const CodeMark = node("CodeMark");
 export const WikiLink = node("WikiLink");
 export const WikiLinkMark = node("WikiLinkMark");
+export const HashTag = node("HashTag");
+export const Blank = node("Blank");
 export const FencedCode = node("FencedCode");
 export const FencedCodeMark = node("FencedCodeMark");
 
