@@ -58,7 +58,7 @@ export default function CardItem(props: CardItemProps) {
       classList={{ "opacity-40": isDragging() }}
     >
       <A
-        use:ripple
+        ref={ripple}
         href={`/${props.potSlug}/${titleToSegment(props.card.title)}`}
       >
         {/* Folded-corner indicator for pinned cards (see
