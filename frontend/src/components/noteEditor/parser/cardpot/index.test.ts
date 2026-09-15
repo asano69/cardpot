@@ -51,6 +51,27 @@ describe("Cardpot Lezer syntax", () => {
     );
   });
 
+  it("parses Italic through the same generic decoration dispatcher as Bold", () => {
+    expect(tree("[/ italic]")).toBe(
+      "Document(Paragraph(Italic(ItalicMark,ItalicMark)))",
+    );
+  });
+
+  it("generalizes the repeated-character rule to Italic too", () => {
+    expect(tree("[// two]")).toBe(
+      "Document(Paragraph(Italic(ItalicMark,ItalicMark)))",
+    );
+  });
+
+  it("recursively parses a decoration's content so a nested WikiLink still resolves", () => {
+    // Unlike the old parseBold, which stopped scanning at the first "[",
+    // the shared decoration dispatcher tracks bracket depth and re-parses
+    // its content as inline, so a nested link inside the decoration works.
+    expect(tree("[* [Link] text]")).toBe(
+      "Document(Paragraph(Bold(BoldMark,WikiLink(WikiLinkMark,WikiLinkMark),BoldMark)))",
+    );
+  });
+
   it("recognizes a fenced block line by line and excludes its content from inline parsing", () => {
     expect(tree("before\n```ts\n[not-a-link]\n```\nafter")).toBe(
       "Document(Paragraph,FencedCode(FencedCodeMark,FencedCodeMark),Paragraph)",

@@ -12,7 +12,7 @@ import { parser } from "@lezer/markdown";
 import { codeLanguageWrap } from "./codeLanguages";
 import { isMark, revealStyle } from "./nodeProps";
 import { parseBlank } from "./rules/blank";
-import { parseBold } from "./rules/bold";
+import { parseDecoration } from "./rules/decoration";
 import { parseFencedCode } from "./rules/fencedCode";
 import { parseHashTag } from "./rules/hashTag";
 import { parseInlineCode } from "./rules/inlineCode";
@@ -53,6 +53,8 @@ const cardpotParser = parser.configure({
     "QuoteMark",
     "Bold",
     "BoldMark",
+    "Italic",
+    "ItalicMark",
     "Code",
     "CodeMark",
     "WikiLink",
@@ -63,19 +65,25 @@ const cardpotParser = parser.configure({
   props: [
     revealStyle.add({
       Bold: "cm-bold",
+      Italic: "cm-italic",
       Code: "cm-inline-code",
       WikiLink: "cm-wikilink",
       HashTag: "cm-hashtag",
       Blank: "cm-blank",
     }),
-    isMark.add({ BoldMark: true, CodeMark: true, WikiLinkMark: true }),
+    isMark.add({
+      BoldMark: true,
+      ItalicMark: true,
+      CodeMark: true,
+      WikiLinkMark: true,
+    }),
   ],
   parseBlock: [
     { name: "CardpotFencedCode", parse: parseFencedCode },
     { name: "CardpotQuote", parse: parseQuote },
   ],
   parseInline: [
-    { name: "CardpotBold", parse: parseBold },
+    { name: "CardpotDecoration", parse: parseDecoration },
     { name: "CardpotBlank", parse: parseBlank },
     { name: "CardpotWikiLink", parse: parseWikiLink },
     { name: "CardpotInlineCode", parse: parseInlineCode },
@@ -99,6 +107,8 @@ function node(name: string): NodeType {
 // compare these by identity when decorating or navigating syntax nodes.
 export const Bold = node("Bold");
 export const BoldMark = node("BoldMark");
+export const Italic = node("Italic");
+export const ItalicMark = node("ItalicMark");
 export const Code = node("Code");
 export const CodeMark = node("CodeMark");
 export const WikiLink = node("WikiLink");

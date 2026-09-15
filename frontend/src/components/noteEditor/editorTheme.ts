@@ -92,6 +92,10 @@ export const editorTheme = EditorView.theme({
     fontWeight: "bold",
   },
 
+  ".cm-italic": {
+    fontStyle: "italic",
+  },
+
   // Inline code span (see parser/cardpot's Code node): a monospace
   // font plus GitHub's own subtle code-background tint.
   ".cm-inline-code": {
