@@ -1,6 +1,7 @@
 import { onCleanup, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { useSortable } from "@dnd-kit/solid/sortable";
+import ripplet from "ripplet.js";
 import { registerCardElement } from "../../lib/cardsStore";
 import { titleToSegment } from "../../lib/slugify";
 import { deriveCardGridTitle } from "../../lib/cardGridTitle";
@@ -25,6 +26,48 @@ export interface CardItemProps {
 // internal/serve/ydoc.go's buildTitleAndPreview) from the card's live
 // Yjs body, not parsed here.
 export default function CardItem(props: CardItemProps) {
+  // Touch drags start with the same pointerdown event as taps. Keep the
+  // ripple pending until the pointer is released so merely beginning a
+  // mobile drag does not show a tap ripple. This matches dnd-kit's
+  // pointer activation distance (see CardList.tsx).
+  const TOUCH_DRAG_THRESHOLD_PX = 5;
+  let touchStart: { pointerId: number; x: number; y: number } | undefined;
+
+  const handlePointerDown = (event: PointerEvent) => {
+    if (event.pointerType !== "touch") {
+      ripplet(event);
+      return;
+    }
+
+    touchStart = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+    };
+  };
+
+  const handlePointerMove = (event: PointerEvent) => {
+    if (!touchStart || event.pointerId !== touchStart.pointerId) return;
+
+    if (
+      Math.hypot(event.clientX - touchStart.x, event.clientY - touchStart.y) >=
+      TOUCH_DRAG_THRESHOLD_PX
+    ) {
+      touchStart = undefined;
+    }
+  };
+
+  const handlePointerUp = (event: PointerEvent) => {
+    if (!touchStart || event.pointerId !== touchStart.pointerId) return;
+
+    touchStart = undefined;
+    ripplet(event);
+  };
+
+  const cancelTouchRipple = () => {
+    touchStart = undefined;
+  };
+
   // Makes this card draggable and a drop target within the grid.
   // Getter syntax (not a plain destructure) is required so the hook
   // re-reads id/index reactively instead of only once at setup -- see
@@ -56,7 +99,13 @@ export default function CardItem(props: CardItemProps) {
       class="card-grid-item"
       classList={{ "opacity-40": isDragging() }}
     >
-      <A href={`/${props.potSlug}/${titleToSegment(props.card.title)}`}>
+      <A
+        href={`/${props.potSlug}/${titleToSegment(props.card.title)}`}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={cancelTouchRipple}
+      >
         {/* Folded-corner indicator for pinned cards (see
             styles/components.css's .card-grid-item .pin). */}
         <Show when={props.card.pin}>

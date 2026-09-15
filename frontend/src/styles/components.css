@@ -294,6 +294,8 @@
     height: 100%;
     width: 100%;
     overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
     background-color: light-dark(#fff, #373b44);
     box-shadow: 0 2px 0 light-dark(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.2));
     border-radius: 2px;
