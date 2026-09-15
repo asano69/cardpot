@@ -69,7 +69,7 @@ cosy のディスパッチ順序をそのまま「要件一覧」として転記
 
 依存関係の少ない順に並べる。**Phase 0 は両ドキュメントに明記されていなかったが、Phase 4 に進む前に必須の下準備なので新設した。**
 
-### Phase 0: 行スコープブロックの基盤整備
+### Phase 0: 行スコープブロックの基盤整備（完了）
 
 Phase 4（Quote / Helpfeel / CommandLine / NumberList）はどれも「行頭パターンを検出し、残りを inline パースに委譲する」という同じ形を取る。今の `FencedCode` は複数行ブロックの実装例にはなるが、単一行ブロックの実装例が無い。ここを先に整備しておかないと Phase 4 で毎回車輪の再発明になる。
 
@@ -81,6 +81,8 @@ Phase 4（Quote / Helpfeel / CommandLine / NumberList）はどれも「行頭パ
 - 成果物: 単一行ブロック共通ヘルパー1つ + それを使った最小サンプル1つ（例えば `Quote` の骨組みだけ）。
 
 **DoD**: 新しい単一行ブロック記法を1つ追加するのに、rules/ に1ファイル足して登録するだけで済む状態になっていること。かつ、prefix 判定の分岐構造が cosy の `parse_block` と1対1で対応付けられる状態になっていること。
+
+**実施結果**: `rules/lineBlock.ts` に cosy と同順の `code:` → `table:` → `>` → `? ` → `$ `/`% ` のディスパッチを実装した。未対応の種別は Paragraph にフォールスルーさせ、最小の利用例として `rules/quote.ts` を追加した。Quote の本文は `cx.parser.parseInline` に渡すため、既存の Cardpot inline 記法をそのまま再帰的に解釈する。
 
 ### Phase 1: 単純な行内トークン
 

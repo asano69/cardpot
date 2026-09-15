@@ -27,4 +27,18 @@ describe("Cardpot Lezer syntax", () => {
       "Document(Paragraph(Code(CodeMark,CodeMark),WikiLink(WikiLinkMark,WikiLinkMark)))",
     );
   });
+
+  it("parses a quote line and delegates its content to Cardpot inline rules", () => {
+    expect(tree("> [* bold] [page] `code`")).toBe(
+      "Document(Quote(QuoteMark,Bold(BoldMark,BoldMark),WikiLink(WikiLinkMark,WikiLinkMark),Code(CodeMark,CodeMark)))",
+    );
+    expect(tree(">no separating space")).toBe(
+      "Document(Quote(QuoteMark))",
+    );
+  });
+
+  it("only recognizes quote prefixes after space indentation", () => {
+    expect(tree("  > indented quote")).toBe("Document(Quote(QuoteMark))");
+    expect(tree("\t> not a cosy-style indented quote")).toBe("Document(Paragraph)");
+  });
 });

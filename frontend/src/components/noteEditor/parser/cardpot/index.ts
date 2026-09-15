@@ -14,6 +14,7 @@ import { isMark, revealStyle } from "./nodeProps";
 import { parseBold } from "./rules/bold";
 import { parseFencedCode } from "./rules/fencedCode";
 import { parseInlineCode } from "./rules/inlineCode";
+import { parseQuote } from "./rules/quote";
 import { parseWikiLink } from "./rules/wikiLink";
 
 export { isMark, revealStyle };
@@ -46,6 +47,8 @@ const cardpotParser = parser.configure({
   defineNodes: [
     { name: "FencedCode", block: true },
     "FencedCodeMark",
+    { name: "Quote", block: true },
+    "QuoteMark",
     "Bold",
     "BoldMark",
     "Code",
@@ -61,7 +64,10 @@ const cardpotParser = parser.configure({
     }),
     isMark.add({ BoldMark: true, CodeMark: true, WikiLinkMark: true }),
   ],
-  parseBlock: [{ name: "CardpotFencedCode", parse: parseFencedCode }],
+  parseBlock: [
+    { name: "CardpotFencedCode", parse: parseFencedCode },
+    { name: "CardpotQuote", parse: parseQuote },
+  ],
   parseInline: [
     { name: "CardpotBold", parse: parseBold },
     { name: "CardpotWikiLink", parse: parseWikiLink },

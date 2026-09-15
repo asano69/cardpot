@@ -3,9 +3,11 @@
 
 /data/
 
+# Locally cloned reference implementations used by parser development.
+/sb-spec/
+
 pb_data*/
 node_modules/
 dist/
 tmp/
-
 
