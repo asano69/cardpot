@@ -1,0 +1,166 @@
+# Cardpot パーサ実装計画（統合版）
+
+`docs/parser/cardpot-parser.md` と `docs/parser/scrapbox-parser.md` はそれぞれ別の切り口（前者は「cosy を網羅性チェックリストとして使う」、後者は「scrapbox-parser を依存の少ない順にフェーズ分けする」）で書かれていて、そのままでは実装順序が一本化されていない。このドキュメントは両者を統合し、**この順番で実装すれば手戻りが最小になる**という単一のロードマップを示す。
+
+以後、このドキュメントを実装時の唯一の参照先とする。個別記法の細かい正規表現・エッジケースは都度 `scrapbox-parser`（TypeScript, 正規表現ベース）を、記法の網羅漏れチェックは `cosy`（Rust, winnow ベース）を参照する、という役割分担は変えない。
+
+## 0. 参照実装の役割分担
+
+cosy を「チェックリストとしてのみ使う」のは誤りで、記法によっては**cosy の方がロジックの正解**になっている箇所がある。用途を1つに決め打ちせず、記法ごとに使い分ける。
+
+| リポジトリ | 役割 | 使い方 |
+|---|---|---|
+| `sb-spec/cosy` | **① 網羅性チェックリスト**、かつ **② 構造・曖昧性解消ロジックの正解** | ①: `parser/mod.rs` の block ディスパッチ条件と `parser/node.rs` の `alt((...))` の並びを「サポートすべき記法一覧」として使う。②: **block分岐/行継続判定（`parser/block.rs`）と 角括弧の多義性解消（`parser/bracket.rs` 以下一式）は、ロジック構造そのものを移植元にする。** 理由は後述。 |
+| `sb-spec/scrapbox-parser` | **③ 単純記法の実装ソース**、かつ **④ 全記法共通のテストケース抽出元** | ③: 依存関係のない単純な行内記法（HashTag, Blank など）は正規表現をそのまま拝借してよい。④: `test/**/*.test.ts` の入力ケースは cosy 由来のロジックで実装した記法も含め、全フェーズで regression test の元ネタとして使う。 |
+| Cardpot (`frontend/src/components/noteEditor/parser/cardpot`) | **実装先** | `@lezer/markdown` ベース。既存の `Bold` / `WikiLink` / `Code` / `FencedCode` と同じ形（`nodeProps` で `revealStyle` / `isMark` を付け、`syntaxReveal.ts` が汎用的に表示制御する）を崩さずに拡張していく。 |
+
+### なぜ block分岐・曖昧性解消は cosy を正解とするか
+
+- **block分岐（Phase 0 の設計根拠）**: scrapbox-parser の `Pack.ts` は「全行を先にスキャンして pack にまとめる」事前パス方式で、Lezer の `BlockContext`（行を前から順にストリーム処理しながら、その場で「自分の担当か」を判定する）とは構造が違う。cosy の `parse_block` は「インデント数を数える → prefix で if/else 分岐 → デフォルトは line」という形で、これはそのまま Lezer の `BlockParser` が書くべき形と一致する。**Phase 0 の共通ヘルパーは cosy の `parse_block` の分岐構造を model にする。**
+- **角括弧の多義性解消（Phase 3 の設計根拠）**: scrapbox-parser は「正規表現を優先順位配列で並べて先勝ち」方式で、正規表現同士が重なるケース（例: `test/line/formula.test.ts` の「Formula の直後に decoration が続く」ケース）を個別のテストで力業で潰している。これは新しい記法を足すたびに既存の正規表現との衝突を心配する必要があるということで、Cardpot のように後から記法を継ぎ足していく前提には向かない。cosy は `bracket_content.rs::take_bracket_content` でネスト深度を数えて正しく `]` の対応を取り、`links_and_pages.rs` では `split_once`/`rsplit_once` でトークンを構造的に分類してから dispatch している。これは優先順位ゲームではなく構造的に曖昧性を解く実装なので、**Phase 3 の角括弧ディスパッチャは cosy のロジックを Lezer 用に移植する。** scrapbox-parser はこのフェーズでは regression test のケース抽出専用に留める（実装ロジックの参照元にはしない）。
+
+上記2箇所以外（Phase 1, Phase 4, Phase 5 の大半）は、cosy 側の実装が Rust/winnow の1行パーサ寄りで Lezer への移植メリットが薄いため、従来通り scrapbox-parser の正規表現を実装ソースとして使う。
+
+## 1. 現状のアーキテクチャ（前提知識）
+
+- `index.ts` が `cardpotParser`（`@lezer/markdown` の `parser.configure()`）を組み立てている。CommonMark の block/inline パーサは全部 `remove` してあり、`Paragraph` だけが残っている。
+- **inline** 拡張は `parseInline` 配列に `{ name, parse }` を足す形（`rules/bold.ts`, `rules/wikiLink.ts`, `rules/inlineCode.ts`）。`InlineContext` を受け取り、マッチしなければ `-1`、マッチすれば `cx.addElement(...)` で範囲とノードを登録する。
+- **block** 拡張は `parseBlock` 配列に `{ name, parse }` を足す形（`rules/fencedCode.ts` のみ現状）。`BlockContext` と `Line` を受け取り、`cx.nextLine()` で複数行を消費できる。
+- 表示制御は記法固有のコードを増やさず、`nodeProps.ts` の `revealStyle`（常時スタイルを当てるクラス）と `isMark`（カーソルが触れていない時だけ隠す delimiter）の2つのプロパティだけで `syntaxReveal.ts` が汎用処理している。**新しい記法もこの2プロパティに乗せるだけで表示制御が済む設計を維持する**。
+- タイトル行（1行目）は `titleCandidatePlugin.ts` / `titleLineHighlight.ts` が別枠で扱っており、構文パーサとは独立している。
+
+新しい記法を足すときは常に「① rules/ に parse 関数を書く → ② index.ts の `defineNodes` / `parseBlock` or `parseInline` / `props` に登録する → ③ 必要なら `editorTheme.ts` に CSS を足す」という3点セットになる。この型を崩さない。
+
+## 2. 記法カバレッジ・チェックリスト
+
+cosy のディスパッチ順序をそのまま「要件一覧」として転記し、Cardpot での現状・対応フェーズを併記する。
+
+### block レベル（cosy: `parser/block.rs` の分岐順）
+
+| 記法 | 判定条件 | scrapbox-parser 実装 | Cardpot 現状 | 対応フェーズ |
+|---|---|---|---|---|
+| CodeBlock | `code:` prefix | `CodeBlock.ts` | ✅ 実装済み（`FencedCode`。ただし構文は ```` ``` ```` 形式で scrapbox の `code:` とは別記法） | 対応不要（Cardpot 独自の ```` ``` ```` を正式採用。`code:` 対応要否は Phase 5 で判断） |
+| Table | `table:` prefix | `Table.ts` | ❌ 未実装 | Phase 5 |
+| Quote | `>` prefix | `QuoteNode.ts` | ❌ 未実装 | Phase 4 |
+| Helpfeel | `? ` prefix | `HelpfeelNode.ts` | ❌ 未実装 | Phase 4 |
+| CommandLine | `$ ` / `% ` prefix | `CommandLineNode.ts` | ❌ 未実装 | Phase 4 |
+| Line（デフォルト） | 上記以外 | `Line.ts` | ✅ 実装済み（`Paragraph`） | — |
+
+### inline レベル（cosy: `parser/node.rs` の `alt()` 順）
+
+| 記法 | scrapbox-parser 実装 | Cardpot 現状 | 対応フェーズ |
+|---|---|---|---|
+| InlineCode `` `x` `` | `CodeNode.ts` | ✅ 実装済み（`rules/inlineCode.ts`） | — |
+| HashTag `#tag` | `HashTagNode.ts` | ❌ 未実装 | Phase 1 |
+| Blank `[ ]` | `BlankNode.ts` | ❌ 未実装 | Phase 1 |
+| NumberList `1. text` | `NumberListNode.ts` | ❌ 未実装（行頭パターンなので block 寄り） | Phase 4 |
+| Decoration `[* x]` `[/ x]` ... | `DecorationNode.ts` | ⚠️ `*` のみ実装済み（`Bold` 固定） | Phase 2 |
+| Formula `[$ x]` | `FormulaNode.ts` | ❌ 未実装 | Phase 3 以降（優先度低。角括弧ディスパッチャの1分岐として追加） |
+| StrongImage / StrongIcon / Strong `[[...]]` | `StrongImageNode.ts` / `StrongIconNode.ts` / `StrongNode.ts` | ❌ 未実装 | Phase 3 |
+| Image `[url]` | `ImageNode.ts` | ❌ 未実装 | Phase 3 |
+| ExternalLink `[url label]` | `ExternalLinkNode.ts` | ❌ 未実装 | Phase 3 |
+| Icon `[x.icon]` | `IconNode.ts` | ❌ 未実装 | Phase 3 |
+| GoogleMap `[N35..,E139..]` | `GoogleMapNode.ts` | ❌ 未実装（優先度低） | Phase 3 の末尾、または見送り |
+| InternalLink `[title]` | `InternalLinkNode.ts` | ✅ 実装済み（`WikiLink`。ただし `[[title]]` ではなく `[title]` のみ） | Phase 3 で角括弧ディスパッチャに統合 |
+
+この表が唯一のソース・オブ・トゥルースになる。新しい記法に着手する前に、この表の該当行のステータスを更新すること。
+
+## 3. 実装フェーズ（統合ロードマップ）
+
+依存関係の少ない順に並べる。**Phase 0 は両ドキュメントに明記されていなかったが、Phase 4 に進む前に必須の下準備なので新設した。**
+
+### Phase 0: 行スコープブロックの基盤整備
+
+Phase 4（Quote / Helpfeel / CommandLine / NumberList）はどれも「行頭パターンを検出し、残りを inline パースに委譲する」という同じ形を取る。今の `FencedCode` は複数行ブロックの実装例にはなるが、単一行ブロックの実装例が無い。ここを先に整備しておかないと Phase 4 で毎回車輪の再発明になる。
+
+- **設計の model は cosy の `parser/block.rs` の `parse_block` にする**（0章で述べた通り、事前パス方式の scrapbox-parser `Pack.ts` ではなく）。具体的には次の3ステップの形をそのまま踏襲する：
+  1. 行頭の空白を数えて indent を確定する（`parse_block` の `indent_len` 相当）。
+  2. prefix を順番に if/else でチェックし、どの block 種別かを決める（`parse_block` の `if input.starts_with(...) else if ... else` の連鎖）。
+  3. 該当する block パーサに委譲し、無ければ通常の line（Paragraph）として扱う。
+- `rules/` に `lineBlock.ts`（仮）として、この3ステップに対応する共通ヘルパーを用意する。「prefix を除いた残りを inline パースに委譲する」部分は `codeLanguages.ts` の `parseMixed` パターン（`FencedCode` の中身を別言語パーサに委譲している部分）を参考にし、単一行ブロックの場合は「prefix 以降の残り全部を、外側と同じ `cardpotParser` のインライン規則で再帰的に解釈させる」だけでよい。
+- 成果物: 単一行ブロック共通ヘルパー1つ + それを使った最小サンプル1つ（例えば `Quote` の骨組みだけ）。
+
+**DoD**: 新しい単一行ブロック記法を1つ追加するのに、rules/ に1ファイル足して登録するだけで済む状態になっていること。かつ、prefix 判定の分岐構造が cosy の `parse_block` と1対1で対応付けられる状態になっていること。
+
+### Phase 1: 単純な行内トークン
+
+依存が無く、既存の `Bold` / `WikiLink` / `InlineCode` と全く同じ形（`InlineContext` を受けて範囲を返すだけ）で実装できるものから着手する。
+
+- **HashTag** (`#tag`)
+  - 参照: `scrapbox-parser/src/block/node/HashTagNode.ts` の正規表現とその周辺処理
+  - 実装: `rules/hashTag.ts` を新設。`revealStyle` は付けず（`#tag` 自体を隠す必要はない）、リンク色のスタイルだけ当てる。クリックナビゲーションは `wikiLinkNavigation.ts` と同様のパターンで別途追加可能（必須ではない）。
+- **Blank** (`[ ]`)
+  - 参照: `BlankNode.ts`
+  - 実装: `rules/blank.ts`。空白専用の角括弧なので、Phase 3 の角括弧ディスパッチャより前に「中身が空白のみの `[...]`」として先に弾いておくと Phase 3 の実装が単純になる。
+
+**DoD**: `#tag` と `[ ]`（半角/全角スペース、タブ含む）がハイライトされ、`syntaxReveal` の対象外（常時表示でよい記法）として動作する regression test が通ること。テストケースは `scrapbox-parser/test/line/hashTag.test.ts` と `blank.test.ts` の入力をそのまま流用する。
+
+### Phase 2: Decoration の汎用化
+
+現状 `Bold`（`[* text]` 固定）を Decoration に一般化するかどうかの判断ポイント。**簡潔さ優先の方針に従い、`*` の強度指定（`*-1`〜`*-10`）や他の記号（`!"#%&'()*+,-./{|}<>_~`）は今回は対応しない。** `[* text]` は現状のまま `Bold` として維持し、Phase 2 では手を入れない。
+
+理由: `userPreferences` にもある通りメンテナンス容易性を最優先する。Decoration の汎用化はテストケースを大きく増やす割に Cardpot 独自の使われ方（個人〜小規模チームの Wiki）では優先度が低い。将来ニーズが出た時点で別 PR として `Bold` → `Decoration`（`decos: string[]` を持つノード）へのリファクタリングを検討する。
+
+**このフェーズは「対応しないことを決める」フェーズとして扱い、実装作業はスキップして Phase 3 に進む。**
+
+### Phase 3: 角括弧の多義性解決
+
+最難関。`[...]` の中身によって WikiLink / 外部リンク / 画像 / リンク+ラベル / Icon / `[[...]]` の Strong 系に化ける。**ここは 0章で述べた通り、scrapbox-parser の正規表現優先順位配列ではなく、cosy の `parser/bracket.rs` 一式（`bracket_content.rs`, `bracket/links_and_pages.rs`, `bracket/icon.rs`, `bracket/coordinate.rs`, `bracket/math.rs`, `bracket/project_link.rs`）のロジック構造を移植元にする。**
+
+- **括弧の対応取り**: cosy の `bracket_content.rs::take_bracket_content` はネスト深度を数えて正しく対応する `]` を見つける（scrapbox-parser の `[^[\]]*` ベースの正規表現はネストを正しく扱えない）。Lezer 側でも同じ深度カウント方式で中身の範囲を確定させてから分類に入る。既存の `wikiLink.ts` は現状こそ簡易実装だが、Phase 3 ではこの深度カウント方式に置き換える。
+- **ディスパッチャ**: `rules/bracket.ts`（仮）に `decideBracketNodeType(content: string): BracketKind` のような純粋関数を用意する。中身を分類する判定ロジックは cosy の `bracket.rs` の `alt((parse_math, parse_icon, parse_project_link, parse_coordinate, parse_links_and_pages(extension)))` の順序と判定条件をそのまま踏襲する（scrapbox-parser の正規表現優先順位配列は使わない）。
+- **リンク/画像/ラベルの分類**: cosy の `links_and_pages.rs` は「スペースで区切った最初/最後のトークンを `split_once`/`rsplit_once` で取り出し、それぞれが URL かどうかを `infer_url`（MIME 判定つき）で分類してから組み合わせで dispatch する」という構造的な分類をしている。これを移植する。URL の拡張子/Gyazo 判定など具体的な正規表現の値だけは `scrapbox-parser/src/block/node/ImageNode.ts` / `StrongImageNode.ts` と突き合わせて漏れがないか確認する（値の出典は scrapbox-parser、分類の構造は cosy）。
+- `[[...]]`（二重括弧）と `[...]`（単括弧）は開き括弧の数で先に分岐する（`WikiLink` の既存実装 `rules/wikiLink.ts` を土台に、中身の分類だけ `decideBracketNodeType` に委譲する形にリファクタリング）。
+- 実装順序（依存の少ない順、cosy の `bracket.rs` の並びに準拠）:
+  1. Math (`[$ x]`) — 単純な prefix 判定
+  2. Icon (`[x.icon]`) — 単純な suffix 判定
+  3. ProjectLink (`[/project/page]`) — Cardpot に project 概念が無ければ見送り可（要判断）
+  4. Coordinate/GoogleMap（優先度低。時間が余れば対応、なければ見送り可）
+  5. links_and_pages 相当（ExternalLink / Image / LinkedImage / ラベル付きリンク / InternalLink）— 一番複雑なので最後
+  6. StrongImage / StrongIcon / Strong（`[[...]]`）は cosy の `strong.rs` を参照し、上記の分類ロジックを再利用する形にする
+  7. 既存 `WikiLink` を `decideBracketNodeType` 経由に統合
+
+**DoD**: `scrapbox-parser/test/line/{link,image,icon,strongImage,strongIcon,strong,googleMap,formula}.test.ts` の入力ケースを **cosy 由来のロジックで**パースし、少なくとも Node 種別の判定が一致すること（AST の形そのものは Lezer 用に異なってよい）。加えて、ネストした角括弧（`[a [b] c]` のようなケース）が破綻しないこと（scrapbox-parser 単体ベースの実装では見落としがちな観点なので明示的にテストする）。
+
+### Phase 4: 行スコープブロック
+
+Phase 0 で作った共通ヘルパーを使って、prefix 判定＋残りを inline delegate、を1記法ずつ足していく。
+
+- **Quote** (`> text`)
+- **Helpfeel** (`? text`)
+- **CommandLine** (`$ cmd` / `% cmd`)
+- **NumberList** (`1. text`)
+
+実装順は依存の少なさで決める：Quote → Helpfeel → CommandLine → NumberList（NumberList だけ数字の桁数を読む分、正規表現がわずかに複雑）。
+
+各記法につき、参照は `scrapbox-parser/src/block/node/{QuoteNode,HelpfeelNode,CommandLineNode,NumberListNode}.ts` の正規表現をそのまま使う。
+
+**DoD**: 4記法それぞれについて、対応する `scrapbox-parser/test/line/*.test.ts` の入力ケースが期待通りに block 化されること。
+
+### Phase 5: 複数行ブロック（Table）
+
+`rules/fencedCode.ts` の `cx.nextLine()` パターンを流用する。終端条件だけ「明示的な close マーク」ではなく「インデントレベルが戻ったら終了」に差し替える。
+
+- 参照: `scrapbox-parser/src/block/Table.ts`（タブ区切りでセルを分割し、各セルを再度 inline パースする部分）
+- Cardpot 版インデントはタブ文字が単位（`bulletEnter.ts` / `hangingIndent.ts` と同じ `\t` 基準）なので、scrapbox 本家のスペースインデントとは前提が異なる点に注意。既存の `LEADING_TABS_RE` と同じ考え方で終端判定する。
+
+`code:` prefix による CodeBlock（Table と同じ「複数行・インデント終端」構造）への対応要否もこのフェーズで判断する。Cardpot は既に独自の ```` ``` ```` フェンス記法を採用済みなので、`code:` は基本的に非対応のままでよい（ユーザー影響は小さい）。
+
+**DoD**: `scrapbox-parser/test/table/index.test.ts` のケースが Table として block 化されること。
+
+## 4. 各フェーズ共通の進め方
+
+1. 対象記法について、**先にテストケースを Cardpot の `*.test.ts` に移植する**（レッドの状態で始める）。既存の `parser/cardpot/index.test.ts` や `bulletEnter.test.ts` のように、パース結果のツリー文字列や AST を assert するスタイルに合わせる。ケースの出典は基本 scrapbox-parser の `test/**/*.test.ts` だが、**Phase 0 / Phase 3 に限っては cosy 側の `tests/integration.rs` や `src/parser/bracket/*.rs` 内の `#[cfg(test)]` ケース（特にネスト括弧・複数トークン分類のケース）も必ず含める**。scrapbox-parser 単体では拾えない構造的なエッジケースがそちらにしかないため。
+2. `rules/` に parse 関数を実装。既存の `bold.ts` / `wikiLink.ts` / `inlineCode.ts` / `fencedCode.ts` のいずれかを雛形にする（inline か block かで選ぶ）。
+3. `index.ts` の `defineNodes` / `parseBlock` or `parseInline` / `props`（`revealStyle`, `isMark`）に登録する。
+4. 表示が必要なら `editorTheme.ts` に CSS を足す。ナビゲーションが必要なら `wikiLinkNavigation.ts` を参考にする。
+5. 2章の記法カバレッジ表のステータスを更新する。
+
+## 5. スコープ外・見送り事項（現時点での判断）
+
+- **Decoration の完全汎用化**（`*` 以外の装飾文字、強調レベル）: Phase 2 で見送りと決定済み。
+- **GoogleMap**: 個人〜小規模チーム Wiki というプロダクト特性上、優先度は最低。Phase 3 の最後に時間があれば着手する程度でよい。
+- **`code:` prefix によるコードブロック**: Cardpot は独自の ```` ``` ```` フェンス記法を正式採用済みのため、原則非対応。
+- **Cardpot 独自拡張構文**: Scrapbox 互換の記法一式（Phase 1〜5）が完了してから着手する。既存記法と衝突しない構文を選ぶこと（例えば `[* text]` は Bold として予約済みなので使わない）。
+
+この5フェーズ＋見送り事項の一覧を守れば、cosy 側のチェックリストと scrapbox-parser 側のフェーズ分けの両方を矛盾なく満たせる。
