@@ -30,6 +30,27 @@ describe("Cardpot Lezer syntax", () => {
     expect(tree("[] [*** [ ]]")).toBe("Document(Paragraph(Blank))");
   });
 
+  it("parses Bold regardless of how many asterisks are used", () => {
+    expect(tree("[* one]")).toBe(
+      "Document(Paragraph(Bold(BoldMark,BoldMark)))",
+    );
+    expect(tree("[** two]")).toBe(
+      "Document(Paragraph(Bold(BoldMark,BoldMark)))",
+    );
+    expect(tree("[***** five]")).toBe(
+      "Document(Paragraph(Bold(BoldMark,BoldMark)))",
+    );
+  });
+
+  it("falls through to WikiLink when an asterisk run has no following space", () => {
+    // No space after the asterisks -- Bold doesn't match, and the
+    // content isn't whitespace-only either, so this still resolves to
+    // a WikiLink, matching the old exact-"[* "-prefix behavior.
+    expect(tree("[**]")).toBe(
+      "Document(Paragraph(WikiLink(WikiLinkMark,WikiLinkMark)))",
+    );
+  });
+
   it("recognizes a fenced block line by line and excludes its content from inline parsing", () => {
     expect(tree("before\n```ts\n[not-a-link]\n```\nafter")).toBe(
       "Document(Paragraph,FencedCode(FencedCodeMark,FencedCodeMark),Paragraph)",
