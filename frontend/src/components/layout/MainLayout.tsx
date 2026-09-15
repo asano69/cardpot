@@ -1,6 +1,7 @@
 import { createSignal, type ParentProps } from "solid-js";
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
+import Footer from "./Footer";
 import { createIsMobile } from "../../lib/mediaQuery";
 
 export default function MainLayout(props: ParentProps) {
@@ -60,6 +61,8 @@ export default function MainLayout(props: ParentProps) {
           </div>
         </main>
       </div>
+
+      <Footer />
     </div>
   );
 }

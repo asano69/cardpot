@@ -17,6 +17,7 @@ import CardItem from "./CardItem";
 import { cardsById, cardsLoaded, mergeCards } from "../../lib/cardsStore";
 import { computePosition } from "../../lib/position";
 import { useTitle } from "../../lib/useTitle";
+import { useFooterSlot } from "../../lib/footerSlot";
 import { usePot } from "../pots/PotContext";
 import type { CardRecord } from "./CardForm";
 // Detail page for a single pot, reached via the folder-open button on
@@ -74,7 +75,16 @@ export default function CardList() {
       }),
   );
 
-  // How many of `cards()` are actually mounted into the DOM. A pot
+  // Footer's status-bar slot: this pot's total card count. Reads from
+  // `cards()` (not `visibleCards()`), so it reflects the whole pot
+  // rather than only what's currently paged into the DOM below.
+  useFooterSlot(() => (
+    <div class="page-list-status">
+      <span class="item">{cards().length} pages</span>
+    </div>
+  ));
+
+  // How many of `cards()` are actually mounted into the DOM.
   // with thousands of cards would otherwise mount that many CardItems
   // (each with its own useSortable registration) at once, which was
   // enough to freeze the tab entirely -- see loadMoreOnScroll below.
