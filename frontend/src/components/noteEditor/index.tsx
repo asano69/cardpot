@@ -206,6 +206,17 @@ export default function NoteEditor(props: NoteEditorProps) {
       <div class="min-w-0 flex-1 px-2 py-10 sm:px-10 bg-field shadow-md">
         <div ref={mountEditor} class="text-text outline-none" />
       </div>
+      {/* Reserves space below the editor so a long note's last line
+          never lands flush against the bottom of the viewport --
+          mirrors Cosense's own .related-page-list (see
+          styles/components.css), including its class names, since
+          this will eventually host the backlinks panel described in
+          docs/wikilink-backlink-design.md. Empty for now -- both the
+          toolbar and the link list are unimplemented. */}
+      <section class="related-page-list">
+        <div class="toolbar" />
+        <div class="links-container" />
+      </section>
     </>
   );
 }
