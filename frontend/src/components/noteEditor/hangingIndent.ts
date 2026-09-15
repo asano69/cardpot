@@ -128,7 +128,6 @@ function buildDecorations(view: EditorView): DecorationSet {
             }).range(line.from + i, line.from + i + 1),
           );
         }
-
       }
       pos = line.to + 1;
     }

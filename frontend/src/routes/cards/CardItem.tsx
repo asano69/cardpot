@@ -35,7 +35,10 @@ export default function CardItem(props: CardItemProps) {
 
   const handlePointerDown = (event: PointerEvent) => {
     if (event.pointerType !== "touch") {
-      ripplet(event);
+      ripplet(event, {
+        spreadingDuration: ".2s",
+        clearingDuration: ".60s",
+      });
       return;
     }
 
@@ -61,7 +64,10 @@ export default function CardItem(props: CardItemProps) {
     if (!touchStart || event.pointerId !== touchStart.pointerId) return;
 
     touchStart = undefined;
-    ripplet(event);
+    ripplet(event, {
+      spreadingDuration: ".2s",
+      clearingDuration: ".6s",
+    });
   };
 
   const cancelTouchRipple = () => {
