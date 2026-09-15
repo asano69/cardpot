@@ -27,7 +27,14 @@ describe("Cardpot Lezer syntax", () => {
     expect(tree("[ ] [　] [\t] [ 　 \t　\t ] [page]")).toBe(
       "Document(Paragraph(Blank,Blank,Blank,Blank,WikiLink(WikiLinkMark,WikiLinkMark)))",
     );
-    expect(tree("[] [*** [ ]]")).toBe("Document(Paragraph(Blank))");
+    // "[*** [ ]]" is now correctly recognized as a Bold decoration
+    // wrapping a nested Blank, since parseDecoration tracks bracket
+    // depth and recurses into its content (see the "recursively
+    // parses a decoration's content" test above). The bare "[]" still
+    // matches nothing (empty content) and stays as plain text.
+    expect(tree("[] [*** [ ]]")).toBe(
+      "Document(Paragraph(Bold(BoldMark,Blank,BoldMark)))",
+    );
   });
 
   it("parses Bold regardless of how many asterisks are used", () => {
