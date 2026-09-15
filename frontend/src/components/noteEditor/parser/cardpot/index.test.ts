@@ -37,6 +37,41 @@ describe("Cardpot Lezer syntax", () => {
     );
   });
 
+  it("structurally dispatches single brackets after finding their matching close", () => {
+    expect(
+      tree("[$ x + [y]] [me.icon*3] [/project/page] [N35.68,E139.76,Z14]"),
+    ).toBe(
+      "Document(Paragraph(Math,Icon,ProjectLink(ProjectLinkMark,ProjectLinkMark),GoogleMap))",
+    );
+    expect(tree("[a [b] c] [unterminated [page]")).toBe(
+      "Document(Paragraph(WikiLink(WikiLinkMark,WikiLinkMark),WikiLink(WikiLinkMark,WikiLinkMark)))",
+    );
+  });
+
+  it("classifies URLs by their structure rather than rule priority", () => {
+    expect(
+      tree(
+        "[https://example.com/] [https://example.com/a.png] [https://example.com/a.png https://example.com/] [label https://example.com/] [https://example.com/ label]",
+      ),
+    ).toBe(
+      "Document(Paragraph(ExternalLink(ExternalLinkMark,ExternalLinkMark),Image,LinkedImage,ExternalLink(ExternalLinkMark,ExternalLinkMark),ExternalLink(ExternalLinkMark,ExternalLinkMark)))",
+    );
+    expect(tree("[https://example.com/ label [page]]")).toBe(
+      "Document(Paragraph(ExternalLink(ExternalLinkMark,WikiLink(WikiLinkMark,WikiLinkMark),ExternalLinkMark)))",
+    );
+  });
+
+  it("parses double brackets as Strong and preserves nested bracket pairing", () => {
+    expect(
+      tree("[[strong [page]]] [[https://example.com/a.png]] [[me.icon]]"),
+    ).toBe(
+      "Document(Paragraph(Strong(StrongMark,WikiLink(WikiLinkMark,WikiLinkMark),StrongMark),Strong(StrongMark,StrongImage,StrongMark),Strong(StrongMark,StrongIcon,StrongMark)))",
+    );
+    expect(tree("[[]] [[unterminated]")).toBe(
+      "Document(Paragraph(WikiLink(WikiLinkMark,WikiLinkMark)))",
+    );
+  });
+
   it("parses Bold regardless of how many asterisks are used", () => {
     expect(tree("[* one]")).toBe(
       "Document(Paragraph(Bold(BoldMark,BoldMark)))",

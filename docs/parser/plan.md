@@ -55,13 +55,13 @@ cosy のディスパッチ順序をそのまま「要件一覧」として転記
 | Blank `[ ]` | `BlankNode.ts` | ✅ 実装済み | — |
 | NumberList `1. text` | `NumberListNode.ts` | ❌ 未実装（行頭パターンなので block 寄り） | Phase 4 |
 | Decoration `[* x]` `[/ x]` ... | `DecorationNode.ts` | ✅ 実装済み（`rules/decoration.ts`。`*`/`/` の組み合わせとネストに対応） | — |
-| Formula `[$ x]` | `FormulaNode.ts` | ❌ 未実装 | Phase 3 以降（優先度低。角括弧ディスパッチャの1分岐として追加） |
-| StrongImage / StrongIcon / Strong `[[...]]` | `StrongImageNode.ts` / `StrongIconNode.ts` / `StrongNode.ts` | ❌ 未実装 | Phase 3 |
-| Image `[url]` | `ImageNode.ts` | ❌ 未実装 | Phase 3 |
-| ExternalLink `[url label]` | `ExternalLinkNode.ts` | ❌ 未実装 | Phase 3 |
-| Icon `[x.icon]` | `IconNode.ts` | ❌ 未実装 | Phase 3 |
-| GoogleMap `[N35..,E139..]` | `GoogleMapNode.ts` | ❌ 未実装（優先度低） | Phase 3 の末尾、または見送り |
-| InternalLink `[title]` | `InternalLinkNode.ts` | ✅ 実装済み（`WikiLink`。ただし `[[title]]` ではなく `[title]` のみ） | Phase 3 で角括弧ディスパッチャに統合 |
+| Formula `[$ x]` | `FormulaNode.ts` | ✅ 実装済み | — |
+| StrongImage / StrongIcon / Strong `[[...]]` | `StrongImageNode.ts` / `StrongIconNode.ts` / `StrongNode.ts` | ✅ 実装済み | — |
+| Image `[url]` | `ImageNode.ts` | ✅ 実装済み | — |
+| ExternalLink `[url label]` | `ExternalLinkNode.ts` | ✅ 実装済み | — |
+| Icon `[x.icon]` | `IconNode.ts` | ✅ 実装済み | — |
+| GoogleMap `[N35..,E139..]` | `GoogleMapNode.ts` | ✅ 実装済み | — |
+| InternalLink `[title]` | `InternalLinkNode.ts` | ✅ 角括弧ディスパッチャに統合済み | — |
 
 この表が唯一のソース・オブ・トゥルースになる。新しい記法に着手する前に、この表の該当行のステータスを更新すること。
 
@@ -258,6 +258,8 @@ export function parseDecoration(cx: InlineContext, next: number, pos: number): n
   7. 既存 `WikiLink` を `decideBracketNodeType` 経由に統合
 
 **DoD**: `scrapbox-parser/test/line/{link,image,icon,strongImage,strongIcon,strong,googleMap,formula}.test.ts` の入力ケースを **cosy 由来のロジックで**パースし、少なくとも Node 種別の判定が一致すること（AST の形そのものは Lezer 用に異なってよい）。加えて、ネストした角括弧（`[a [b] c]` のようなケース）が破綻しないこと（scrapbox-parser 単体ベースの実装では見落としがちな観点なので明示的にテストする）。
+
+**実施結果**: `rules/bracket.ts` に cosy の順序（Math → Icon → ProjectLink → Coordinate → links/pages）で分類する純粋ディスパッチャと、ネスト深度で対応する閉じ角括弧を探すスキャナを追加した。単括弧は Formula / Icon / ProjectLink / GoogleMap / Image / ExternalLink / LinkedImage / WikiLink に、二重括弧は Strong / StrongImage / StrongIcon に分類する。URL の画像判定は scrapbox-parser の拡張子・Gyazo ケースも含め、links/pages の first/last token 分類構造は cosy に合わせている。
 
 ### Phase 4: 行スコープブロック
 
