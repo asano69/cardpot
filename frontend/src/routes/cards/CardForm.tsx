@@ -16,6 +16,7 @@ import { titleToSegment, segmentToSlug, slugToTitle } from "../../lib/slugify";
 import type { TitleCandidate } from "../../lib/titleCandidate";
 import { useTitle } from "../../lib/useTitle";
 import { useTopBarActions } from "../../lib/topBarSlot";
+import { useFooterSlot } from "../../lib/footerSlot";
 import { computePosition } from "../../lib/position";
 import { deriveCardGridTitle } from "../../lib/cardGridTitle";
 import { randomKey } from "../../lib/randomKey";
@@ -157,6 +158,15 @@ export default function CardForm() {
         ? `${deriveCardGridTitle(card)} - ${potTitle}`
         : potTitle
       : undefined;
+  });
+  // Footer's status-bar slot: the open card's own title. Only shown
+  // once a real card exists -- a still-unresolved draft has no title
+  // to show yet (see DraftCardEditor, which creates the record only
+  // after the header is confirmed).
+  useFooterSlot(() => {
+    const id = cardId();
+    const card = id ? cardsById[id] : undefined;
+    return card ? <div class="page-title">{deriveCardGridTitle(card)}</div> : undefined;
   });
   useTopBarActions(() => (
     <Show when={cardId()}>

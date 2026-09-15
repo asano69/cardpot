@@ -449,4 +449,26 @@
     align-items: center;
     height: 100%;
   }
+
+  /* CardForm's footer slot: the open card's title, truncated instead
+   * of wrapping. margin-right: auto pushes it to the left edge of the
+   * status bar (page-list-status's "N pages" box, by contrast, is a
+   * plain flex child that .status-bar's justify-content: flex-end
+   * pushes right) -- only one of the two is ever mounted at a time,
+   * so they never actually compete for space. border: none overrides
+   * the top/left border every other .status-bar box gets, since a
+   * left-aligned box touching the viewport's left edge has no
+   * adjacent box to visually separate from. */
+  .status-bar > div.page-title {
+    display: inline-block;
+    max-width: 250px;
+    border: none;
+    border-top-right-radius: 3px;
+    margin-right: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+    padding-left: 5px;
+  }
 }
