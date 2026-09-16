@@ -193,41 +193,51 @@ export default function CardForm() {
 
   return (
     <Show when={cardsLoaded() && (cardId() || draft())} fallback={<Loading />}>
-      <div class="flex flex-col">
-        <Show when={mergeTarget()}>
-          <Alert class="mb-2 rounded-md border border-[#dc3545] bg-card px-3 py-2 text-sm text-[#dc3545]">
-            "{mergeTarget()}" already exists.
-          </Alert>
-        </Show>
-        <Show
-          when={cardId()}
-          keyed
-          fallback={
-            <Show when={draft()} keyed>
-              {(value) => (
-                <DraftCardEditor
-                  potId={() => pot()?.id}
-                  potSlug={() => params.slug}
-                  initialTitle={value.initialTitle}
-                  draftKey={value.key}
-                  onCreated={handleCreated}
-                  onMergeTarget={setMergeTarget}
-                />
-              )}
-            </Show>
-          }
-        >
-          {(id) => (
-            <ExistingCardEditor
-              cardId={id}
-              potSlug={() => params.slug}
-              initialUpdate={draftUpdate()}
-              existingTitle={cardsById[id]?.title}
-              onMergeTarget={setMergeTarget}
-              onLiveTitleChange={handleLiveTitleChange}
-            />
-          )}
-        </Show>
+      <div class="page-column">
+        <div class="col-page flex flex-col">
+          <Show when={mergeTarget()}>
+            <Alert class="mb-2 rounded-md border border-[#dc3545] bg-card px-3 py-2 text-sm text-[#dc3545]">
+              "{mergeTarget()}" already exists.
+            </Alert>
+          </Show>
+          <Show
+            when={cardId()}
+            keyed
+            fallback={
+              <Show when={draft()} keyed>
+                {(value) => (
+                  <DraftCardEditor
+                    potId={() => pot()?.id}
+                    potSlug={() => params.slug}
+                    initialTitle={value.initialTitle}
+                    draftKey={value.key}
+                    onCreated={handleCreated}
+                    onMergeTarget={setMergeTarget}
+                  />
+                )}
+              </Show>
+            }
+          >
+            {(id) => (
+              <ExistingCardEditor
+                cardId={id}
+                potSlug={() => params.slug}
+                initialUpdate={draftUpdate()}
+                existingTitle={cardsById[id]?.title}
+                onMergeTarget={setMergeTarget}
+                onLiveTitleChange={handleLiveTitleChange}
+              />
+            )}
+          </Show>
+        </div>
+        {/* Sticky vertical menu to the right of the editor. Only the
+            dropdown trigger placeholder exists for now -- its menu
+            items are added in a later change. */}
+        <div class="page-menu">
+          <div class="dropdown">
+            <button type="button" aria-label="Page menu" class="icon-btn" />
+          </div>
+        </div>
       </div>
     </Show>
   );

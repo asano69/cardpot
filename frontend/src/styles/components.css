@@ -471,4 +471,32 @@
     pointer-events: none;
     padding-left: 5px;
   }
+
+  /* Two-column layout for a card's detail view: the note editor on
+   * the left, a sticky vertical page-menu on the right (ported from
+   * Cosense/Scrapbox's own .page-column/.col-page/.page-menu). No
+   * "spacer" column here, unlike Scrapbox's own CSS -- Sidebar
+   * already owns the left edge of the page in this app. */
+  .page-column {
+    display: grid;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 10px;
+    grid-template-columns: minmax(200px, 960px) min-content;
+    grid-template-areas: "page menu";
+  }
+
+  .col-page {
+    width: 100%;
+    grid-area: page;
+  }
+
+  .page-menu {
+    position: sticky;
+    top: 45px;
+    font-size: 13px;
+    text-align: left;
+    z-index: 300;
+    grid-area: menu;
+  }
 }
