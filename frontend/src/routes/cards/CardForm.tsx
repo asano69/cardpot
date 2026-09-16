@@ -162,10 +162,27 @@ export default function CardForm() {
   // once a real card exists -- a still-unresolved draft has no title
   // to show yet (see DraftCardEditor, which creates the record only
   // after the header is confirmed).
+  // Debug-only indicator of which editor mode is currently mounted: a
+  // draft only owns a local Y.Doc and has no "cards" record yet (see
+  // DraftCardEditor), while an existing card has already synced
+  // against its own room (see ExistingCardEditor). Surfacing this in
+  // the footer makes it easy to tell which one is active without
+  // reading logs.
+  const editorMode = () => (cardId() ? "editor" : draft() ? "draft" : undefined);
+
   useFooterSlot(() => {
     const id = cardId();
     const card = id ? cardsById[id] : undefined;
-    return card ? <div class="page-title">{deriveCardGridTitle(card)}</div> : undefined;
+    return (
+      <>
+        {card && <div class="page-title">{deriveCardGridTitle(card)}</div>}
+        <Show when={editorMode()}>
+          <div class="page-list-status">
+            <span class="item">{editorMode()}</span>
+          </div>
+        </Show>
+      </>
+    );
   });
   return (
     <Show when={cardsLoaded() && (cardId() || draft())} fallback={<Loading />}>
@@ -211,7 +228,7 @@ export default function CardForm() {
             sit next to the editor instead of at the top of the page.
             Hidden for a draft, which has no card to pin or delete
             yet. */}
-        <div class="page-menu flex flex-col gap-2">
+        <div class="page-menu flex flex-col gap-1">
           <Show when={cardId()}>
             <button
               type="button"
