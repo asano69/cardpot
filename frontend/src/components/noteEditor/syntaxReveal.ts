@@ -7,7 +7,7 @@ import {
   type ViewUpdate,
 } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { revealStyle, isMark } from "./parser/cardpot";
+import { revealStyle, isMark, hideContent } from "./parser/cardpot";
 
 // Hides a delimiter/mark node (e.g. "[* " or "]") using a replacing
 // decoration rather than a font-size:0 mark. Decoration.replace()
@@ -81,6 +81,20 @@ function buildDecorations(view: EditorView): DecorationSet {
       // tracking.
       const touching = main.from <= to && main.to >= from;
       if (touching) return; // leave marks visible for editing
+
+      // Some node types (Image, LinkedImage) carry no mark children
+      // at all -- their raw "[url]" text is only meaningful while
+      // actively editing it, since the actual image already renders
+      // separately as a widget (see imageWidget.ts). For those, hide
+      // the node's entire range instead of looking for marks to hide.
+      if (node.type.prop(hideContent)) {
+        decorations.push(
+          Decoration.replace({
+            widget: new EmptyRevealWidget(styleClass),
+          }).range(from, to),
+        );
+        return;
+      }
 
       // Exactly two mark children (open/close) are expected per
       // revealable node (see parser/cardpot's parseDocument) -- the

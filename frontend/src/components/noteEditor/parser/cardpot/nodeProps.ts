@@ -18,3 +18,13 @@ export const revealStyle = new NodeProp<string>();
 // should stay visible even when the cursor isn't touching it (e.g.
 // CodeBlockMark's `code:` declaration) simply omits this prop.
 export const isMark = new NodeProp<true>();
+
+// Applied to a node type whose entire source range should be hidden
+// while the cursor isn't touching it, rather than just its delimiter
+// marks. Image/LinkedImage nodes have no open/close mark children at
+// all (see rules/bracket.ts) -- their raw "[url]" text is only useful
+// while actively editing it, since the actual image is already shown
+// separately as a widget (see imageWidget.ts). Nodes tagged with this
+// prop have their whole range replaced with nothing instead of only
+// hiding mark children (see syntaxReveal.ts).
+export const hideContent = new NodeProp<true>();

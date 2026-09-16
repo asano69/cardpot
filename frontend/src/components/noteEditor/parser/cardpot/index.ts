@@ -10,7 +10,7 @@ import { NodeType } from "@lezer/common";
 import { parser } from "@lezer/markdown";
 
 import { codeLanguageWrap } from "./codeLanguages";
-import { isMark, revealStyle } from "./nodeProps";
+import { hideContent, isMark, revealStyle } from "./nodeProps";
 import { parseBlank } from "./rules/blank";
 import { parseBracket } from "./rules/bracket";
 import { parseDecoration } from "./rules/decoration";
@@ -21,7 +21,7 @@ import { startsIndentedBlock } from "./rules/indentedBlock";
 import { parseQuote } from "./rules/quote";
 import { parseTable } from "./rules/table";
 
-export { isMark, revealStyle };
+export { hideContent, isMark, revealStyle };
 
 const defaultParsers = [
   "LinkReference",
@@ -98,6 +98,12 @@ const cardpotParser = parser.configure({
       // line -- the same live-preview behavior as every other
       // revealable node here.
       Quote: "cm-quote",
+      // Image/LinkedImage have no mark children of their own (see
+      // rules/bracket.ts), so this class only ever shows while the
+      // cursor is actively editing the raw "[url]" text -- see the
+      // hideContent registration below for what happens otherwise.
+      Image: "cm-image-syntax",
+      LinkedImage: "cm-image-syntax",
     }),
     isMark.add({
       BoldMark: true,
@@ -108,6 +114,14 @@ const cardpotParser = parser.configure({
       ProjectLinkMark: true,
       StrongMark: true,
       QuoteMark: true,
+    }),
+    // Image/LinkedImage's raw bracketed URL is only shown while the
+    // cursor touches it; otherwise it's hidden entirely, since the
+    // actual image is already rendered as a widget (see
+    // imageWidget.ts) and the raw text would just be noise.
+    hideContent.add({
+      Image: true,
+      LinkedImage: true,
     }),
   ],
   parseBlock: [

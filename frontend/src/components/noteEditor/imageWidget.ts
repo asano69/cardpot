@@ -1,12 +1,14 @@
 import {
   EditorView,
+  ViewPlugin,
   Decoration,
   WidgetType,
   type DecorationSet,
+  type ViewUpdate,
 } from "@codemirror/view";
-import { StateField, type EditorState } from "@codemirror/state";
+import type { EditorState } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
-import { Image, StrongImage } from "./parser/cardpot";
+import { Image, LinkedImage, StrongImage } from "./parser/cardpot";
 import { decideBracketNodeType } from "./parser/cardpot/rules/bracket";
 
 // Scrapbox distinguishes a plain image reference ("[url]") from its
@@ -55,14 +57,15 @@ class ImageWidget extends WidgetType {
   }
 }
 
-// Recovers an Image/StrongImage node's src. Neither node stores src as
-// an attribute of its own (see rules/bracket.ts), so this re-derives
-// it from the node's own source text -- mirroring
+// Recovers an Image/LinkedImage/StrongImage node's src. None of these
+// store src as an attribute of their own (see rules/bracket.ts), so
+// this re-derives it from the node's own source text -- mirroring
 // externalLinkNavigation.ts's own approach for ExternalLink hrefs.
 //
 // A StrongImage node's range is already just its bare URL text (see
 // parseStrong in rules/bracket.ts, which never wraps it in its own
-// [[ ]] marks); an Image node's range still includes its [ ] pair.
+// [[ ]] marks); an Image/LinkedImage node's range still includes its
+// [ ] pair.
 function extractSrc(
   state: EditorState,
   from: number,
@@ -74,50 +77,62 @@ function extractSrc(
   return decideBracketNodeType(content).src ?? null;
 }
 
-// Walks the whole document rather than just the viewport: unlike a
-// ViewPlugin, a StateField has no `view.visibleRanges` to scope
-// against, since it computes over EditorState alone. Note-sized
-// documents make this cheap enough that scoping isn't worth the
-// extra complexity.
-function buildDecorations(state: EditorState): DecorationSet {
+// Replaces an Image/LinkedImage/StrongImage node's raw bracketed text
+// with the actual rendered image, in place -- the same Obsidian-style
+// live-preview behavior syntaxReveal.ts gives every other syntax node
+// (see that file's `touching` check), just implemented separately
+// here since the "hidden" state isn't blank: it's a real <img>
+// element, not a CSS-styled span. While the caret is inside the
+// node's own range, the replacement is skipped so the raw
+// "[url]"/"[[url]]" text shows instead, so it stays editable.
+function buildDecorations(view: EditorView): DecorationSet {
   const decorations = [];
-  syntaxTree(state).iterate({
+  const { main } = view.state.selection;
+
+  syntaxTree(view.state).iterate({
     enter(node) {
       const strong = node.type === StrongImage;
-      if (node.type !== Image && !strong) return;
+      if (node.type !== Image && node.type !== LinkedImage && !strong) return;
 
-      const src = extractSrc(state, node.from, node.to, strong);
+      const { from, to } = node;
+      const touching = main.from <= to && main.to >= from;
+      if (touching) return; // leave raw text visible for editing
+
+      const src = extractSrc(view.state, from, to, strong);
       if (!src) return;
 
-      // Rendered as a block widget right after the node's own line,
-      // so the image appears below the syntax rather than
-      // replacing it -- the raw "[url]"/"[[url]]" text stays
-      // visible and editable.
-      const line = state.doc.lineAt(node.to);
       decorations.push(
-        Decoration.widget({
+        Decoration.replace({
           widget: new ImageWidget(src, strong),
-          block: true,
-          side: 1,
-        }).range(line.to),
+        }).range(from, to),
       );
     },
   });
+
   return Decoration.set(decorations, true);
 }
 
-// Block decorations (Decoration.widget({ block: true }) above) must be
-// supplied by a StateField, not a ViewPlugin -- CodeMirror throws
-// "Block decorations may not be specified via plugins" otherwise,
-// since a view plugin's decorations aren't available early enough for
-// CodeMirror's line-structure computation.
-export const imageWidget = StateField.define<DecorationSet>({
-  create(state) {
-    return buildDecorations(state);
+// A ViewPlugin (not a StateField): the widget now replaces inline
+// text rather than inserting a block decoration, so it's no longer
+// subject to CodeMirror's "block decorations may not come from a
+// plugin" restriction. Recomputing on selectionSet as well as
+// docChanged is what drives the caret-enters-reveals-raw-text
+// behavior -- mirrors syntaxReveal.ts's own update() exactly.
+export const imageWidget = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+
+    constructor(view: EditorView) {
+      this.decorations = buildDecorations(view);
+    }
+
+    update(update: ViewUpdate) {
+      if (update.docChanged || update.selectionSet) {
+        this.decorations = buildDecorations(update.view);
+      }
+    }
   },
-  update(decorations, tr) {
-    if (tr.docChanged) return buildDecorations(tr.state);
-    return decorations.map(tr.changes);
+  {
+    decorations: (plugin) => plugin.decorations,
   },
-  provide: (field) => EditorView.decorations.from(field),
-});
+);
