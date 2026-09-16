@@ -5,7 +5,6 @@ import pb from "../../lib/pb";
 import DraftCardEditor from "../../components/noteEditor/DraftCardEditor";
 import ExistingCardEditor from "../../components/noteEditor/ExistingCardEditor";
 import Loading from "../../components/Loading";
-import ActionsMenu from "../../components/menus/ActionsMenu";
 import { Trash2, Pin, PinOff } from "../../lib/icons";
 import {
   cardsById,
@@ -212,25 +211,24 @@ export default function CardForm() {
             sit next to the editor instead of at the top of the page.
             Hidden for a draft, which has no card to pin or delete
             yet. */}
-        <div class="page-menu">
+        <div class="page-menu flex flex-col gap-2">
           <Show when={cardId()}>
-            <ActionsMenu
-              label="Page menu"
-              triggerClass="tool-btn"
-              items={[
-                {
-                  label: pinned() ? "Unpin" : "Pin",
-                  icon: pinned() ? PinOff : Pin,
-                  onSelect: togglePin,
-                },
-                {
-                  label: "Delete",
-                  icon: Trash2,
-                  onSelect: handleDelete,
-                  destructive: true,
-                },
-              ]}
-            />
+            <button
+              type="button"
+              aria-label={pinned() ? "Unpin" : "Pin"}
+              class="tool-btn"
+              onClick={togglePin}
+            >
+              {pinned() ? <PinOff size={20} /> : <Pin size={20} />}
+            </button>
+            <button
+              type="button"
+              aria-label="Delete"
+              class="tool-btn"
+              onClick={handleDelete}
+            >
+              <Trash2 size={20} />
+            </button>
           </Show>
         </div>
       </div>
