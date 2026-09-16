@@ -13,6 +13,10 @@ export interface ActionsMenuProps {
   // aria-label for the trigger button (defaults to "Actions")
   label?: string;
   items: ActionsMenuItem[];
+  // Class applied to the trigger button. Defaults to "icon-btn"; a caller
+  // that places the menu somewhere with its own tool-button styling (e.g.
+  // CardForm's page-menu) can override it.
+  triggerClass?: string;
 }
 
 // Reusable "..." dropdown menu: an icon-button trigger plus a list of
@@ -24,7 +28,7 @@ export default function ActionsMenu(props: ActionsMenuProps) {
     <DropdownMenu>
       <DropdownMenu.Trigger
         aria-label={props.label ?? "Actions"}
-        class="icon-btn"
+        class={props.triggerClass ?? "icon-btn"}
       >
         <Ellipsis size={24} />
       </DropdownMenu.Trigger>

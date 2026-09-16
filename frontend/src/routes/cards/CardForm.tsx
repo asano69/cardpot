@@ -5,6 +5,7 @@ import pb from "../../lib/pb";
 import DraftCardEditor from "../../components/noteEditor/DraftCardEditor";
 import ExistingCardEditor from "../../components/noteEditor/ExistingCardEditor";
 import Loading from "../../components/Loading";
+import ActionsMenu from "../../components/menus/ActionsMenu";
 import { Trash2, Pin, PinOff } from "../../lib/icons";
 import {
   cardsById,
@@ -15,7 +16,6 @@ import {
 import { titleToSegment, segmentToSlug, slugToTitle } from "../../lib/slugify";
 import type { TitleCandidate } from "../../lib/titleCandidate";
 import { useTitle } from "../../lib/useTitle";
-import { useTopBarActions } from "../../lib/topBarSlot";
 import { useFooterSlot } from "../../lib/footerSlot";
 import { computePosition } from "../../lib/position";
 import { deriveCardGridTitle } from "../../lib/cardGridTitle";
@@ -168,29 +168,6 @@ export default function CardForm() {
     const card = id ? cardsById[id] : undefined;
     return card ? <div class="page-title">{deriveCardGridTitle(card)}</div> : undefined;
   });
-  useTopBarActions(() => (
-    <Show when={cardId()}>
-      <button
-        type="button"
-        aria-label={pinned() ? "Unpin card" : "Pin card"}
-        class="icon-btn shrink-0"
-        onClick={togglePin}
-      >
-        <Show when={pinned()} fallback={<Pin size={20} />}>
-          <PinOff size={20} />
-        </Show>
-      </button>
-      <button
-        type="button"
-        aria-label="Delete card"
-        class="icon-btn shrink-0"
-        onClick={handleDelete}
-      >
-        <Trash2 size={20} />
-      </button>
-    </Show>
-  ));
-
   return (
     <Show when={cardsLoaded() && (cardId() || draft())} fallback={<Loading />}>
       <div class="page-column">
@@ -230,13 +207,31 @@ export default function CardForm() {
             )}
           </Show>
         </div>
-        {/* Sticky vertical menu to the right of the editor. Only the
-            dropdown trigger placeholder exists for now -- its menu
-            items are added in a later change. */}
+        {/* Sticky vertical menu to the right of the editor: the open
+            card's pin/delete actions, moved here from TopBar so they
+            sit next to the editor instead of at the top of the page.
+            Hidden for a draft, which has no card to pin or delete
+            yet. */}
         <div class="page-menu">
-          <div class="dropdown">
-            <button type="button" aria-label="Page menu" class="icon-btn" />
-          </div>
+          <Show when={cardId()}>
+            <ActionsMenu
+              label="Page menu"
+              triggerClass="tool-btn"
+              items={[
+                {
+                  label: pinned() ? "Unpin" : "Pin",
+                  icon: pinned() ? PinOff : Pin,
+                  onSelect: togglePin,
+                },
+                {
+                  label: "Delete",
+                  icon: Trash2,
+                  onSelect: handleDelete,
+                  destructive: true,
+                },
+              ]}
+            />
+          </Show>
         </div>
       </div>
     </Show>
