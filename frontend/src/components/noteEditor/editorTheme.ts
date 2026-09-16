@@ -106,7 +106,7 @@ export const editorTheme = EditorView.theme({
     padding: "0.15em 0.35em",
   },
 
-  // Fenced code block (see codeBlockLines.ts): every line the block
+  // `code:` block (see codeBlockLines.ts): every line the block
   // spans gets this class via Decoration.line, which fills the
   // line's full width -- including blank lines and the gap past the
   // last character -- unlike an inline Decoration.mark.
@@ -141,7 +141,7 @@ export const editorTheme = EditorView.theme({
   // Italic + a muted color is enough to distinguish a quoted line
   // from ordinary text without a block-level treatment (this decoration
   // is a plain Decoration.mark over the whole line's range, not a
-  // full-width line decoration like codeBlockLines.ts's fenced-code
+  // full-width line decoration like codeBlockLines.ts's code-block
   // background).
   ".cm-quote": {
     fontStyle: "italic",

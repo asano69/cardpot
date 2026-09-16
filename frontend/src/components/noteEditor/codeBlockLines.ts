@@ -6,10 +6,10 @@ import {
   type ViewUpdate,
 } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { FencedCode } from "./parser/cardpot";
+import { CodeBlock } from "./parser/cardpot";
 
-// Full-line background for a fenced code block (see
-// parser/cardpot/rules/fencedCode.ts). A plain Decoration.mark only
+// Full-line background for a `code:` block (see
+// parser/cardpot/rules/codeBlock.ts). A plain Decoration.mark only
 // colors the actual text runs it covers, so a blank line inside the
 // block -- or the gap past the last character of a line, out to the
 // edge of the editor -- would show through with no background at all.
@@ -22,7 +22,7 @@ function buildDecorations(view: EditorView): DecorationSet {
   const decorations = [];
   syntaxTree(view.state).iterate({
     enter(node) {
-      if (node.type !== FencedCode) return;
+      if (node.type !== CodeBlock) return;
       const startLine = view.state.doc.lineAt(node.from).number;
       const endLine = view.state.doc.lineAt(node.to).number;
       for (let n = startLine; n <= endLine; n++) {

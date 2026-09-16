@@ -1,7 +1,7 @@
-// Dynamic, per-language syntax highlighting for fenced code blocks
-// (see rules/fencedCode.ts). Mirrors @codemirror/lang-markdown's own
+// Dynamic, per-language syntax highlighting for `code:` blocks
+// (see rules/codeBlock.ts). Mirrors @codemirror/lang-markdown's own
 // getCodeParser: language grammars are not bundled up front -- the
-// info string after the opening "```" (e.g. "```ts") is looked up in
+// language metadata after `code:` (e.g. `code:ts`) is looked up in
 // @codemirror/language-data's catalog, and the matching parser
 // package is only pulled in via a dynamic import() the first time
 // that language is actually used. Until the import resolves, the
@@ -13,38 +13,32 @@ import { parseMixed } from "@lezer/common";
 import { LanguageDescription, ParseContext } from "@codemirror/language";
 import { languages } from "@codemirror/language-data";
 
-// Strips the opening fence itself so the trailing text is just the
-// language info (e.g. "```ts" -> "ts"). Only backticks are matched,
-// mirroring fencedCode.ts's own fence detection ("~~~" fences aren't
-// used by this app's parser).
-const FENCE_MARK_RE = /^`+/;
+const CODE_PREFIX_RE = /^\s*code:/;
 
-// Reads a FencedCode node's opening-fence line and returns its info
-// string (the text after the backticks, trimmed), or "" if there is
-// none.
+// Reads a CodeBlock declaration. `code:file(lang)` explicitly selects lang;
+// a bare value is also accepted as a language name, as in `code:typescript`.
 function readInfo(node: SyntaxNodeRef, input: Input): string {
   const openMark = node.node.firstChild;
   if (!openMark) return "";
   const line = input.read(openMark.from, openMark.to);
-  return line.replace(FENCE_MARK_RE, "").trim();
+  const meta = line.replace(CODE_PREFIX_RE, "").trim();
+  const explicitLanguage = /\(([^()]+)\)$/.exec(meta)?.[1];
+  return explicitLanguage?.trim() || meta;
 }
 
-// A FencedCode node's only children are its two FencedCodeMark nodes
-// (the opening and closing fence -- see fencedCode.ts); the actual
-// code text is simply whatever lies between them. Returns that gap,
-// so the fence markup itself is excluded from the nested parse.
+// A CodeBlock has its declaration as its only child. Its raw code starts on
+// the next line and runs to the end of the node.
 function codeRange(node: SyntaxNodeRef) {
-  const open = node.node.firstChild;
-  const close = node.node.lastChild;
-  if (!open || !close || open === close) return null;
-  return { from: open.to, to: close.from };
+  const declaration = node.node.firstChild;
+  if (!declaration || declaration.to >= node.to) return null;
+  return { from: declaration.to + 1, to: node.to };
 }
 
 // Looks up `info` in @codemirror/language-data's catalog and returns
 // a nested-parse descriptor for it, or null if no language matches or
 // the block has no code content to nest into.
-function nestFencedCode(node: SyntaxNodeRef, input: Input) {
-  if (node.name !== "FencedCode") return null;
+function nestCodeBlock(node: SyntaxNodeRef, input: Input) {
+  if (node.name !== "CodeBlock") return null;
 
   const range = codeRange(node);
   if (!range) return null;
@@ -72,4 +66,4 @@ function nestFencedCode(node: SyntaxNodeRef, input: Input) {
   };
 }
 
-export const codeLanguageWrap = parseMixed(nestFencedCode);
+export const codeLanguageWrap = parseMixed(nestCodeBlock);

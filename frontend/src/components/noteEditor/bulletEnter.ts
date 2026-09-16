@@ -1,18 +1,18 @@
 import type { Command } from "@codemirror/view";
 import { EditorSelection, type EditorState } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
-import { FencedCode } from "./parser/cardpot";
+import { CodeBlock } from "./parser/cardpot";
 
 const LEADING_TABS_RE = /^\t+/;
 
-// Whether `pos` falls inside a fenced code block (see
-// codeBlockLines.ts / hangingIndent.ts for the same FencedCode
+// Whether `pos` falls inside a `code:` block (see
+// codeBlockLines.ts / hangingIndent.ts for the same CodeBlock
 // lookup). Leading whitespace there is code content, not a bullet to
 // continue or release.
-function isInFencedCode(state: EditorState, pos: number): boolean {
+function isInCodeBlock(state: EditorState, pos: number): boolean {
   let node = syntaxTree(state).resolveInner(pos, -1);
   while (node) {
-    if (node.type === FencedCode) return true;
+    if (node.type === CodeBlock) return true;
     node = node.parent;
   }
   return false;
@@ -31,11 +31,11 @@ function isInFencedCode(state: EditorState, pos: number): boolean {
 export const insertNewlineKeepingBullet: Command = (view) => {
   const { state } = view;
   const changes = state.changeByRange((range) => {
-    // Inside a fenced code block, Enter always inserts a plain
+    // Inside a `code:` block, Enter always inserts a plain
     // newline -- indentation here is code content, not a bullet to
-    // continue or release (see hangingIndent.ts's own FencedCode
+    // continue or release (see hangingIndent.ts's own CodeBlock
     // guard for the display-side counterpart of this fix).
-    if (isInFencedCode(state, range.from)) {
+    if (isInCodeBlock(state, range.from)) {
       return {
         changes: { from: range.from, to: range.to, insert: "\n" },
         range: EditorSelection.cursor(range.from + 1),

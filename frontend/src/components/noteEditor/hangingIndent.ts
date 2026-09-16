@@ -7,7 +7,7 @@ import {
   type ViewUpdate,
 } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { FencedCode } from "./parser/cardpot";
+import { CodeBlock } from "./parser/cardpot";
 
 // Width of one indent level's mark element, in pixels (see
 // IndentMarkWidget below). Also used by editorTheme.ts to size the
@@ -95,7 +95,7 @@ function buildDecorations(view: EditorView): DecorationSet {
   const codeBlockRanges: { from: number; to: number }[] = [];
   syntaxTree(view.state).iterate({
     enter(node) {
-      if (node.type !== FencedCode) return;
+      if (node.type !== CodeBlock) return;
       codeBlockRanges.push({ from: node.from, to: node.to });
     },
   });

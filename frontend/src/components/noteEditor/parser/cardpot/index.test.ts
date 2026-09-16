@@ -132,15 +132,32 @@ describe("Cardpot Lezer syntax", () => {
     );
   });
 
-  it("recognizes a fenced block line by line and excludes its content from inline parsing", () => {
-    expect(tree("before\n```ts\n[not-a-link]\n```\nafter")).toBe(
-      "Document(Paragraph,FencedCode(FencedCodeMark,FencedCodeMark),Paragraph)",
+  it("parses code: blocks until their tab indentation returns", () => {
+    expect(
+      tree("before\ncode:typescript\n\t[not-a-link]\n\tconst x = 1\nafter"),
+    ).toBe("Document(Paragraph,CodeBlock(CodeBlockMark),Paragraph)");
+    expect(tree("\tcode:main.rs(rust)\n\t\tfn main() {}\n\tnext")).toBe(
+      "Document(CodeBlock(CodeBlockMark),Paragraph)",
     );
   });
 
-  it("leaves an unterminated fence as normal paragraph text", () => {
-    expect(tree("```\n[page]")).toBe(
-      "Document(Paragraph(Code(CodeMark,CodeMark),WikiLink(WikiLinkMark,WikiLinkMark)))",
+  it("does not treat the removed fenced-code syntax as a block", () => {
+    expect(tree("```ts\n[page]\n``` ")).toBe(
+      "Document(Paragraph(Code(CodeMark,CodeMark),WikiLink(WikiLinkMark,WikiLinkMark)),Paragraph(Code(CodeMark,CodeMark)))",
+    );
+  });
+
+  it("parses tab-indented table rows and delegates each cell to inline rules", () => {
+    expect(
+      tree("table:links\n\t[* bold]\t[page]\t`code`\n\t#tag\t[ ]\t\noutside"),
+    ).toBe(
+      "Document(Table(TableMark,TableRow(TableCell(Bold(BoldMark,BoldMark)),TableCell(WikiLink(WikiLinkMark,WikiLinkMark)),TableCell(Code(CodeMark,CodeMark))),TableRow(TableCell(HashTag),TableCell(Blank),TableCell)),Paragraph)",
+    );
+  });
+
+  it("terminates tables at equal or shallower tab indentation", () => {
+    expect(tree("\ttable:nested\n\t\ta\tb\n\tnext\ntail")).toBe(
+      "Document(Table(TableMark,TableRow(TableCell,TableCell)),Paragraph)",
     );
   });
 

@@ -14,10 +14,12 @@ import { isMark, revealStyle } from "./nodeProps";
 import { parseBlank } from "./rules/blank";
 import { parseBracket } from "./rules/bracket";
 import { parseDecoration } from "./rules/decoration";
-import { parseFencedCode } from "./rules/fencedCode";
+import { parseCodeBlock } from "./rules/codeBlock";
 import { parseHashTag } from "./rules/hashTag";
 import { parseInlineCode } from "./rules/inlineCode";
+import { startsIndentedBlock } from "./rules/indentedBlock";
 import { parseQuote } from "./rules/quote";
+import { parseTable } from "./rules/table";
 
 export { isMark, revealStyle };
 
@@ -47,8 +49,12 @@ const defaultParsers = [
 const cardpotParser = parser.configure({
   remove: defaultParsers,
   defineNodes: [
-    { name: "FencedCode", block: true },
-    "FencedCodeMark",
+    { name: "CodeBlock", block: true },
+    "CodeBlockMark",
+    { name: "Table", block: true },
+    "TableMark",
+    { name: "TableRow", block: true },
+    "TableCell",
     { name: "Quote", block: true },
     "QuoteMark",
     "Bold",
@@ -105,7 +111,16 @@ const cardpotParser = parser.configure({
     }),
   ],
   parseBlock: [
-    { name: "CardpotFencedCode", parse: parseFencedCode },
+    {
+      name: "CardpotCodeBlock",
+      parse: parseCodeBlock,
+      endLeaf: (_, line) => startsIndentedBlock(line, "code:") !== null,
+    },
+    {
+      name: "CardpotTable",
+      parse: parseTable,
+      endLeaf: (_, line) => startsIndentedBlock(line, "table:") !== null,
+    },
     { name: "CardpotQuote", parse: parseQuote },
   ],
   parseInline: [
@@ -115,8 +130,8 @@ const cardpotParser = parser.configure({
     { name: "CardpotInlineCode", parse: parseInlineCode },
     { name: "CardpotHashTag", parse: parseHashTag },
   ],
-  // Nests a fenced code block's content in whatever language its
-  // info string (e.g. "```ts") resolves to, loaded on demand -- see
+  // Nests a `code:` block's content in whatever language its metadata
+  // (e.g. "code:ts") resolves to, loaded on demand -- see
   // codeLanguages.ts.
   wrap: codeLanguageWrap,
 });
@@ -154,8 +169,12 @@ export const StrongImage = node("StrongImage");
 export const StrongIcon = node("StrongIcon");
 export const HashTag = node("HashTag");
 export const Blank = node("Blank");
-export const FencedCode = node("FencedCode");
-export const FencedCodeMark = node("FencedCodeMark");
+export const CodeBlock = node("CodeBlock");
+export const CodeBlockMark = node("CodeBlockMark");
+export const Table = node("Table");
+export const TableMark = node("TableMark");
+export const TableRow = node("TableRow");
+export const TableCell = node("TableCell");
 
 const cardpotLanguageData = defineLanguageFacet({});
 

@@ -101,7 +101,7 @@ export default function NoteEditor(props: NoteEditorProps) {
         // to hide/show the raw markup around the cursor, Obsidian-
         // style (see syntaxReveal.ts).
         cardpotSyntax(),
-        // Colors tokens inside fenced code blocks once their
+        // Colors tokens inside `code:` blocks once their
         // language has resolved (see parser/cardpot/codeLanguages.ts).
         syntaxHighlighting(defaultHighlightStyle),
         syntaxReveal,

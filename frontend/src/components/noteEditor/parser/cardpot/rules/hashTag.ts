@@ -11,7 +11,9 @@ export function parseHashTag(
 ): number {
   if (
     next !== 35 ||
-    (pos > 0 && !/\s/.test(cx.slice(pos - 1, pos))) ||
+    // Inline contexts used by table cells can start at a non-zero document
+    // offset. Their first character is still a valid hashtag boundary.
+    (pos > cx.offset && !/\s/.test(cx.slice(pos - 1, pos))) ||
     pos + 1 >= cx.end ||
     /\s/.test(cx.slice(pos + 1, pos + 2))
   ) {

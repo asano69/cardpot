@@ -8,11 +8,11 @@
 
 cosy を「チェックリストとしてのみ使う」のは誤りで、記法によっては**cosy の方がロジックの正解**になっている箇所がある。用途を1つに決め打ちせず、記法ごとに使い分ける。
 
-| リポジトリ | 役割 | 使い方 |
-|---|---|---|
-| `sb-spec/cosy` | **① 網羅性チェックリスト**、かつ **② 構造・曖昧性解消ロジックの正解** | ①: `parser/mod.rs` の block ディスパッチ条件と `parser/node.rs` の `alt((...))` の並びを「サポートすべき記法一覧」として使う。②: **block分岐/行継続判定（`parser/block.rs`）と 角括弧の多義性解消（`parser/bracket.rs` 以下一式）は、ロジック構造そのものを移植元にする。** 理由は後述。 |
-| `sb-spec/scrapbox-parser` | **③ 単純記法の実装ソース**、かつ **④ 全記法共通のテストケース抽出元** | ③: 依存関係のない単純な行内記法（HashTag, Blank など）は正規表現をそのまま拝借してよい。④: `test/**/*.test.ts` の入力ケースは cosy 由来のロジックで実装した記法も含め、全フェーズで regression test の元ネタとして使う。 |
-| Cardpot (`frontend/src/components/noteEditor/parser/cardpot`) | **実装先** | `@lezer/markdown` ベース。既存の `Bold` / `WikiLink` / `Code` / `FencedCode` と同じ形（`nodeProps` で `revealStyle` / `isMark` を付け、`syntaxReveal.ts` が汎用的に表示制御する）を崩さずに拡張していく。 |
+| リポジトリ                                                    | 役割                                                                  | 使い方                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sb-spec/cosy`                                                | **① 網羅性チェックリスト**、かつ **② 構造・曖昧性解消ロジックの正解** | ①: `parser/mod.rs` の block ディスパッチ条件と `parser/node.rs` の `alt((...))` の並びを「サポートすべき記法一覧」として使う。②: **block分岐/行継続判定（`parser/block.rs`）と 角括弧の多義性解消（`parser/bracket.rs` 以下一式）は、ロジック構造そのものを移植元にする。** 理由は後述。 |
+| `sb-spec/scrapbox-parser`                                     | **③ 単純記法の実装ソース**、かつ **④ 全記法共通のテストケース抽出元** | ③: 依存関係のない単純な行内記法（HashTag, Blank など）は正規表現をそのまま拝借してよい。④: `test/**/*.test.ts` の入力ケースは cosy 由来のロジックで実装した記法も含め、全フェーズで regression test の元ネタとして使う。                                                                 |
+| Cardpot (`frontend/src/components/noteEditor/parser/cardpot`) | **実装先**                                                            | `@lezer/markdown` ベース。既存の `Bold` / `WikiLink` / `Code` / `CodeBlock` と同じ形（`nodeProps` で `revealStyle` / `isMark` を付け、`syntaxReveal.ts` が汎用的に表示制御する）を崩さずに拡張していく。                                                                                 |
 
 ### なぜ block分岐・曖昧性解消は cosy を正解とするか
 
@@ -37,34 +37,33 @@ cosy のディスパッチ順序をそのまま「要件一覧」として転記
 
 ### block レベル（cosy: `parser/block.rs` の分岐順）
 
-| 記法 | 判定条件 | scrapbox-parser 実装 | Cardpot 現状 | 対応フェーズ |
-|---|---|---|---|---|
-| CodeBlock | `code:` prefix | `CodeBlock.ts` | ✅ 実装済み（`FencedCode`。ただし構文は ```` ``` ```` 形式で scrapbox の `code:` とは別記法） | 対応不要（Cardpot 独自の ```` ``` ```` を正式採用。`code:` 対応要否は Phase 5 で判断） |
-| Table | `table:` prefix | `Table.ts` | ❌ 未実装 | Phase 5 |
-| Quote | `>` prefix | `QuoteNode.ts` | ✅ 実装済み（`rules/quote.ts`。本文は再帰的に inline パースされ、`QuoteMark` は他の記法と同じく syntaxReveal で reveal/hide される） | — |
-| Helpfeel | `? ` prefix | `HelpfeelNode.ts` | ❌ 未実装 | Phase 4 |
-| CommandLine | `$ ` / `% ` prefix | `CommandLineNode.ts` | ❌ 未実装 | Phase 4 |
-| Line（デフォルト） | 上記以外 | `Line.ts` | ✅ 実装済み（`Paragraph`） | — |
+| 記法               | 判定条件           | scrapbox-parser 実装 | Cardpot 現状                                                                                                                         | 対応フェーズ |
+| ------------------ | ------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------ |
+| CodeBlock          | `code:` prefix     | `CodeBlock.ts`       | ✅ 実装済み（`rules/codeBlock.ts`。タブのインデント復帰で終了）                                                                      | —            |
+| Table              | `table:` prefix    | `Table.ts`           | ✅ 実装済み（`rules/table.ts`。セルは inline parser に委譲）                                                                         | —            |
+| Quote              | `>` prefix         | `QuoteNode.ts`       | ✅ 実装済み（`rules/quote.ts`。本文は再帰的に inline パースされ、`QuoteMark` は他の記法と同じく syntaxReveal で reveal/hide される） | —            |
+| Helpfeel           | `? ` prefix        | `HelpfeelNode.ts`    | ❌ 未実装                                                                                                                            | Phase 4      |
+| CommandLine        | `$ ` / `% ` prefix | `CommandLineNode.ts` | ❌ 未実装                                                                                                                            | Phase 4      |
+| Line（デフォルト） | 上記以外           | `Line.ts`            | ✅ 実装済み（`Paragraph`）                                                                                                           | —            |
 
 ### inline レベル（cosy: `parser/node.rs` の `alt()` 順）
 
-| 記法 | scrapbox-parser 実装 | Cardpot 現状 | 対応フェーズ |
-|---|---|---|---|
-| InlineCode `` `x` `` | `CodeNode.ts` | ✅ 実装済み（`rules/inlineCode.ts`） | — |
-| HashTag `#tag` | `HashTagNode.ts` | ✅ 実装済み | — |
-| Blank `[ ]` | `BlankNode.ts` | ✅ 実装済み | — |
-| NumberList `1. text` | `NumberListNode.ts` | ❌ 未実装（行頭パターンなので block 寄り） | Phase 4 |
-| Decoration `[* x]` `[/ x]` ... | `DecorationNode.ts` | ✅ 実装済み（`rules/decoration.ts`。`*`/`/` の組み合わせとネストに対応） | — |
-| Formula `[$ x]` | `FormulaNode.ts` | ✅ 実装済み | — |
-| StrongImage / StrongIcon / Strong `[[...]]` | `StrongImageNode.ts` / `StrongIconNode.ts` / `StrongNode.ts` | ✅ 実装済み | — |
-| Image `[url]` | `ImageNode.ts` | ✅ 実装済み | — |
-| ExternalLink `[url label]` | `ExternalLinkNode.ts` | ✅ 実装済み | — |
-| Icon `[x.icon]` | `IconNode.ts` | ✅ 実装済み | — |
-| GoogleMap `[N35..,E139..]` | `GoogleMapNode.ts` | ✅ 実装済み | — |
-| InternalLink `[title]` | `InternalLinkNode.ts` | ✅ 角括弧ディスパッチャに統合済み | — |
+| 記法                                        | scrapbox-parser 実装                                         | Cardpot 現状                                                             | 対応フェーズ |
+| ------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------ | ------------ |
+| InlineCode `` `x` ``                        | `CodeNode.ts`                                                | ✅ 実装済み（`rules/inlineCode.ts`）                                     | —            |
+| HashTag `#tag`                              | `HashTagNode.ts`                                             | ✅ 実装済み                                                              | —            |
+| Blank `[ ]`                                 | `BlankNode.ts`                                               | ✅ 実装済み                                                              | —            |
+| NumberList `1. text`                        | `NumberListNode.ts`                                          | ❌ 未実装（行頭パターンなので block 寄り）                               | Phase 4      |
+| Decoration `[* x]` `[/ x]` ...              | `DecorationNode.ts`                                          | ✅ 実装済み（`rules/decoration.ts`。`*`/`/` の組み合わせとネストに対応） | —            |
+| Formula `[$ x]`                             | `FormulaNode.ts`                                             | ✅ 実装済み                                                              | —            |
+| StrongImage / StrongIcon / Strong `[[...]]` | `StrongImageNode.ts` / `StrongIconNode.ts` / `StrongNode.ts` | ✅ 実装済み                                                              | —            |
+| Image `[url]`                               | `ImageNode.ts`                                               | ✅ 実装済み                                                              | —            |
+| ExternalLink `[url label]`                  | `ExternalLinkNode.ts`                                        | ✅ 実装済み                                                              | —            |
+| Icon `[x.icon]`                             | `IconNode.ts`                                                | ✅ 実装済み                                                              | —            |
+| GoogleMap `[N35..,E139..]`                  | `GoogleMapNode.ts`                                           | ✅ 実装済み                                                              | —            |
+| InternalLink `[title]`                      | `InternalLinkNode.ts`                                        | ✅ 角括弧ディスパッチャに統合済み                                        | —            |
 
 この表が唯一のソース・オブ・トゥルースになる。新しい記法に着手する前に、この表の該当行のステータスを更新すること。
-
 
 ## 3. 実装フェーズ（統合ロードマップ）
 
@@ -72,13 +71,13 @@ cosy のディスパッチ順序をそのまま「要件一覧」として転記
 
 ### Phase 0: 行スコープブロックの基盤整備（完了）
 
-Phase 4（Quote / Helpfeel / CommandLine / NumberList）はどれも「行頭パターンを検出し、残りを inline パースに委譲する」という同じ形を取る。今の `FencedCode` は複数行ブロックの実装例にはなるが、単一行ブロックの実装例が無い。ここを先に整備しておかないと Phase 4 で毎回車輪の再発明になる。
+Phase 4（Quote / Helpfeel / CommandLine / NumberList）はどれも「行頭パターンを検出し、残りを inline パースに委譲する」という同じ形を取る。複数行ブロックの例とは別に、単一行ブロックの実装例も先に整備しておかないと Phase 4 で毎回車輪の再発明になる。
 
 - **設計の model は cosy の `parser/block.rs` の `parse_block` にする**（0章で述べた通り、事前パス方式の scrapbox-parser `Pack.ts` ではなく）。具体的には次の3ステップの形をそのまま踏襲する：
   1. 行頭の空白を数えて indent を確定する（`parse_block` の `indent_len` 相当）。
   2. prefix を順番に if/else でチェックし、どの block 種別かを決める（`parse_block` の `if input.starts_with(...) else if ... else` の連鎖）。
   3. 該当する block パーサに委譲し、無ければ通常の line（Paragraph）として扱う。
-- `rules/` に `lineBlock.ts`（仮）として、この3ステップに対応する共通ヘルパーを用意する。「prefix を除いた残りを inline パースに委譲する」部分は `codeLanguages.ts` の `parseMixed` パターン（`FencedCode` の中身を別言語パーサに委譲している部分）を参考にし、単一行ブロックの場合は「prefix 以降の残り全部を、外側と同じ `cardpotParser` のインライン規則で再帰的に解釈させる」だけでよい。
+- `rules/` に `lineBlock.ts`（仮）として、この3ステップに対応する共通ヘルパーを用意する。「prefix を除いた残りを inline パースに委譲する」部分は `codeLanguages.ts` の `parseMixed` パターン（`CodeBlock` の中身を別言語パーサに委譲している部分）を参考にし、単一行ブロックの場合は「prefix 以降の残り全部を、外側と同じ `cardpotParser` のインライン規則で再帰的に解釈させる」だけでよい。
 - 成果物: 単一行ブロック共通ヘルパー1つ + それを使った最小サンプル1つ（例えば `Quote` の骨組みだけ）。
 
 **DoD**: 新しい単一行ブロック記法を1つ追加するのに、rules/ に1ファイル足して登録するだけで済む状態になっていること。かつ、prefix 判定の分岐構造が cosy の `parse_block` と1対1で対応付けられる状態になっていること。
@@ -117,8 +116,9 @@ if (cx.slice(pos, pos + 3) !== "[* ") return -1;
 
 装飾文字クラス（DECO_CHARS）に属する文字が1つ以上 + スペースという条件に緩和する
 マッチした装飾文字列（rawDecos）をノードの属性として保持する
-* の連続数（* ** ***...）を強度レベル（*-1〜*-10、10個以上は10に丸め）に変換する
-装飾文字の組み合わせ（decos の集合）に応じて CSS を出し分ける（太字・イタリック・取り消し線・下線などを複合適用できるようにする）
+
+- の連続数（* ** **_...）を強度レベル（_-1〜*-10、10個以上は10に丸め）に変換する
+  装飾文字の組み合わせ（decos の集合）に応じて CSS を出し分ける（太字・イタリック・取り消し線・下線などを複合適用できるようにする）
 
 Lezer/Cardpot パーサでの設計:
 
@@ -128,6 +128,7 @@ Lezer/Cardpot パーサでの設計:
 
 そのためこの部分の設計はsb-spec/cahce/lezer-mdの設計を参考にする必要がある。
 そこでは、おそらく ネストノードを使っていると思う
+
 ```
 Italic {
   "*" InlineContent "*"
@@ -137,19 +138,24 @@ Bold {
   "**" InlineContent "**"
 }
 ```
+
 結果
+
 ```
 Italic
   Bold
     Text
 ```
+
 ASTを後段で解釈すると
+
 ```
 {
   text: "hello",
   marks: ["italic", "bold"]
 }
 ```
+
 へ変換できます。これがlezerらしいやり方だと思う。
 その方向性で正しいと思います。実際、これは Lezer/CodeMirror 6 の設計思想そのもの（`@lezer/markdown` の Emphasis/StrongEmphasis も同じ発想）で、CommonMark の ATXHeading1〜6 が「level を動的属性にせず固定個の型で列挙する」のと同じパターンです。ただし cosy/scrapbox の Decoration は CommonMark の emphasis とは構造が少し違うので、そこを踏まえて設計すると詰まらずに済むと思います。
 
@@ -188,11 +194,21 @@ const MARKS = [
   { char: "_", node: "Underline" },
 ] as const;
 
-export function parseDecoration(cx: InlineContext, next: number, pos: number): number {
+export function parseDecoration(
+  cx: InlineContext,
+  next: number,
+  pos: number,
+): number {
   if (next !== 91 /* [ */) return -1;
 
   let i = pos + 1;
-  while (i < cx.end && cx.char(i) !== 32 && cx.char(i) !== 93 && cx.char(i) !== 10) i++;
+  while (
+    i < cx.end &&
+    cx.char(i) !== 32 &&
+    cx.char(i) !== 93 &&
+    cx.char(i) !== 10
+  )
+    i++;
   const decos = cx.slice(pos + 1, i);
   if (decos === "" || cx.char(i) !== 32) return -1;
 
@@ -239,7 +255,6 @@ export function parseDecoration(cx: InlineContext, next: number, pos: number): n
 
 という順序が安全だと思います。ネストの複雑さは「同時に組み合わせるマークが2種類以上必要になった瞬間」に初めて要る話なので、それまで持ち込まない方が保守しやすいはずです。
 
-
 ### Phase 3: 角括弧の多義性解決
 
 最難関。`[...]` の中身によって WikiLink / 外部リンク / 画像 / リンク+ラベル / Icon / `[[...]]` の Strong 系に化ける。**ここは 0章で述べた通り、scrapbox-parser の正規表現優先順位配列ではなく、cosy の `parser/bracket.rs` 一式（`bracket_content.rs`, `bracket/links_and_pages.rs`, `bracket/icon.rs`, `bracket/coordinate.rs`, `bracket/math.rs`, `bracket/project_link.rs`）のロジック構造を移植元にする。**
@@ -278,21 +293,23 @@ Phase 0 で作った共通ヘルパーを使って、prefix 判定＋残りを i
 
 **実施結果 (Quote)**: パース自体は Phase 0 の `rules/quote.ts`（共通ヘルパー `lineBlock.ts` 経由）で先行実装済みだったため、Phase 4 では既存の revealable な記法（Bold/Italic/WikiLink など）と足並みを揃える仕上げのみ行った。`index.ts` の `revealStyle`/`isMark` に `Quote`/`QuoteMark` を登録し、`editorTheme.ts` に `.cm-quote` のスタイル（イタリック＋ミュートカラー）を追加。これにより先頭の `>` はカーソルがその行に触れていない間は他の記法と同じく `syntaxReveal.ts` によって隠れる。構造面のテストは `index.test.ts` の既存ケース（`"> [* bold] [page] `code`"` など）でカバー済みのため追加していない。
 
-### Phase 5: 複数行ブロック（Table）
+### Phase 5: 複数行ブロック（Table / CodeBlock）
 
-`rules/fencedCode.ts` の `cx.nextLine()` パターンを流用する。終端条件だけ「明示的な close マーク」ではなく「インデントレベルが戻ったら終了」に差し替える。
+`cx.nextLine()` パターンを使い、終端条件を「明示的な close マーク」ではなく「タブのインデントレベルが戻ったら終了」にする。
 
 - 参照: `scrapbox-parser/src/block/Table.ts`（タブ区切りでセルを分割し、各セルを再度 inline パースする部分）
 - Cardpot 版インデントはタブ文字が単位（`bulletEnter.ts` / `hangingIndent.ts` と同じ `\t` 基準）なので、scrapbox 本家のスペースインデントとは前提が異なる点に注意。既存の `LEADING_TABS_RE` と同じ考え方で終端判定する。
 
-`code:` prefix による CodeBlock（Table と同じ「複数行・インデント終端」構造）への対応要否もこのフェーズで判断する。Cardpot は既に独自の ```` ``` ```` フェンス記法を採用済みなので、`code:` は基本的に非対応のままでよい（ユーザー影響は小さい）。
+`code:` prefix による CodeBlock は Table と同じ「複数行・インデント終端」構造として同時に実装する。Cardpot 独自の ` ``` ` フェンス記法は廃止し、以後は Scrapbox / Helpfeel 互換の `code:` 記法だけをコードブロックとして扱う。
 
-**DoD**: `scrapbox-parser/test/table/index.test.ts` のケースが Table として block 化されること。
+**DoD**: `scrapbox-parser/test/table/index.test.ts` のケースが Table として block 化され、`scrapbox-parser/test/codeBlock/index.test.ts` のケースが CodeBlock として block 化されること。セル本文は Cardpot の inline 規則で再帰的にパースされ、コード本文は raw text のままであること。
+
+**実施結果**: `rules/indentedBlock.ts` にタブ基準の共通行収集処理を追加し、`rules/table.ts` と `rules/codeBlock.ts` がこれを利用するようにした。`table:` の後続タブ行は `TableRow` / `TableCell` として構造化し、各セルは既存 inline parser に委譲する。`code:` の後続タブ行は raw の `CodeBlock` 本文として保持し、`code:typescript` および `code:main.rs(rust)` のメタデータから既存の遅延言語ハイライトも利用できる。旧 `rules/fencedCode.ts` と ` ``` ` ブロック構文は削除した。
 
 ## 4. 各フェーズ共通の進め方
 
 1. 対象記法について、**先にテストケースを Cardpot の `*.test.ts` に移植する**（レッドの状態で始める）。既存の `parser/cardpot/index.test.ts` や `bulletEnter.test.ts` のように、パース結果のツリー文字列や AST を assert するスタイルに合わせる。ケースの出典は基本 scrapbox-parser の `test/**/*.test.ts` だが、**Phase 0 / Phase 3 に限っては cosy 側の `tests/integration.rs` や `src/parser/bracket/*.rs` 内の `#[cfg(test)]` ケース（特にネスト括弧・複数トークン分類のケース）も必ず含める**。scrapbox-parser 単体では拾えない構造的なエッジケースがそちらにしかないため。
-2. `rules/` に parse 関数を実装。既存の `bold.ts` / `wikiLink.ts` / `inlineCode.ts` / `fencedCode.ts` のいずれかを雛形にする（inline か block かで選ぶ）。
+2. `rules/` に parse 関数を実装。既存の `decoration.ts` / `bracket.ts` / `inlineCode.ts` / `codeBlock.ts` のいずれかを雛形にする（inline か block かで選ぶ）。
 3. `index.ts` の `defineNodes` / `parseBlock` or `parseInline` / `props`（`revealStyle`, `isMark`）に登録する。
 4. 表示が必要なら `editorTheme.ts` に CSS を足す。ナビゲーションが必要なら `wikiLinkNavigation.ts` を参考にする。
 5. 2章の記法カバレッジ表のステータスを更新する。
@@ -301,7 +318,7 @@ Phase 0 で作った共通ヘルパーを使って、prefix 判定＋残りを i
 
 - **Decoration の完全汎用化**（`*` 以外の装飾文字、強調レベル）: Phase 2 で見送りと決定済み。
 - **GoogleMap**: 個人〜小規模チーム Wiki というプロダクト特性上、優先度は最低。Phase 3 の最後に時間があれば着手する程度でよい。
-- **`code:` prefix によるコードブロック**: Cardpot は独自の ```` ``` ```` フェンス記法を正式採用済みのため、原則非対応。
+- **` ``` ` フェンスによるコードブロック**: `code:` 記法へ完全移行したため非対応。フェンス文字列は通常テキストとして扱う。
 - **Cardpot 独自拡張構文**: Scrapbox 互換の記法一式（Phase 1〜5）が完了してから着手する。既存記法と衝突しない構文を選ぶこと（例えば `[* text]` は Bold として予約済みなので使わない）。
 
 この5フェーズ＋見送り事項の一覧を守れば、cosy 側のチェックリストと scrapbox-parser 側のフェーズ分けの両方を矛盾なく満たせる。
