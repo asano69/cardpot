@@ -1,11 +1,10 @@
 import {
   EditorView,
-  ViewPlugin,
   Decoration,
   WidgetType,
   type DecorationSet,
-  type ViewUpdate,
 } from "@codemirror/view";
+import { StateField, type EditorState } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
 import { Image, StrongImage } from "./parser/cardpot";
 import { decideBracketNodeType } from "./parser/cardpot/rules/bracket";
@@ -65,62 +64,60 @@ class ImageWidget extends WidgetType {
 // parseStrong in rules/bracket.ts, which never wraps it in its own
 // [[ ]] marks); an Image node's range still includes its [ ] pair.
 function extractSrc(
-  view: EditorView,
+  state: EditorState,
   from: number,
   to: number,
   strong: boolean,
 ): string | null {
-  if (strong) return view.state.sliceDoc(from, to);
-  const content = view.state.sliceDoc(from + 1, to - 1);
+  if (strong) return state.sliceDoc(from, to);
+  const content = state.sliceDoc(from + 1, to - 1);
   return decideBracketNodeType(content).src ?? null;
 }
 
-function buildDecorations(view: EditorView): DecorationSet {
+// Walks the whole document rather than just the viewport: unlike a
+// ViewPlugin, a StateField has no `view.visibleRanges` to scope
+// against, since it computes over EditorState alone. Note-sized
+// documents make this cheap enough that scoping isn't worth the
+// extra complexity.
+function buildDecorations(state: EditorState): DecorationSet {
   const decorations = [];
-  for (const { from, to } of view.visibleRanges) {
-    syntaxTree(view.state).iterate({
-      from,
-      to,
-      enter(node) {
-        const strong = node.type === StrongImage;
-        if (node.type !== Image && !strong) return;
+  syntaxTree(state).iterate({
+    enter(node) {
+      const strong = node.type === StrongImage;
+      if (node.type !== Image && !strong) return;
 
-        const src = extractSrc(view, node.from, node.to, strong);
-        if (!src) return;
+      const src = extractSrc(state, node.from, node.to, strong);
+      if (!src) return;
 
-        // Rendered as a block widget right after the node's own line,
-        // so the image appears below the syntax rather than
-        // replacing it -- the raw "[url]"/"[[url]]" text stays
-        // visible and editable.
-        const line = view.state.doc.lineAt(node.to);
-        decorations.push(
-          Decoration.widget({
-            widget: new ImageWidget(src, strong),
-            block: true,
-            side: 1,
-          }).range(line.to),
-        );
-      },
-    });
-  }
+      // Rendered as a block widget right after the node's own line,
+      // so the image appears below the syntax rather than
+      // replacing it -- the raw "[url]"/"[[url]]" text stays
+      // visible and editable.
+      const line = state.doc.lineAt(node.to);
+      decorations.push(
+        Decoration.widget({
+          widget: new ImageWidget(src, strong),
+          block: true,
+          side: 1,
+        }).range(line.to),
+      );
+    },
+  });
   return Decoration.set(decorations, true);
 }
 
-export const imageWidget = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet;
-
-    constructor(view: EditorView) {
-      this.decorations = buildDecorations(view);
-    }
-
-    update(update: ViewUpdate) {
-      if (update.docChanged || update.viewportChanged) {
-        this.decorations = buildDecorations(update.view);
-      }
-    }
+// Block decorations (Decoration.widget({ block: true }) above) must be
+// supplied by a StateField, not a ViewPlugin -- CodeMirror throws
+// "Block decorations may not be specified via plugins" otherwise,
+// since a view plugin's decorations aren't available early enough for
+// CodeMirror's line-structure computation.
+export const imageWidget = StateField.define<DecorationSet>({
+  create(state) {
+    return buildDecorations(state);
   },
-  {
-    decorations: (plugin) => plugin.decorations,
+  update(decorations, tr) {
+    if (tr.docChanged) return buildDecorations(tr.state);
+    return decorations.map(tr.changes);
   },
-);
+  provide: (field) => EditorView.decorations.from(field),
+});
