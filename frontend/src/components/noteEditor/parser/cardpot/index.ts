@@ -86,6 +86,12 @@ const cardpotParser = parser.configure({
       Strong: "cm-bold",
       HashTag: "cm-hashtag",
       Blank: "cm-blank",
+      // Whole-line node, not a delimiter pair: only the leading ">"
+      // is an isMark child (see rules/quote.ts), so syntaxReveal
+      // hides just that prefix while the cursor is elsewhere on the
+      // line -- the same live-preview behavior as every other
+      // revealable node here.
+      Quote: "cm-quote",
     }),
     isMark.add({
       BoldMark: true,
@@ -95,6 +101,7 @@ const cardpotParser = parser.configure({
       ExternalLinkMark: true,
       ProjectLinkMark: true,
       StrongMark: true,
+      QuoteMark: true,
     }),
   ],
   parseBlock: [

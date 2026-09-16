@@ -41,7 +41,7 @@ cosy のディスパッチ順序をそのまま「要件一覧」として転記
 |---|---|---|---|---|
 | CodeBlock | `code:` prefix | `CodeBlock.ts` | ✅ 実装済み（`FencedCode`。ただし構文は ```` ``` ```` 形式で scrapbox の `code:` とは別記法） | 対応不要（Cardpot 独自の ```` ``` ```` を正式採用。`code:` 対応要否は Phase 5 で判断） |
 | Table | `table:` prefix | `Table.ts` | ❌ 未実装 | Phase 5 |
-| Quote | `>` prefix | `QuoteNode.ts` | ❌ 未実装 | Phase 4 |
+| Quote | `>` prefix | `QuoteNode.ts` | ✅ 実装済み（`rules/quote.ts`。本文は再帰的に inline パースされ、`QuoteMark` は他の記法と同じく syntaxReveal で reveal/hide される） | — |
 | Helpfeel | `? ` prefix | `HelpfeelNode.ts` | ❌ 未実装 | Phase 4 |
 | CommandLine | `$ ` / `% ` prefix | `CommandLineNode.ts` | ❌ 未実装 | Phase 4 |
 | Line（デフォルト） | 上記以外 | `Line.ts` | ✅ 実装済み（`Paragraph`） | — |
@@ -275,6 +275,8 @@ Phase 0 で作った共通ヘルパーを使って、prefix 判定＋残りを i
 各記法につき、参照は `scrapbox-parser/src/block/node/{QuoteNode,HelpfeelNode,CommandLineNode,NumberListNode}.ts` の正規表現をそのまま使う。
 
 **DoD**: 4記法それぞれについて、対応する `scrapbox-parser/test/line/*.test.ts` の入力ケースが期待通りに block 化されること。
+
+**実施結果 (Quote)**: パース自体は Phase 0 の `rules/quote.ts`（共通ヘルパー `lineBlock.ts` 経由）で先行実装済みだったため、Phase 4 では既存の revealable な記法（Bold/Italic/WikiLink など）と足並みを揃える仕上げのみ行った。`index.ts` の `revealStyle`/`isMark` に `Quote`/`QuoteMark` を登録し、`editorTheme.ts` に `.cm-quote` のスタイル（イタリック＋ミュートカラー）を追加。これにより先頭の `>` はカーソルがその行に触れていない間は他の記法と同じく `syntaxReveal.ts` によって隠れる。構造面のテストは `index.test.ts` の既存ケース（`"> [* bold] [page] `code`"` など）でカバー済みのため追加していない。
 
 ### Phase 5: 複数行ブロック（Table）
 

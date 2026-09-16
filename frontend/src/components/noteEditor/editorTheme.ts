@@ -136,4 +136,15 @@ export const editorTheme = EditorView.theme({
       "light-dark(rgba(234, 179, 8, 0.18), rgba(250, 204, 21, 0.24))",
     borderRadius: "3px",
   },
+
+  // Quote (see parser/cardpot's Quote node and rules/quote.ts).
+  // Italic + a muted color is enough to distinguish a quoted line
+  // from ordinary text without a block-level treatment (this decoration
+  // is a plain Decoration.mark over the whole line's range, not a
+  // full-width line decoration like codeBlockLines.ts's fenced-code
+  // background).
+  ".cm-quote": {
+    fontStyle: "italic",
+    color: "var(--color-line-text)",
+  },
 });
