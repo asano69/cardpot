@@ -27,6 +27,7 @@ import { cardpotSyntax } from "./parser/cardpot";
 import { syntaxReveal } from "./syntaxReveal";
 import { wikiLinkNavigation } from "./wikiLinkNavigation";
 import { externalLinkNavigation } from "./externalLinkNavigation";
+import { pasteUrlDecode } from "./pasteUrlDecode";
 import type { TitleCandidate } from "../../lib/titleCandidate";
 
 export interface NoteEditorProps {
@@ -110,6 +111,7 @@ export default function NoteEditor(props: NoteEditorProps) {
         syntaxReveal,
         wikiLinkNavigation(props.potSlug, navigate),
         externalLinkNavigation(),
+        pasteUrlDecode(),
         // A single real tab character per indent level, not spaces --
         // indentMore/indentLess (bound below) both insert/remove
         // whatever this unit is. Matches bulletLineDecoration.ts's own
