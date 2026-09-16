@@ -42,7 +42,7 @@ from flask import Flask
 ### frontend
 - Solid.js v1.9
 - Kobalte v0.13+
-- Tailwind v4
+- Tailwind v4 / CSS Modules
 - clauderic/dnd-kit v0.5.0
 - CodeMirror6
 - yjs
