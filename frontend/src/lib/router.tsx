@@ -2,11 +2,11 @@
 import { Router, Route } from "@solidjs/router";
 
 import AppShell from "../components/layout/AppShell";
-import PotLayout from "../routes/pots/PotLayout";
+import PotLayout from "../pages/pots/PotLayout";
 
-import PotList from "../routes/pots/PotList";
-import CardList from "../routes/cards/CardList";
-import CardForm from "../routes/cards/CardForm";
+import PotList from "../pages/pots/PotList";
+import CardList from "../pages/cards/CardList";
+import CardForm from "../pages/cards/CardForm";
 
 // All top-level routes in one place, so adding or removing a page never
 // requires touching main.tsx.
@@ -32,7 +32,7 @@ export default function AppRouter() {
             between them never remounts CardForm/NoteEditor.
             CardForm's own URL-sync effect replaces "/new" with
             "/:cardSlug" the instant a draft's title resolves (right
-            after createCard() returns); with two separate routes,
+            after createCard() returns); with two separate pages,
             Solid Router treated that as a match against a different
             Route and tore down the still-connecting WebsocketProvider
             and its in-memory Y.Doc before the just-typed header ever

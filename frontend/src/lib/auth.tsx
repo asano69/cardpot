@@ -2,7 +2,7 @@
 import { createSignal, onCleanup, Show, type JSX } from "solid-js";
 
 import pb from "./pb";
-import Login from "../routes/Login";
+import Login from "../pages/Login";
 
 interface AuthGateProps {
   children: JSX.Element;

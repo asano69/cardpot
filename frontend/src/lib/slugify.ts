@@ -1,7 +1,7 @@
 // frontend/src/lib/slugify.ts
 //
 // Converts a card's title into the URL path segment used to display
-// it (see routes/cards/CardForm.tsx and CardItem.tsx). This replaces
+// it (see pages/cards/CardForm.tsx and CardItem.tsx). This replaces
 // the old persisted, server-disambiguated "slug" field entirely: since
 // a card's title is already guaranteed unique within its pot (see the
 // "cards" collection's (pot, title) unique index), the URL segment can

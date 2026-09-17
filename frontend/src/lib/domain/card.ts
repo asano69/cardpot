@@ -56,7 +56,7 @@ export interface CardRecord {
 }
 
 // The title shown for a card in CardList's grid (see
-// routes/cards/CardItem.tsx). Branded so call sites can't
+// pages/cards/CardItem.tsx). Branded so call sites can't
 // accidentally pass a card's genuine CardTitle directly where the
 // grid-specific title is expected, in case grid-specific formatting
 // (e.g. truncation) is ever added here.

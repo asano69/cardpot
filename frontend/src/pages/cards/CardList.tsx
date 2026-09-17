@@ -51,7 +51,7 @@ export default function CardList() {
   useTitle(() => pot()?.title);
   // TopBar's pot-name link (and the "add card" button next to it) is
   // now registered once by the parent PotLayout route, not here -- see
-  // lib/router.tsx and routes/pots/PotLayout.tsx.
+  // lib/router.tsx and pages/pots/PotLayout.tsx.
 
   // The whole "cards" collection is now fetched once for the app's
   // entire lifetime (see AppShell.tsx and lib/cardsStore.ts's
