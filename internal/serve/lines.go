@@ -125,6 +125,7 @@ func hashLineContent(content string) string {
 // entirely (no write), so its "updated" timestamp keeps reflecting
 // when that line was actually last edited rather than the moment of
 // this snapshot. Lines no longer present in the document are deleted.
+//nolint:unused // kept for future re-wiring once line identity has a new strategy (see the TODO at the top of this file)
 func (p *ydocPersistence) updateLines(room, xml string) error {
 	lines, err := extractLines(xml)
 	if err != nil {
