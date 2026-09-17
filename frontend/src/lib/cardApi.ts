@@ -1,5 +1,5 @@
 import pb from "./pb";
-import type { CardRecord, TitleCandidate } from "./domain/card";
+import type { CardRecord, TitleCandidate } from "./models/card";
 
 // Response shape shared by createCard/updateCardTitle: the saved card,
 // plus a merge-alert target computed server-side (see findMergeTarget

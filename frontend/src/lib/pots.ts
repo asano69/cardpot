@@ -1,5 +1,5 @@
 import pb from "./pb";
-import type { PotRecord } from "./domain/pot";
+import type { PotRecord } from "./models/pot";
 
 // Looks up an pot by its unique "slug" field. Pots are addressed by
 // slug in the URL instead of their PocketBase id, so any page that

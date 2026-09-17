@@ -1,4 +1,4 @@
-// frontend/src/lib/domain/card.ts
+// frontend/src/lib/models/card.ts
 //
 // Card domain types, consolidated in one place: a title candidate's
 // raw text and how it resolves into a card's stored title (see

@@ -17,7 +17,7 @@ import { titleToSegment, segmentToSlug, slugToTitle } from "../../lib/slugify";
 import { useTitle } from "../../lib/useTitle";
 import { useFooterSlot } from "../../lib/footerSlot";
 import { computePosition } from "../../lib/position";
-import { deriveCardGridTitle, type CardRecord } from "../../lib/domain/card";
+import { deriveCardGridTitle, type CardRecord } from "../../lib/models/card";
 import { usePot } from "../pots/PotContext";
 
 type Draft = { initialTitle?: string };

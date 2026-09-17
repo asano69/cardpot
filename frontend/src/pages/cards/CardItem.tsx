@@ -3,7 +3,7 @@ import { A } from "@solidjs/router";
 import { useSortable } from "@dnd-kit/solid/sortable";
 import { registerCardElement } from "../../lib/cardsStore";
 import { titleToSegment } from "../../lib/slugify";
-import { deriveCardGridTitle, type CardRecord } from "../../lib/domain/card";
+import { deriveCardGridTitle, type CardRecord } from "../../lib/models/card";
 import { ripple } from "../../lib/directives/ripple";
 
 export interface CardItemProps {

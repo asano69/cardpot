@@ -1,5 +1,5 @@
 import { createContext, useContext, type Accessor } from "solid-js";
-import type { PotRecord } from "../../lib/domain/pot";
+import type { PotRecord } from "../../lib/models/pot";
 
 // Shares the pot record fetched once by PotLayout with every route
 // nested under it (CardList, CardForm), so navigating between them

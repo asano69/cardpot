@@ -4,7 +4,7 @@ import { Plus } from "../../lib/icons";
 
 import pb from "../../lib/pb";
 import { randomKey } from "../../lib/randomKey";
-import type { PotRecord } from "../../lib/domain/pot";
+import type { PotRecord } from "../../lib/models/pot";
 
 export interface PotFormProps {
   // Whether at least one pot already exists -- tones down the
