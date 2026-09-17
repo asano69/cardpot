@@ -11,7 +11,7 @@ import "@fontsource/fraunces/500.css";
 import "./styles/index.css";
 import "./lib/theme";
 import AppRouter from "./lib/router";
-import AuthGate from "./lib/auth";
+import AuthGate from "./components/AuthGate";
 
 render(
   () => (
