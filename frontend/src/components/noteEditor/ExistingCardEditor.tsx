@@ -8,14 +8,19 @@ import type { TitleCandidate } from "../../lib/titleCandidate";
 export interface ExistingCardEditorProps {
   cardId: string;
   potSlug: () => string;
-  initialUpdate?: Uint8Array;
+  // The live Y.Doc handed off from DraftCardEditor's create() call,
+  // already holding everything the user typed while drafting. Reused
+  // directly (not re-created via encode/applyUpdate) so the body text
+  // can never be lost in an encode/decode round trip. Omitted when
+  // opening a card that wasn't just created from a draft.
+  initialYdoc?: Y.Doc;
   onMergeTarget?: (target: string | null) => void;
   existingTitle?: string;
 }
 
-// Existing cards own the network lifecycle. Applying a just-created draft
-// update before creating the providers guarantees body text survives the
-// draft-to-existing component replacement.
+// Existing cards own the network lifecycle. Reusing the draft's own Y.Doc
+// (see initialYdoc above) before creating the providers guarantees body
+// text survives the draft-to-existing component replacement.
 //
 // Title resolution for an existing card is no longer driven from here: the
 // server watches this room's live Yjs document directly (see
@@ -25,8 +30,7 @@ export interface ExistingCardEditorProps {
 // lib/cardsStore.ts), so no HTTP round-trip -- and therefore no save-failure
 // state -- is needed here anymore.
 export default function ExistingCardEditor(props: ExistingCardEditorProps) {
-  const ydoc = new Y.Doc();
-  if (props.initialUpdate) Y.applyUpdate(ydoc, props.initialUpdate);
+  const ydoc = props.initialYdoc ?? new Y.Doc();
   const idbProvider = new IndexeddbPersistence(props.cardId, ydoc);
   const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
   const provider = new WebsocketProvider(

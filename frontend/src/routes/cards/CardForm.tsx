@@ -1,6 +1,7 @@
 import { createSignal, createEffect, Show } from "solid-js";
 import { useParams, useNavigate } from "@solidjs/router";
 import { Alert } from "@kobalte/core/alert";
+import type * as Y from "yjs";
 import pb from "../../lib/pb";
 import DraftCardEditor from "../../components/noteEditor/DraftCardEditor";
 import ExistingCardEditor from "../../components/noteEditor/ExistingCardEditor";
@@ -48,7 +49,7 @@ export default function CardForm() {
   const [draft, setDraft] = createSignal<Draft | undefined>(
     params.cardSlug ? undefined : { key: `new:${randomKey()}` },
   );
-  const [draftUpdate, setDraftUpdate] = createSignal<Uint8Array>();
+  const [draftYdoc, setDraftYdoc] = createSignal<Y.Doc>();
   const [mergeTarget, setMergeTarget] = createSignal<string | null>(null);
   let urlSegment = params.cardSlug ?? "";
 
@@ -58,7 +59,7 @@ export default function CardForm() {
   createEffect(() => {
     if (!params.cardSlug) {
       setCardId(undefined);
-      setDraftUpdate(undefined);
+     setDraftYdoc(undefined);
       setDraft({ key: `new:${randomKey()}` });
       return;
     }
@@ -75,7 +76,7 @@ export default function CardForm() {
     const slug = segmentToSlug(params.cardSlug);
     if (slug === urlSegment && cardId()) return;
     const record = findCardByPotAndSlug(potId, slug);
-    setDraftUpdate(undefined);
+    setDraftYdoc(undefined)
     if (record) {
       setCardId(record.id);
       setDraft(undefined);
@@ -118,8 +119,8 @@ export default function CardForm() {
     replaceUrl(titleToSegment(title));
   });
 
-  const handleCreated = (id: string, update: Uint8Array) => {
-    setDraftUpdate(update);
+  const handleCreated = (id: string, ydoc: Y.Doc) => {
+    setDraftYdoc(ydoc);
     setCardId(id);
     setDraft(undefined);
   };
@@ -223,7 +224,7 @@ export default function CardForm() {
               <ExistingCardEditor
                 cardId={id}
                 potSlug={() => params.slug}
-                initialUpdate={draftUpdate()}
+                initialYdoc={draftYdoc()}
                 existingTitle={cardsById[id]?.title}
                 onMergeTarget={setMergeTarget}
               />
