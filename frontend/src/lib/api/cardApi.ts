@@ -1,5 +1,5 @@
 import pb from "./pb";
-import type { CardRecord, TitleCandidate } from "./models/card";
+import type { CardRecord, TitleCandidate } from "../models/card";
 
 // Response shape shared by createCard/updateCardTitle: the saved card,
 // plus a merge-alert target computed server-side (see findMergeTarget
@@ -30,7 +30,7 @@ export async function createCard(
 // lib/slugify.ts) instead of being a separate field kept in sync here.
 // Resolving a card by its URL slug now happens entirely client-side
 // against the already-loaded cardsById store (see
-// lib/cardsStore.ts's findCardByPotAndSlug) instead of a dedicated
+// lib/stores/cardsStore.ts's findCardByPotAndSlug) instead of a dedicated
 // server route -- there is no per-open network round-trip anymore.
 export async function updateCardTitle(
   cardId: string,

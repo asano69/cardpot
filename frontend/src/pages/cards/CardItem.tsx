@@ -1,8 +1,8 @@
 import { onCleanup, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { useSortable } from "@dnd-kit/solid/sortable";
-import { registerCardElement } from "../../lib/cardsStore";
-import { titleToSegment } from "../../lib/slugify";
+import { registerCardElement } from "../../lib/stores/cardsStore";
+import { titleToSegment } from "../../lib/models/slugify";
 import { deriveCardGridTitle, type CardRecord } from "../../lib/models/card";
 import { ripple } from "../../lib/directives/ripple";
 

@@ -4,7 +4,7 @@ import { DragDropProvider } from "@dnd-kit/solid";
 import { useSortable, isSortable } from "@dnd-kit/solid/sortable";
 import { PointerSensor, KeyboardSensor } from "@dnd-kit/dom";
 
-import pb from "../../lib/pb";
+import pb from "../../lib/api/pb";
 import { computePosition } from "../../lib/position";
 import type { PotRecord } from "../../lib/models/pot";
 

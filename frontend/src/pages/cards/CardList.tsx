@@ -11,10 +11,10 @@ import { DragDropProvider } from "@dnd-kit/solid";
 import { isSortable } from "@dnd-kit/solid/sortable";
 import { PointerSensor, KeyboardSensor } from "@dnd-kit/dom";
 
-import pb from "../../lib/pb";
+import pb from "../../lib/api/pb";
 import Loading from "../../components/Loading";
 import CardItem from "./CardItem";
-import { cardsById, cardsLoaded, mergeCards } from "../../lib/cardsStore";
+import { cardsById, cardsLoaded, mergeCards } from "../../lib/stores/cardsStore";
 import { computePosition } from "../../lib/position";
 import { useTitle } from "../../lib/useTitle";
 import { useFooterSlot } from "../../lib/footerSlot";
@@ -54,7 +54,7 @@ export default function CardList() {
   // lib/router.tsx and pages/pots/PotLayout.tsx.
 
   // The whole "cards" collection is now fetched once for the app's
-  // entire lifetime (see AppShell.tsx and lib/cardsStore.ts's
+  // entire lifetime (see AppShell.tsx and lib/stores/cardsStore.ts's
   // loadAllCards), not paginated per pot per CardList mount -- this
   // just waits for that one fetch to have landed.
 
@@ -120,7 +120,7 @@ export default function CardList() {
   // How long to wait, after the local optimistic reorder is applied,
   // before sending the new position to PocketBase. This client is
   // also subscribed to its own realtime "cards" updates (see
-  // startCardsSubscription in lib/cardsStore.ts), and that handler
+  // startCardsSubscription in lib/stores/cardsStore.ts), and that handler
   // always runs the FLIP animation, which sets the same element's
   // `transform` that dnd-kit's own drop animation is still settling
   // right after a drag ends. Delaying only the network request (not

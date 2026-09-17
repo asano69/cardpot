@@ -2,7 +2,7 @@ import { createSignal } from "solid-js";
 
 import Logo from "../components/Logo";
 
-import pb from "../lib/pb";
+import pb from "../lib/api/pb";
 
 // Login screen shown by AuthGate when no valid superuser session exists.
 // This app is single-user, so the PocketBase superuser account also

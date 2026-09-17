@@ -2,7 +2,7 @@ import { createSignal, createEffect, Show, untrack } from "solid-js";
 import { useParams, useNavigate } from "@solidjs/router";
 import { Alert } from "@kobalte/core/alert";
 import type * as Y from "yjs";
-import pb from "../../lib/pb";
+import pb from "../../lib/api/pb";
 import DraftCardEditor from "../../features/noteEditor/DraftCardEditor";
 import ExistingCardEditor from "../../features/noteEditor/ExistingCardEditor";
 import Loading from "../../components/Loading";
@@ -12,8 +12,8 @@ import {
   cardsLoaded,
   mergeCards,
   findCardByPotAndSlug,
-} from "../../lib/cardsStore";
-import { titleToSegment, segmentToSlug, slugToTitle } from "../../lib/slugify";
+} from "../../lib/stores/cardsStore";
+import { titleToSegment, segmentToSlug, slugToTitle } from "../../lib/models/slugify";
 import { useTitle } from "../../lib/useTitle";
 import { useFooterSlot } from "../../lib/footerSlot";
 import { computePosition } from "../../lib/position";

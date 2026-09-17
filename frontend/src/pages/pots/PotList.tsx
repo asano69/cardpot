@@ -3,7 +3,7 @@ import { DragDropProvider } from "@dnd-kit/solid";
 import { isSortable } from "@dnd-kit/solid/sortable";
 import { PointerSensor, KeyboardSensor } from "@dnd-kit/dom";
 
-import pb from "../../lib/pb";
+import pb from "../../lib/api/pb";
 import Loading from "../../components/Loading";
 import PotGridItem from "./PotGridItem";
 import PotForm from "./PotForm";

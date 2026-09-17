@@ -27,7 +27,7 @@ export interface ExistingCardEditorProps {
 // internal/serve/title_watch.go) and resolves+persists the title itself,
 // debounced the same way the old client-side flow was. That update reaches
 // this client through the shared "cards" realtime subscription (see
-// lib/cardsStore.ts), so no HTTP round-trip -- and therefore no save-failure
+// lib/stores/cardsStore.ts), so no HTTP round-trip -- and therefore no save-failure
 // state -- is needed here anymore.
 export default function ExistingCardEditor(props: ExistingCardEditorProps) {
   const ydoc = props.initialYdoc ?? new Y.Doc();

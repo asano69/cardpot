@@ -1,7 +1,7 @@
 // frontend/src/lib/auth.tsx
 import { createSignal, onCleanup, Show, type JSX } from "solid-js";
 
-import pb from "./pb";
+import pb from "./api/pb";
 import Login from "../pages/Login";
 
 interface AuthGateProps {

@@ -1,7 +1,7 @@
 import { createResource, type ParentProps } from "solid-js";
 import { useParams } from "@solidjs/router";
 
-import { fetchPotBySlug } from "../../lib/pots";
+import { fetchPotBySlug } from "../../lib/api/pots";
 import { useTopBarPotLink } from "../../lib/topBarSlot";
 import PotContext from "./PotContext";
 
