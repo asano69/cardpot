@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   collapseGridTitleWhitespace,
   deriveCardGridTitle,
-} from "./cardGridTitle";
-import type { CardRecord } from "../routes/cards/CardForm";
+  type CardRecord,
+} from "./card";
 
 // Phase 3 regression tests: lock in the relationship between a
 // resolved card title and the cardGridTitle derived from it. See

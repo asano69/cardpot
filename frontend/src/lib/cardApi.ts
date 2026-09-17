@@ -1,6 +1,5 @@
 import pb from "./pb";
-import type { CardRecord } from "../routes/cards/CardForm";
-import type { TitleCandidate } from "./titleCandidate";
+import type { CardRecord, TitleCandidate } from "./domain/card";
 
 // Response shape shared by createCard/updateCardTitle: the saved card,
 // plus a merge-alert target computed server-side (see findMergeTarget

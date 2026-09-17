@@ -6,7 +6,7 @@ import ActionsMenu from "../../components/menus/ActionsMenu";
 import PromptDialog from "../../components/dialogs/PromptDialog";
 import ConfirmDialog from "../../components/dialogs/ConfirmDialog";
 import pb from "../../lib/pb";
-import type { PotRecord } from "./PotForm";
+import type { PotRecord } from "../../lib/domain/pot";
 
 export interface PotGridItemProps {
   pot: PotRecord;

@@ -3,7 +3,7 @@ import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 import { IndexeddbPersistence } from "y-indexeddb";
 import NoteEditor from "./index";
-import type { TitleCandidate } from "../../lib/titleCandidate";
+import type { TitleCandidate } from "../../lib/domain/card";
 
 export interface ExistingCardEditorProps {
   cardId: string;

@@ -8,7 +8,7 @@ import Loading from "../../components/Loading";
 import PotGridItem from "./PotGridItem";
 import PotForm from "./PotForm";
 import { computePosition } from "../../lib/position";
-import type { PotRecord } from "./PotForm";
+import type { PotRecord } from "../../lib/domain/pot";
 
 // Same override as CardList's own sensors: without it, PointerSensor's
 // default preventActivation refuses to start a drag from inside an

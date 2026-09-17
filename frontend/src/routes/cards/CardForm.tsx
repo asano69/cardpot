@@ -17,22 +17,8 @@ import { titleToSegment, segmentToSlug, slugToTitle } from "../../lib/slugify";
 import { useTitle } from "../../lib/useTitle";
 import { useFooterSlot } from "../../lib/footerSlot";
 import { computePosition } from "../../lib/position";
-import { deriveCardGridTitle } from "../../lib/cardGridTitle";
+import { deriveCardGridTitle, type CardRecord } from "../../lib/domain/card";
 import { usePot } from "../pots/PotContext";
-import type { CardTitle } from "../../lib/cardTitle";
-
-export interface CardRecord {
-  id: string;
-  title: CardTitle;
-  slug: string;
-  description: string;
-  image: string;
-  pot: string;
-  position: number;
-  pin: boolean;
-  created: string;
-  updated: string;
-}
 
 type Draft = { initialTitle?: string };
 

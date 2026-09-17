@@ -6,10 +6,7 @@ import {
 import type { PluginValue, ViewUpdate } from "@codemirror/view";
 import { ViewPlugin } from "@codemirror/view";
 import { ySyncAnnotation } from "y-codemirror.next";
-import {
-  type TitleCandidate,
-  makeTitleCandidate,
-} from "../../lib/titleCandidate";
+import { type TitleCandidate, makeTitleCandidate } from "../../lib/domain/card";
 
 // How long to wait, after the last edit to the header (line 1), before
 // treating it as "confirmed" and firing the callback. Pressing Enter

@@ -4,17 +4,7 @@ import { Plus } from "../../lib/icons";
 
 import pb from "../../lib/pb";
 import { randomKey } from "../../lib/randomKey";
-
-// Matches the PocketBase "pots" collection schema.
-export interface PotRecord {
-  id: string;
-  slug: string;
-  title: string;
-  done: boolean;
-  position: number;
-  created: string;
-  updated: string;
-}
+import type { PotRecord } from "../../lib/domain/pot";
 
 export interface PotFormProps {
   // Whether at least one pot already exists -- tones down the

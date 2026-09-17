@@ -2,7 +2,7 @@ import { createSignal, onCleanup } from "solid-js";
 import * as Y from "yjs";
 import NoteEditor from "./index";
 import { createCard } from "../../lib/cardApi";
-import type { TitleCandidate } from "../../lib/titleCandidate";
+import type { TitleCandidate } from "../../lib/domain/card";
 import { mergeCards } from "../../lib/cardsStore";
 
 export interface DraftCardEditorProps {

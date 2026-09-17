@@ -6,7 +6,7 @@ import { PointerSensor, KeyboardSensor } from "@dnd-kit/dom";
 
 import pb from "../../lib/pb";
 import { computePosition } from "../../lib/position";
-import type { PotRecord } from "../../routes/pots/PotForm";
+import type { PotRecord } from "../../lib/domain/pot";
 
 // Same override as PotList/CardList's own sensors: without it,
 // PointerSensor's default preventActivation refuses to start a drag
