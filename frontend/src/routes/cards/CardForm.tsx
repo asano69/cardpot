@@ -1,4 +1,4 @@
-import { createSignal, createEffect, Show } from "solid-js";
+import { createSignal, createEffect, Show, untrack } from "solid-js";
 import { useParams, useNavigate } from "@solidjs/router";
 import { Alert } from "@kobalte/core/alert";
 import type * as Y from "yjs";
@@ -74,7 +74,14 @@ export default function CardForm() {
     // through on every keystroke instead of short-circuiting.
     const slug = segmentToSlug(params.cardSlug);
     if (slug === urlSegment && cardId()) return;
-    const record = findCardByPotAndSlug(potId, slug);
+    // Reading cardsById via findCardByPotAndSlug must not make this effect
+    // re-run on every unrelated cardsById mutation. Without untrack, the
+    // mergeCards() call inside DraftCardEditor's create() -- which runs
+    // before onCreated/handleCreated hands off the draft's own Y.Doc --
+    // used to make this effect "discover" the just-created record on its
+    // own and resolve cardId here first, so ExistingCardEditor mounted
+    // with a brand-new empty Y.Doc instead of the draft's real one.
+    const record = untrack(() => findCardByPotAndSlug(potId, slug));
     setDraftYdoc(undefined)
     if (record) {
       setCardId(record.id);
