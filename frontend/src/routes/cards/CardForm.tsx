@@ -90,25 +90,36 @@ export default function CardForm() {
     navigate(`/${params.slug}/${segment}`, { replace: true });
   };
 
+  // Dead code: this used to push every live-typed header straight into the
+  // URL as an optimistic slug. During IME composition (e.g. Japanese
+  // input), CodeMirror commits a real transaction per preedit character, so
+  // this fired -- and called navigate() -- on every keystroke, which kept
+  // interrupting the composition session. The URL now only updates once the
+  // server has resolved the real title (see the createEffect below), which
+  // is debounced server-side (see internal/serve/title_watch.go) and never
+  // touches an in-progress composition.
   const handleLiveTitleChange = (candidate: TitleCandidate) => {
     if (!cardId() || !candidate) return;
     optimisticSegment = titleToSegment(candidate);
     replaceUrl(optimisticSegment);
   };
 
-  // Do not overwrite the immediate local slug with the old server title while
-  // a title request is in flight. The response updates cardsById, which then
-  // becomes the authoritative replacement (including server conflict suffixes).
-  createEffect(() => {
-    const id = cardId();
-    if (!id) return;
-    const title = cardsById[id]?.title;
-    if (!title) return;
-    const serverSegment = titleToSegment(title);
-    if (shouldDeferServerSlugSync(optimisticSegment, serverSegment)) return;
-    optimisticSegment = undefined;
-    replaceUrl(serverSegment);
-  });
+  // TEMPORARILY DISABLED for isolation testing (IME composition bug): this
+  // effect also calls replaceUrl(), so it was a second possible source of
+  // per-keystroke URL churn even after handleLiveTitleChange was unwired.
+  // With this commented out, the URL should never change while editing an
+  // existing card's title, no matter what. Re-enable once it's confirmed
+  // whether the IME interruption is actually gone.
+  // createEffect(() => {
+  //   const id = cardId();
+  //   if (!id) return;
+  //   const title = cardsById[id]?.title;
+  //   if (!title) return;
+  //   const serverSegment = titleToSegment(title);
+  //   if (shouldDeferServerSlugSync(optimisticSegment, serverSegment)) return;
+  //   optimisticSegment = undefined;
+  //   replaceUrl(serverSegment);
+  // });
 
   const handleCreated = (id: string, update: Uint8Array) => {
     setDraftUpdate(update);
@@ -218,7 +229,8 @@ export default function CardForm() {
                 initialUpdate={draftUpdate()}
                 existingTitle={cardsById[id]?.title}
                 onMergeTarget={setMergeTarget}
-                onLiveTitleChange={handleLiveTitleChange}
+                // onLiveTitleChange intentionally left unwired -- see
+                // handleLiveTitleChange's comment above.
               />
             )}
           </Show>
