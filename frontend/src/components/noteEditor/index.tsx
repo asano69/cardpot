@@ -38,7 +38,6 @@ export interface NoteEditorProps {
   autofocus?: boolean;
   existingTitle?: string;
   onConfirmedTitle: (candidate: TitleCandidate) => void;
-  onLiveTitleChange?: (candidate: TitleCandidate) => void;
 }
 
 // Rendering-only CodeMirror adapter. The caller owns the Y.Doc and every
@@ -81,7 +80,7 @@ export default function NoteEditor(props: NoteEditorProps) {
         // custom handling needed for the double-bracket case.
         closeBrackets(),
         yCollab(ytext, null),
-        titleCandidateExtension(handleSlugCandidate, props.onLiveTitleChange),
+        titleCandidateExtension(handleSlugCandidate),
         titleLineHighlight,
         editorTheme,
         // Hanging indent for wrapped lines, and the Scrapbox/Cosense-

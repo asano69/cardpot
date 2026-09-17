@@ -13,7 +13,6 @@ import {
   findCardByPotAndSlug,
 } from "../../lib/cardsStore";
 import { titleToSegment, segmentToSlug, slugToTitle } from "../../lib/slugify";
-import type { TitleCandidate } from "../../lib/titleCandidate";
 import { useTitle } from "../../lib/useTitle";
 import { useFooterSlot } from "../../lib/footerSlot";
 import { computePosition } from "../../lib/position";
@@ -21,7 +20,6 @@ import { deriveCardGridTitle } from "../../lib/cardGridTitle";
 import { randomKey } from "../../lib/randomKey";
 import { usePot } from "../pots/PotContext";
 import type { CardTitle } from "../../lib/cardTitle";
-import { shouldDeferServerSlugSync } from "./cardUrlSync";
 
 export interface CardRecord {
   id: string;
@@ -53,7 +51,6 @@ export default function CardForm() {
   const [draftUpdate, setDraftUpdate] = createSignal<Uint8Array>();
   const [mergeTarget, setMergeTarget] = createSignal<string | null>(null);
   let urlSegment = params.cardSlug ?? "";
-  let optimisticSegment: string | undefined;
 
   // The comparison is still necessary because router params react to our own
   // replace navigation. It is intentionally limited to URL echoes; editor
@@ -109,34 +106,16 @@ export default function CardForm() {
     );
   };
 
-  // Dead code: this used to push every live-typed header straight into the
-  // URL as an optimistic slug. During IME composition (e.g. Japanese
-  // input), CodeMirror commits a real transaction per preedit character, so
-  // this fired -- and called navigate() -- on every keystroke, which kept
-  // interrupting the composition session. The URL now only updates once the
-  // server has resolved the real title (see the createEffect below), which
-  // is debounced server-side (see internal/serve/title_watch.go) and never
-  // touches an in-progress composition.
-  const handleLiveTitleChange = (candidate: TitleCandidate) => {
-    if (!cardId() || !candidate) return;
-    optimisticSegment = titleToSegment(candidate);
-    replaceUrl(optimisticSegment);
-  };
-
-  // Do not overwrite the immediate local slug with the old server title while
-  // a title request is in flight. The response updates cardsById, which then
-  // becomes the authoritative replacement (including server conflict suffixes).
-  // replaceUrl() above now only touches the address bar (history.replaceState),
-  // so this no longer causes any visible re-render or remount.
+  // Keeps the address bar's slug in sync with the server-resolved title
+  // (see internal/serve/title_watch.go). replaceUrl() only touches
+  // history.replaceState, so this causes no visible re-render or remount
+  // (see replaceUrl's own comment above).
   createEffect(() => {
     const id = cardId();
     if (!id) return;
     const title = cardsById[id]?.title;
     if (!title) return;
-    const serverSegment = titleToSegment(title);
-    if (shouldDeferServerSlugSync(optimisticSegment, serverSegment)) return;
-    optimisticSegment = undefined;
-    replaceUrl(serverSegment);
+    replaceUrl(titleToSegment(title));
   });
 
   const handleCreated = (id: string, update: Uint8Array) => {
@@ -247,8 +226,6 @@ export default function CardForm() {
                 initialUpdate={draftUpdate()}
                 existingTitle={cardsById[id]?.title}
                 onMergeTarget={setMergeTarget}
-                // onLiveTitleChange intentionally left unwired -- see
-                // handleLiveTitleChange's comment above.
               />
             )}
           </Show>

@@ -10,7 +10,6 @@ export interface ExistingCardEditorProps {
   potSlug: () => string;
   initialUpdate?: Uint8Array;
   onMergeTarget?: (target: string | null) => void;
-  onLiveTitleChange?: (candidate: TitleCandidate) => void;
   existingTitle?: string;
 }
 
@@ -53,7 +52,6 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
       provider={provider}
       potSlug={props.potSlug}
       onConfirmedTitle={confirm}
-      onLiveTitleChange={props.onLiveTitleChange}
       existingTitle={props.existingTitle}
     />
   );

@@ -64,21 +64,12 @@ class TitleCandidateTracker implements PluginValue {
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   private lastFired: TitleCandidate | null = null;
 
-  constructor(
-    private readonly onConfirmed: (candidate: TitleCandidate) => void,
-    // Fired synchronously, with no debounce, on every user edit --
-    // separate from onConfirmed's debounced/Enter-gated flow. Lets a
-    // caller (CardForm) reflect line 1 into the URL's slug segment in
-    // real time, instead of waiting for the server round-trip that
-    // onConfirmed eventually triggers.
-    private readonly onLiveChange?: (candidate: TitleCandidate) => void,
-  ) {}
+  constructor(private readonly onConfirmed: (candidate: TitleCandidate) => void) {}
 
   update(update: ViewUpdate) {
     if (!hasUserEdit(update)) return;
 
     const candidate = extractCandidate(update.state);
-    this.onLiveChange?.(candidate);
     clearTimeout(this.debounceTimer);
 
     if (headerJustCommitted(update)) {
@@ -110,9 +101,6 @@ class TitleCandidateTracker implements PluginValue {
 
 export function titleCandidateExtension(
   onConfirmed: (candidate: TitleCandidate) => void,
-  onLiveChange?: (candidate: TitleCandidate) => void,
 ): Extension {
-  return ViewPlugin.define(
-    () => new TitleCandidateTracker(onConfirmed, onLiveChange),
-  );
+  return ViewPlugin.define(() => new TitleCandidateTracker(onConfirmed));
 }
