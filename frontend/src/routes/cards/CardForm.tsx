@@ -67,9 +67,16 @@ export default function CardForm() {
     }
     const potId = pot()?.id;
     if (!potId || !cardsLoaded()) return;
-    if (params.cardSlug === urlSegment && cardId()) return;
 
+    // Compare decoded forms: urlSegment holds the raw (unencoded) slug,
+    // but params.cardSlug reflects the URL's actual path, which the
+    // browser percent-encodes for any non-ASCII text (e.g. Japanese)
+    // even though titleToSegment/replaceUrl never encoded it themselves.
+    // Comparing the raw encoded param against the raw slug therefore
+    // never matched for non-ASCII titles, so this guard silently fell
+    // through on every keystroke instead of short-circuiting.
     const slug = segmentToSlug(params.cardSlug);
+    if (slug === urlSegment && cardId()) return;
     const record = findCardByPotAndSlug(potId, slug);
     setDraftUpdate(undefined);
     if (record) {
@@ -84,10 +91,22 @@ export default function CardForm() {
     }
   });
 
+  // Updates only the browser's address bar, bypassing Solid Router's own
+  // navigate(). navigate() also updates Router's reactive location/params
+  // signals, which re-fires every effect that reads them -- including this
+  // component's own top createEffect (which reads params.cardSlug) -- and
+  // that visibly re-evaluates the page even though the open card never
+  // actually changes. history.replaceState() fires no popstate event, so
+  // Router's signals (and this component's own reactivity) stay untouched;
+  // only what's shown in the address bar changes.
   const replaceUrl = (segment: string) => {
     if (segment === urlSegment) return;
     urlSegment = segment;
-    navigate(`/${params.slug}/${segment}`, { replace: true });
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `/${params.slug}/${segment}`,
+    );
   };
 
   // Dead code: this used to push every live-typed header straight into the
@@ -104,22 +123,21 @@ export default function CardForm() {
     replaceUrl(optimisticSegment);
   };
 
-  // TEMPORARILY DISABLED for isolation testing (IME composition bug): this
-  // effect also calls replaceUrl(), so it was a second possible source of
-  // per-keystroke URL churn even after handleLiveTitleChange was unwired.
-  // With this commented out, the URL should never change while editing an
-  // existing card's title, no matter what. Re-enable once it's confirmed
-  // whether the IME interruption is actually gone.
-  // createEffect(() => {
-  //   const id = cardId();
-  //   if (!id) return;
-  //   const title = cardsById[id]?.title;
-  //   if (!title) return;
-  //   const serverSegment = titleToSegment(title);
-  //   if (shouldDeferServerSlugSync(optimisticSegment, serverSegment)) return;
-  //   optimisticSegment = undefined;
-  //   replaceUrl(serverSegment);
-  // });
+  // Do not overwrite the immediate local slug with the old server title while
+  // a title request is in flight. The response updates cardsById, which then
+  // becomes the authoritative replacement (including server conflict suffixes).
+  // replaceUrl() above now only touches the address bar (history.replaceState),
+  // so this no longer causes any visible re-render or remount.
+  createEffect(() => {
+    const id = cardId();
+    if (!id) return;
+    const title = cardsById[id]?.title;
+    if (!title) return;
+    const serverSegment = titleToSegment(title);
+    if (shouldDeferServerSlugSync(optimisticSegment, serverSegment)) return;
+    optimisticSegment = undefined;
+    replaceUrl(serverSegment);
+  });
 
   const handleCreated = (id: string, update: Uint8Array) => {
     setDraftUpdate(update);
