@@ -70,19 +70,11 @@ func initYjsServer(app core.App) {
 		// Registered once per room, right after the room's crdt.Doc is
 		// constructed and before any peer can touch it (see ygo's
 		// OnLoadDocument doc comment).
+		// Debounced server-side title resolution (see title_watch.go):
+		// this now supersedes the old debug-only line0 logging that
+		// used to live here.
 		yjsServer.OnLoadDocument = func(_ context.Context, room string, doc *crdt.Doc) error {
-			// Tracks the room's line0 across observer calls so a change
-			// elsewhere in the document (line0 unaffected) doesn't produce
-			// a misleading "line0 changed" log entry.
-			lastLine0 := firstLine(doc.GetText("content").ToString())
-			doc.GetText("content").Observe(func(_ crdt.YTextEvent) {
-				line0 := firstLine(doc.GetText("content").ToString())
-				if line0 == lastLine0 {
-					return
-				}
-				lastLine0 = line0
-				slog.Debug("line0 changed", "room", room, "line0", line0)
-			})
+			titleWatcherInstance.observe(app, room, doc)
 			return nil
 		}
 
@@ -376,6 +368,7 @@ func (p *ydocPersistence) compactIfNeeded(room string) error {
 // cascade-delete via the "card" relation field's cascadeDelete option,
 // so only the in-memory room needs cleaning up here.
 func forgetRoom(room string) {
+	titleWatcherInstance.forget(room)
 	if yjsServer != nil {
 		_ = yjsServer.CloseRoom(room, true)
 	}

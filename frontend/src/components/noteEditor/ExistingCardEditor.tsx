@@ -1,10 +1,8 @@
-import { createSignal, onCleanup } from "solid-js";
+import { onCleanup } from "solid-js";
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 import { IndexeddbPersistence } from "y-indexeddb";
 import NoteEditor from "./index";
-import { updateCardTitle } from "../../lib/cardApi";
-import { mergeCards } from "../../lib/cardsStore";
 import type { TitleCandidate } from "../../lib/titleCandidate";
 
 export interface ExistingCardEditorProps {
@@ -19,6 +17,14 @@ export interface ExistingCardEditorProps {
 // Existing cards own the network lifecycle. Applying a just-created draft
 // update before creating the providers guarantees body text survives the
 // draft-to-existing component replacement.
+//
+// Title resolution for an existing card is no longer driven from here: the
+// server watches this room's live Yjs document directly (see
+// internal/serve/title_watch.go) and resolves+persists the title itself,
+// debounced the same way the old client-side flow was. That update reaches
+// this client through the shared "cards" realtime subscription (see
+// lib/cardsStore.ts), so no HTTP round-trip -- and therefore no save-failure
+// state -- is needed here anymore.
 export default function ExistingCardEditor(props: ExistingCardEditorProps) {
   const ydoc = new Y.Doc();
   if (props.initialUpdate) Y.applyUpdate(ydoc, props.initialUpdate);
@@ -29,40 +35,11 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
     props.cardId,
     ydoc,
   );
-  const [saveError, setSaveError] = createSignal(false);
-  let inFlight = false;
-  let pending: TitleCandidate | null = null;
-  let lastResolved: TitleCandidate | null = null;
 
-  const send = async (candidate: TitleCandidate) => {
-    inFlight = true;
-    try {
-      const result = await updateCardTitle(props.cardId, candidate);
-      setSaveError(false);
-      lastResolved = candidate;
-      mergeCards([result.card]);
-      props.onMergeTarget?.(result.mergeTarget);
-    } catch (error) {
-      console.error("[existing-card-editor] failed to save title:", error);
-      setSaveError(true);
-    } finally {
-      inFlight = false;
-      if (pending !== null) {
-        const next = pending;
-        pending = null;
-        void send(next);
-      }
-    }
-  };
-
-  const confirm = (candidate: TitleCandidate) => {
-    if (candidate === lastResolved) return;
-    if (inFlight) {
-      pending = candidate;
-      return;
-    }
-    void send(candidate);
-  };
+  // Kept only because NoteEditor requires an onConfirmedTitle callback --
+  // resolution itself now happens server-side (see the file comment above),
+  // so there's nothing left to do here on confirm.
+  const confirm = (_candidate: TitleCandidate) => {};
 
   onCleanup(() => {
     provider.destroy();
@@ -71,21 +48,13 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
   });
 
   return (
-    <>
-      {saveError() && (
-        <p class="mb-4 text-sm text-[#dc3545]">
-          Failed to save this card. Your text is still here; edit the title
-          again to retry.
-        </p>
-      )}
-      <NoteEditor
-        ydoc={ydoc}
-        provider={provider}
-        potSlug={props.potSlug}
-        onConfirmedTitle={confirm}
-        onLiveTitleChange={props.onLiveTitleChange}
-        existingTitle={props.existingTitle}
-      />
-    </>
+    <NoteEditor
+      ydoc={ydoc}
+      provider={provider}
+      potSlug={props.potSlug}
+      onConfirmedTitle={confirm}
+      onLiveTitleChange={props.onLiveTitleChange}
+      existingTitle={props.existingTitle}
+    />
   );
 }
