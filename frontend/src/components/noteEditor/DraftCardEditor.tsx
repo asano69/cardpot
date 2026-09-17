@@ -1,6 +1,5 @@
 import { createSignal, onCleanup } from "solid-js";
 import * as Y from "yjs";
-import { IndexeddbPersistence } from "y-indexeddb";
 import NoteEditor from "./index";
 import { createCard } from "../../lib/cardApi";
 import type { TitleCandidate } from "../../lib/titleCandidate";
@@ -10,21 +9,25 @@ export interface DraftCardEditorProps {
   potId: () => string | undefined;
   potSlug: () => string;
   initialTitle?: string;
-  draftKey: string;
   onCreated: (cardId: string, ydoc: Y.Doc) => void;
   onMergeTarget?: (target: string | null) => void;
 }
 
-// A draft deliberately has no WebsocketProvider. Its Y.Doc is local and
-// persisted until createCard succeeds, at which point the Y.Doc itself --
-// not a re-encoded snapshot -- is handed to ExistingCardEditor, which
-// reuses the same instance before connecting to the room. Handing off the
-// live doc instead of Y.encodeStateAsUpdate()/Y.applyUpdate() removes any
-// risk of the snapshot missing an edit that hadn't yet been reflected at
-// the moment it was taken.
+// A draft's Y.Doc is purely in-memory: no WebsocketProvider, and (unlike
+// an existing card, see ExistingCardEditor.tsx) no IndexedDB persistence
+// either. Persisting a draft under a slug-derived key used to leave stale
+// updates behind whenever a draft was abandoned without confirming a
+// title -- revisiting the same nonexistent page later would then merge
+// that old content into the fresh doc unpredictably (e.g. "test" ->
+// "testtest", or worse). Keeping the draft in memory only avoids that
+// entirely; once createCard succeeds, the Y.Doc itself -- not a
+// re-encoded snapshot -- is handed to ExistingCardEditor, which reuses
+// the same instance before connecting to the room. Handing off the live
+// doc instead of Y.encodeStateAsUpdate()/Y.applyUpdate() removes any risk
+// of the snapshot missing an edit that hadn't yet been reflected at the
+// moment it was taken.
 export default function DraftCardEditor(props: DraftCardEditorProps) {
   const ydoc = new Y.Doc();
-  const idbProvider = new IndexeddbPersistence(props.draftKey, ydoc);
   const [saveError, setSaveError] = createSignal(false);
   let creating = false;
   let created = false;
@@ -50,10 +53,6 @@ export default function DraftCardEditor(props: DraftCardEditorProps) {
   };
 
   onCleanup(() => {
-    // Always drop the draft-keyed IndexedDB persistence -- once handed
-    // off, ExistingCardEditor persists the same doc under the real card
-    // id instead, so this key would otherwise linger as an orphan.
-    idbProvider.destroy();
     // Only destroy the Y.Doc if it was never handed off: once
     // ExistingCardEditor has taken ownership, this component must leave
     // it alone rather than destroying the doc out from under it.
@@ -64,8 +63,8 @@ export default function DraftCardEditor(props: DraftCardEditorProps) {
     <>
       {saveError() && (
         <p class="mb-4 text-sm text-[#dc3545]">
-          Failed to create this card. Your text is saved locally; edit the title
-          again to retry.
+          Failed to create this card. Your text is preserved in this session
+          -- edit the title again to retry.
         </p>
       )}
       <NoteEditor

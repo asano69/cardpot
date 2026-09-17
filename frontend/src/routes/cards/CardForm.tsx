@@ -18,7 +18,6 @@ import { useTitle } from "../../lib/useTitle";
 import { useFooterSlot } from "../../lib/footerSlot";
 import { computePosition } from "../../lib/position";
 import { deriveCardGridTitle } from "../../lib/cardGridTitle";
-import { randomKey } from "../../lib/randomKey";
 import { usePot } from "../pots/PotContext";
 import type { CardTitle } from "../../lib/cardTitle";
 
@@ -35,7 +34,7 @@ export interface CardRecord {
   updated: string;
 }
 
-type Draft = { key: string; initialTitle?: string };
+type Draft = { initialTitle?: string };
 
 // Chooses one physical editor mode. A draft owns only a local Y.Doc; an
 // existing card owns its IndexedDB and websocket providers. Switching modes
@@ -47,7 +46,7 @@ export default function CardForm() {
   const pot = usePot();
   const [cardId, setCardId] = createSignal<string>();
   const [draft, setDraft] = createSignal<Draft | undefined>(
-    params.cardSlug ? undefined : { key: `new:${randomKey()}` },
+    params.cardSlug ? undefined : {},
   );
   const [draftYdoc, setDraftYdoc] = createSignal<Y.Doc>();
   const [mergeTarget, setMergeTarget] = createSignal<string | null>(null);
@@ -60,7 +59,7 @@ export default function CardForm() {
     if (!params.cardSlug) {
       setCardId(undefined);
      setDraftYdoc(undefined);
-      setDraft({ key: `new:${randomKey()}` });
+      setDraft({});
       return;
     }
     const potId = pot()?.id;
@@ -82,10 +81,7 @@ export default function CardForm() {
       setDraft(undefined);
     } else {
       setCardId(undefined);
-      setDraft({
-        key: `draft:${potId}:${slug}`,
-        initialTitle: slugToTitle(slug),
-      });
+      setDraft({ initialTitle: slugToTitle(slug) });
     }
   });
 
@@ -212,7 +208,6 @@ export default function CardForm() {
                     potId={() => pot()?.id}
                     potSlug={() => params.slug}
                     initialTitle={value.initialTitle}
-                    draftKey={value.key}
                     onCreated={handleCreated}
                     onMergeTarget={setMergeTarget}
                   />
