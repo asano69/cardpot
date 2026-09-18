@@ -8,6 +8,7 @@ import { wordBreak } from "./plugins/decorations/wordBreak";
 import { codeBlockLines } from "./plugins/decorations/codeBlockLines";
 import { imageWidget } from "./plugins/decorations/imageWidget";
 import { insertNewlineKeepingBullet } from "./plugins/interactions/bulletEnter";
+import { wrapBacktick, wrapBold } from "./plugins/interactions/wrapSelection";
 import { defaultKeymap, indentMore, indentLess } from "@codemirror/commands";
 import { yCollab, yUndoManagerKeymap } from "y-codemirror.next";
 import * as Y from "yjs";
@@ -126,6 +127,12 @@ export default function NoteEditor(props: NoteEditorProps) {
           { key: "Tab", run: indentMore },
           { key: "Shift-Tab", run: indentLess },
           { key: "Enter", run: insertNewlineKeepingBullet },
+          // Wraps a selection instead of typing the character
+          // literally -- see wrapSelection.ts. Bound alongside the
+          // other custom single-char keys above so it also wins over
+          // defaultKeymap's plain "insert this character" binding.
+          { key: "`", run: wrapBacktick },
+          { key: "*", run: wrapBold },
         ]),
         // yCollab supplies its own undo/redo keymap, backed by Yjs's
         // UndoManager -- CM6's own history() extension is
