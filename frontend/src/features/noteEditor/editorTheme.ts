@@ -1,5 +1,8 @@
 import { EditorView } from "@codemirror/view";
-import { INDENT_WIDTH_PX, DOT_SIZE_PX } from "./plugins/decorations/hangingIndent";
+import {
+  INDENT_WIDTH_PX,
+  DOT_SIZE_PX,
+} from "./plugins/decorations/hangingIndent";
 
 // All CodeMirror-specific styling lives here via EditorView.theme(),
 // not as plain CSS in styles/components.css. CodeMirror injects its
@@ -20,13 +23,14 @@ export const editorTheme = EditorView.theme({
     outline: "none",
   },
   ".cm-scroller": {
-    fontFamily: "var(--font-sans)",
+    fontFamily: "var(--font-editor)",
   },
   ".cm-content": {
     padding: "0",
   },
   ".cm-line": {
     lineHeight: "1.7",
+    fontSize: "15px",
     // Baseline: any boundary in the line is breakable, including the
     // boundary next to an atomic non-text inline element (a
     // hanging-indent "pad" widget today, or a future inline image).
@@ -37,7 +41,7 @@ export const editorTheme = EditorView.theme({
     wordBreak: "break-all",
   },
   ".cm-line.cm-title-line": {
-    fontFamily: "var(--font-sans)",
+    fontFamily: "var(--font-editor)",
     fontSize: "1.73rem",
     color: "var(--color-line-title)",
     // A fixed unitless-looking px value, not "normal" -- matches the
@@ -99,7 +103,7 @@ export const editorTheme = EditorView.theme({
   // Inline code span (see parser/cardpot's Code node): a monospace
   // font plus GitHub's own subtle code-background tint.
   ".cm-inline-code": {
-    fontFamily: "monospace",
+    fontFamily: "var(--font-mono)",
     backgroundColor:
       "light-dark(rgba(175, 184, 193, 0.2), rgba(110, 118, 129, 0.4))",
     borderRadius: "6px",
@@ -111,7 +115,7 @@ export const editorTheme = EditorView.theme({
   // line's full width -- including blank lines and the gap past the
   // last character -- unlike an inline Decoration.mark.
   ".cm-line.cm-code-block-line": {
-    fontFamily: "monospace",
+    fontFamily: "var(--font-mono)",
     backgroundColor:
       "light-dark(rgba(175, 184, 193, 0.2), rgba(110, 118, 129, 0.4))",
   },

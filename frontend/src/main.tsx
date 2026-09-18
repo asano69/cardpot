@@ -6,13 +6,11 @@ import { render } from "solid-js/web";
 // unused font files.
 import "@fontsource/fraunces/500.css";
 
-// Self-hosted body font (see theme.css's --font-sans). Only the
-// weights actually used (400 regular, 700 for font-bold utilities)
-// are imported, same reasoning as Fraunces above. Hiragino Sans stays
-// in the font-sans stack as a fallback for Japanese glyphs, which
-// Open Sans doesn't cover.
+
 import "@fontsource/open-sans/400.css";
-import "@fontsource/open-sans/700.css";
+
+import "@fontsource/roboto/400.css";
+import "@fontsource/roboto/700.css";
 
 // Order matters: tokens.css defines the CSS custom properties every other
 // stylesheet consumes via var().

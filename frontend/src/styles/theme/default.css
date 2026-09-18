@@ -105,9 +105,8 @@ html[data-mode="dark"] {
   --font-serif: "TeX Gyre Termes", "Nimbus Roman No9 L", Georgia, serif;
   --font-mono: Menlo, Monaco, Consolas, "Courier New", monospace;
 
-  --font-heading: "Poppins", sans-serif;
+  --font-editor: "Roboto", Helvetica, Arial, "Hiragino Sans", sans-serif;
   --font-display: "Fraunces", "TeX Gyre Termes", Georgia, serif;
-  --font-brand: "Bebas Neue", sans-serif;
 
   /* Not per-preset -- these only vary between light/dark (via
    * color-scheme, see html[data-mode] above), so they stay as plain
