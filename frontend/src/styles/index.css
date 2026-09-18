@@ -5,11 +5,15 @@
  * anything else consumes the resulting var(--color-*) tokens. Preset
  * files (theme/light-*.css, theme/dark-*.css) come after it, so they
  * can supply --theme-*-light/-dark values that base.css's fallback
- * chain already knows how to consume. Adding a new preset needs only
- * a new file here and one import line -- see lib/theme.ts's
+ * chain already knows how to consume -- this app's own original look
+ * is just the "default" preset (light-default.css/dark-default.css),
+ * not a hardcoded fallback in base.css itself. Adding a new preset
+ * needs only a new file here and one import line -- see lib/theme.ts's
  * ThemePreset type for the matching data-light-theme/data-dark-theme
  * attribute values. */
 @import "./theme/base.css";
+@import "./theme/light-default.css";
+@import "./theme/dark-default.css";
 @import "./theme/light-blue.css";
 @import "./theme/dark-blue.css";
 @import "./base.css";

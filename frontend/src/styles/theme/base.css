@@ -2,7 +2,7 @@
  * utilities (bg-bg, text-text, border-border, ...). Each token resolves
  * through a two-step fallback chain:
  *
- *   var(--user-X, var(--theme-X-light/dark fallback, hardcoded default))
+ *   var(--user-X, var(--theme-X-light/dark))
  *
  * --user-* is set at runtime via inline style on <html> (see
  * lib/theme.ts's applyUserThemeVars, added in a later stage) for an
@@ -10,9 +10,10 @@
  * --theme-*-light/-dark is supplied by a preset file (see the sibling
  * light-*.css / dark-*.css files in this directory) selected via the
  * data-light-theme/data-dark-theme attributes on <html> (see
- * lib/theme.ts). With neither set, the hardcoded value at the end of
- * the chain is used -- so this file alone still reproduces the app's
- * original look.
+ * lib/theme.ts). This app's own original look is just another preset
+ * ("default" -- see light-default.css/dark-default.css), not a
+ * hardcoded fallback baked into this file, so lib/theme.ts always sets
+ * both attributes to a real preset name.
  *
  * Which half of light-dark() applies follows the color-scheme of the
  * element: it defaults to the OS preference (see the
@@ -28,65 +29,65 @@
   --font-display: "Fraunces", "TeX Gyre Termes", Georgia, serif;
 
   --color-bg: var(--user-bg, light-dark(
-    var(--theme-bg-light, #e8e9eb),
-    var(--theme-bg-dark, #1e1f20)
+    var(--theme-bg-light),
+    var(--theme-bg-dark)
   ));
   --color-text: var(--user-text, light-dark(
-    var(--theme-text-light, #4a4a4a),
-    var(--theme-text-dark, #e0e0e0)
+    var(--theme-text-light),
+    var(--theme-text-dark)
   ));
 
   --color-line-title: var(--user-line-title, light-dark(
-    var(--theme-line-title-light, #000000),
-    var(--theme-line-title-dark, #e0e0e0)
+    var(--theme-line-title-light),
+    var(--theme-line-title-dark)
   ));
   --color-line-text: var(--user-line-text, light-dark(
-    var(--theme-line-text-light, #4a4a4a),
-    var(--theme-line-text-dark, #c4c4c4)
+    var(--theme-line-text-light),
+    var(--theme-line-text-dark)
   ));
 
   --color-panel: var(--user-panel, light-dark(
-    var(--theme-panel-light, #f8f8f8),
-    var(--theme-panel-dark, #252525)
+    var(--theme-panel-light),
+    var(--theme-panel-dark)
   ));
   --color-surface: var(--user-surface, light-dark(
-    var(--theme-surface-light, #fcfcfc),
-    var(--theme-surface-dark, #1e1e1e)
+    var(--theme-surface-light),
+    var(--theme-surface-dark)
   ));
   --color-card: var(--user-card, light-dark(
-    var(--theme-card-light, #f8f8f8),
-    var(--theme-card-dark, #2a2a2a)
+    var(--theme-card-light),
+    var(--theme-card-dark)
   ));
   --color-field: var(--user-field, light-dark(
-    var(--theme-field-light, #f9fafb),
-    var(--theme-field-dark, #333333)
+    var(--theme-field-light),
+    var(--theme-field-dark)
   ));
   --color-border: var(--user-border, light-dark(
-    var(--theme-border-light, #d0d7de),
-    var(--theme-border-dark, #46494f)
+    var(--theme-border-light),
+    var(--theme-border-dark)
   ));
   --color-hover-bg: var(--user-hover-bg, light-dark(
-    var(--theme-hover-bg-light, #f0f0f0),
-    var(--theme-hover-bg-dark, #3a3a3a)
+    var(--theme-hover-bg-light),
+    var(--theme-hover-bg-dark)
   ));
   --color-hover-border: var(--user-hover-border, light-dark(
-    var(--theme-hover-border-light, #777777),
-    var(--theme-hover-border-dark, #666666)
+    var(--theme-hover-border-light),
+    var(--theme-hover-border-dark)
   ));
   --color-active-bg: var(--user-active-bg, light-dark(
-    var(--theme-active-bg-light, #e4e4e4),
-    var(--theme-active-bg-dark, #444444)
+    var(--theme-active-bg-light),
+    var(--theme-active-bg-dark)
   ));
   --color-active-border: var(--user-active-border, light-dark(
-    var(--theme-active-border-light, #666666),
-    var(--theme-active-border-dark, #777777)
+    var(--theme-active-border-light),
+    var(--theme-active-border-dark)
   ));
   /* Shared background for the app's outer nav (TopBar, Sidebar).
    * A dedicated role token, not a literal color name, so it stays
    * correct if the actual color is swapped in either light or dark. */
   --color-nav: var(--user-nav, light-dark(
-    var(--theme-nav-light, #dcdde0),
-    var(--theme-nav-dark, #1a1b1e)
+    var(--theme-nav-light),
+    var(--theme-nav-dark)
   ));
 
   /* Reusable box-shadow presets, modeled on GitHub Primer's shadow

@@ -38,10 +38,11 @@ export function setTheme(next: Theme): void {
 // resolves to (see styles/theme/base.css's fallback chain and the
 // sibling light-*.css/dark-*.css preset files). One shared type for
 // both axes: a preset name doesn't need to exist for both light and
-// dark -- an unimplemented pairing just falls back to base.css's
-// hardcoded default -- so there's no need for two separate types.
-// "default" means no preset file applies, which resolves straight to
-// that hardcoded default.
+// dark -- an unimplemented pairing just leaves that slot's
+// var(--theme-X-light/dark) unset -- so there's no need for two
+// separate types. "default" is a preset like any other (see
+// light-default.css/dark-default.css), holding this app's own
+// original look instead of being special-cased.
 export type ThemePreset = "default" | "blue";
 
 const LIGHT_PRESET_KEY = "lightPreset";
@@ -52,17 +53,12 @@ function readStoredPreset(key: string): ThemePreset {
   return stored === "blue" ? stored : "default";
 }
 
-// Sets or clears data-light-theme/data-dark-theme on <html>, which is
+// Sets data-light-theme/data-dark-theme on <html> to `value`, which is
 // what a preset file's html[data-light-theme="..."] selector matches
-// against (see styles/theme/light-*.css). "default" removes the
-// attribute entirely rather than setting it to the literal string
-// "default", since no preset file is expected to match that value.
+// against (see styles/theme/light-*.css, including light-default.css
+// for "default").
 function applyPresetAttr(attr: string, value: ThemePreset) {
-  if (value === "default") {
-    document.documentElement.removeAttribute(attr);
-  } else {
-    document.documentElement.setAttribute(attr, value);
-  }
+  document.documentElement.setAttribute(attr, value);
 }
 
 const [lightPreset, setLightPresetSignal] = createSignal<ThemePreset>(
