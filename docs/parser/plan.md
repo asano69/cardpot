@@ -2,7 +2,7 @@
 
 `docs/parser/cardpot-parser.md` と `docs/parser/scrapbox-parser.md` はそれぞれ別の切り口（前者は「cosy を網羅性チェックリストとして使う」、後者は「scrapbox-parser を依存の少ない順にフェーズ分けする」）で書かれていて、そのままでは実装順序が一本化されていない。このドキュメントは両者を統合し、**この順番で実装すれば手戻りが最小になる**という単一のロードマップを示す。
 
-以後、このドキュメントを実装時の唯一の参照先とする。個別記法の細かい正規表現・エッジケースは都度 [scrapbox-parser](https://progfay.github.io/scrapbox-parser/)（TypeScript, 正規表現ベース）を、記法の網羅漏れチェックは `cosy`（Rust, winnow ベース）を参照する、という役割分担は変えない。
+以後、このドキュメントを実装時の唯一の参照先とする。個別記法の細かい正規表現・エッジケースは都度 `scrapbox-parser`（TypeScript, 正規表現ベース）を、記法の網羅漏れチェックは `cosy`（Rust, winnow ベース）を参照する、という役割分担は変えない。
 
 ## 0. 参照実装の役割分担
 
@@ -322,3 +322,7 @@ Phase 0 で作った共通ヘルパーを使って、prefix 判定＋残りを i
 - **Cardpot 独自拡張構文**: Scrapbox 互換の記法一式（Phase 1〜5）が完了してから着手する。既存記法と衝突しない構文を選ぶこと（例えば `[* text]` は Bold として予約済みなので使わない）。
 
 この5フェーズ＋見送り事項の一覧を守れば、cosy 側のチェックリストと scrapbox-parser 側のフェーズ分けの両方を矛盾なく満たせる。
+
+--
+demo：
+- https://progfay.github.io/scrapbox-parser
