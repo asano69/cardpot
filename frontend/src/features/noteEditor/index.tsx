@@ -28,7 +28,7 @@ import { syntaxReveal } from "./plugins/decorations/syntaxReveal";
 import { wikiLinkNavigation } from "./plugins/interactions/wikiLinkNavigation";
 import { externalLinkNavigation } from "./plugins/interactions/externalLinkNavigation";
 import { pasteUrlDecode } from "./plugins/interactions/pasteUrlDecode";
-import type { TitleCandidate } from "../../lib/models/card";
+import type { TitleCandidate } from "@/lib/models/card";
 
 export interface NoteEditorProps {
   ydoc: Y.Doc;

@@ -1,6 +1,6 @@
 import { For } from "solid-js";
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
-import { Ellipsis } from "../../lib/icons";
+import { Ellipsis } from "@/lib/icons";
 
 export interface ActionsMenuItem {
   label: string;

@@ -1,14 +1,14 @@
 import {
   ChevronsLeft as ChevronLeft,
   ChevronsRight as ChevronRight,
-} from "../lib/icons";
+} from "@/lib/icons";
 
 import {
   dayOfWeek,
   formatDisplayDate,
   shiftDate,
   WEEKDAY_ABBREVIATIONS,
-} from "../lib/date";
+} from "@/lib/date";
 
 export interface DateNavProps {
   date: string; // "YYYY-MM-DD"

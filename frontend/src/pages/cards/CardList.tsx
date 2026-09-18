@@ -11,15 +11,15 @@ import { DragDropProvider } from "@dnd-kit/solid";
 import { isSortable } from "@dnd-kit/solid/sortable";
 import { PointerSensor, KeyboardSensor } from "@dnd-kit/dom";
 
-import pb from "../../lib/api/pb";
-import Loading from "../../components/Loading";
+import pb from "@/lib/api/pb";
+import Loading from "@/components/Loading";
 import CardItem from "./CardItem";
-import { cardsById, cardsLoaded, mergeCards } from "../../lib/stores/cardsStore";
-import { computePosition } from "../../lib/position";
-import { useTitle } from "../../lib/useTitle";
-import { useFooterSlot } from "../../lib/footerSlot";
+import { cardsById, cardsLoaded, mergeCards } from "@/lib/stores/cardsStore";
+import { computePosition } from "@/lib/position";
+import { useTitle } from "@/lib/useTitle";
+import { useFooterSlot } from "@/lib/footerSlot";
 import { usePot } from "../pots/PotContext";
-import type { CardRecord } from "../../lib/models/card";
+import type { CardRecord } from "@/lib/models/card";
 // Detail page for a single pot, reached via the folder-open button on
 // PotItem: the pot's title, an add-card button, and every card
 // belonging to it laid out as a Scrapbox/Cosense-style card grid (see

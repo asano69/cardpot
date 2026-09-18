@@ -1,4 +1,4 @@
-import { footerContent } from "../../lib/footerSlot";
+import { footerContent } from "@/lib/footerSlot";
 
 // Bottom-of-viewport status bar, symmetric with TopBar: TopBar owns
 // the top edge and a per-page actions slot, this owns the bottom edge

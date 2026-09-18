@@ -1,11 +1,11 @@
 import { Show } from "solid-js";
 import { A } from "@solidjs/router";
-import { Menu, Plus, X } from "../../lib/icons";
+import { Menu, Plus, X } from "@/lib/icons";
 import Logo from "../Logo";
 
 import ThemeToggle from "./ThemeToggle";
 import UserMenu from "./UserMenu";
-import { topBarActions, topBarPotLink } from "../../lib/topBarSlot";
+import { topBarActions, topBarPotLink } from "@/lib/topBarSlot";
 
 export interface TopBarProps {
   isMobile: boolean;

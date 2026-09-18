@@ -1,6 +1,6 @@
 import { onCleanup, onMount, type ParentProps } from "solid-js";
 import MainLayout from "./MainLayout";
-import { startCardsSubscription, loadAllCards } from "../../lib/stores/cardsStore";
+import { startCardsSubscription, loadAllCards } from "@/lib/stores/cardsStore";
 
 // Wraps every route so Header and Sidebar render once regardless of page.
 // Passed as Router's `root` prop (see lib/router.tsx) instead of wrapping

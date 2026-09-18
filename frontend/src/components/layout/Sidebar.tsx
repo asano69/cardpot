@@ -1,7 +1,7 @@
 import { For, Show, type Component } from "solid-js";
 import { A } from "@solidjs/router";
 
-import { useVersion } from "../../lib/version";
+import { useVersion } from "@/lib/version";
 import SidebarPotList from "./SidebarPotList";
 
 interface NavItem {

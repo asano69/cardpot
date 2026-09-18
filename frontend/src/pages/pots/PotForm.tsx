@@ -1,10 +1,10 @@
 import { createSignal } from "solid-js";
 import { TextField } from "@kobalte/core/text-field";
-import { Plus } from "../../lib/icons";
+import { Plus } from "@/lib/icons";
 
-import pb from "../../lib/api/pb";
-import { randomKey } from "../../lib/randomKey";
-import type { PotRecord } from "../../lib/models/pot";
+import pb from "@/lib/api/pb";
+import { randomKey } from "@/lib/randomKey";
+import type { PotRecord } from "@/lib/models/pot";
 
 export interface PotFormProps {
   // Whether at least one pot already exists -- tones down the

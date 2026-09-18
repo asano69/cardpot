@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 import { AlertDialog } from "@kobalte/core/alert-dialog";
-import { X, Check } from "../../lib/icons";
+import { X, Check } from "@/lib/icons";
 
 export interface ConfirmDialogProps {
   open: boolean;

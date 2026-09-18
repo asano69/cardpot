@@ -1,7 +1,7 @@
 import { createSignal, createEffect } from "solid-js";
 import { Dialog } from "@kobalte/core/dialog";
 import { TextField } from "@kobalte/core/text-field";
-import { X, Check } from "../../lib/icons";
+import { X, Check } from "@/lib/icons";
 
 export interface PromptDialogProps {
   open: boolean;

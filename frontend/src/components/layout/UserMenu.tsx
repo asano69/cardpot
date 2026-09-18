@@ -6,8 +6,8 @@ import {
   Settings,
   Help,
   About,
-} from "../../lib/icons";
-import pb from "../../lib/api/pb";
+} from "@/lib/icons";
+import pb from "@/lib/api/pb";
 
 // Dropdown menu in the top-right corner, currently holding just logout.
 // Split out of TopBar so TopBar stays focused on layout (toggle + logo)

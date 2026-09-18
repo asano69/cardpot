@@ -2,7 +2,7 @@ import { createSignal, type ParentProps } from "solid-js";
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
-import { createIsMobile } from "../../lib/mediaQuery";
+import { createIsMobile } from "@/lib/mediaQuery";
 
 export default function MainLayout(props: ParentProps) {
   // Whether the viewport is currently mobile-sized. Drives both the

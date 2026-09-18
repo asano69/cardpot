@@ -4,9 +4,9 @@ import { DragDropProvider } from "@dnd-kit/solid";
 import { useSortable, isSortable } from "@dnd-kit/solid/sortable";
 import { PointerSensor, KeyboardSensor } from "@dnd-kit/dom";
 
-import pb from "../../lib/api/pb";
-import { computePosition } from "../../lib/position";
-import type { PotRecord } from "../../lib/models/pot";
+import pb from "@/lib/api/pb";
+import { computePosition } from "@/lib/position";
+import type { PotRecord } from "@/lib/models/pot";
 
 // Same override as PotList/CardList's own sensors: without it,
 // PointerSensor's default preventActivation refuses to start a drag

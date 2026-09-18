@@ -2,22 +2,22 @@ import { createSignal, createEffect, Show, untrack } from "solid-js";
 import { useParams, useNavigate } from "@solidjs/router";
 import { Alert } from "@kobalte/core/alert";
 import type * as Y from "yjs";
-import pb from "../../lib/api/pb";
-import DraftCardEditor from "../../features/noteEditor/DraftCardEditor";
-import ExistingCardEditor from "../../features/noteEditor/ExistingCardEditor";
-import Loading from "../../components/Loading";
-import { Trash2, Pin, PinOff } from "../../lib/icons";
+import pb from "@/lib/api/pb";
+import DraftCardEditor from "@/features/noteEditor/DraftCardEditor";
+import ExistingCardEditor from "@/features/noteEditor/ExistingCardEditor";
+import Loading from "@/components/Loading";
+import { Trash2, Pin, PinOff } from "@/lib/icons";
 import {
   cardsById,
   cardsLoaded,
   mergeCards,
   findCardByPotAndSlug,
-} from "../../lib/stores/cardsStore";
-import { titleToSegment, segmentToSlug, slugToTitle } from "../../lib/models/slugify";
-import { useTitle } from "../../lib/useTitle";
-import { useFooterSlot } from "../../lib/footerSlot";
-import { computePosition } from "../../lib/position";
-import { deriveCardGridTitle, type CardRecord } from "../../lib/models/card";
+} from "@/lib/stores/cardsStore";
+import { titleToSegment, segmentToSlug, slugToTitle } from "@/lib/models/slugify";
+import { useTitle } from "@/lib/useTitle";
+import { useFooterSlot } from "@/lib/footerSlot";
+import { computePosition } from "@/lib/position";
+import { deriveCardGridTitle, type CardRecord } from "@/lib/models/card";
 import { usePot } from "../pots/PotContext";
 
 type Draft = { initialTitle?: string };

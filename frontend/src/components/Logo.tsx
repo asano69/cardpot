@@ -1,7 +1,7 @@
 import { Show, type ParentProps } from "solid-js";
 import { A } from "@solidjs/router";
 
-import { useVersion } from "../lib/version";
+import { useVersion } from "@/lib/version";
 
 export interface LogoProps {
   // Overall pixel size of the icon (width == height). Defaults to 30px.

@@ -1,7 +1,7 @@
 import { createSignal, createEffect } from "solid-js";
 import { Dialog } from "@kobalte/core/dialog";
 import { Combobox } from "@kobalte/core/combobox";
-import { X, Check, ChevronDown } from "../../lib/icons";
+import { X, Check, ChevronDown } from "@/lib/icons";
 
 export interface ComboboxDialogProps<T extends Record<string, unknown>> {
   open: boolean;

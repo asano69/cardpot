@@ -1,8 +1,8 @@
 import { createResource, type ParentProps } from "solid-js";
 import { useParams } from "@solidjs/router";
 
-import { fetchPotBySlug } from "../../lib/api/pots";
-import { useTopBarPotLink } from "../../lib/topBarSlot";
+import { fetchPotBySlug } from "@/lib/api/pots";
+import { useTopBarPotLink } from "@/lib/topBarSlot";
 import PotContext from "./PotContext";
 
 // Wraps every route scoped to a single pot (CardList, CardForm) so the

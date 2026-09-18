@@ -1,12 +1,12 @@
 import { createSignal } from "solid-js";
 import { A } from "@solidjs/router";
 import { useSortable } from "@dnd-kit/solid/sortable";
-import { Pencil, Trash2 } from "../../lib/icons";
-import ActionsMenu from "../../components/menus/ActionsMenu";
-import PromptDialog from "../../components/dialogs/PromptDialog";
-import ConfirmDialog from "../../components/dialogs/ConfirmDialog";
-import pb from "../../lib/api/pb";
-import type { PotRecord } from "../../lib/models/pot";
+import { Pencil, Trash2 } from "@/lib/icons";
+import ActionsMenu from "@/components/menus/ActionsMenu";
+import PromptDialog from "@/components/dialogs/PromptDialog";
+import ConfirmDialog from "@/components/dialogs/ConfirmDialog";
+import pb from "@/lib/api/pb";
+import type { PotRecord } from "@/lib/models/pot";
 
 export interface PotGridItemProps {
   pot: PotRecord;
