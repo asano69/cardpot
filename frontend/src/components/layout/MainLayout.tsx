@@ -19,7 +19,7 @@ export default function MainLayout(props: ParentProps) {
     // h-screen + overflow-hidden bounds this to the viewport height, so
     // Sidebar and <main> below can each scroll independently instead of
     // the whole page scrolling as one.
-    <div class="flex h-screen flex-col overflow-hidden bg-bg">
+    <div class="app flex h-screen flex-col overflow-hidden bg-bg">
       {/* TopBar with logo and sidebar toggle. Height/spacing is
           controlled here (not inside TopBar) via the `class` prop, so
           this is the one place to tweak the bar's size. */}
