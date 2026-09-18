@@ -2,6 +2,7 @@
 import { defineConfig, type Plugin } from "vite";
 import solid from "vite-plugin-solid";
 import tailwindcss from "@tailwindcss/vite";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 // Single source of truth for this build: also read by __APP_NAME__ below
 // and by the index.html %APP_NAME% placeholder, so the value only has to
@@ -20,7 +21,10 @@ const injectAppNameHtml: Plugin = {
 };
 
 export default defineConfig({
-  plugins: [solid(), tailwindcss(), injectAppNameHtml],
+  // tsconfigPaths reads tsconfig.json's "paths" directly, so the "@/"
+  // alias only needs to be defined once (in tsconfig.json) instead of
+  // duplicated here.
+  plugins: [solid(), tailwindcss(), tsconfigPaths(), injectAppNameHtml],
   // __APP_NAME__ is a build-time constant (not a runtime env var), so it
   // can be referenced anywhere in src/ without an import.
   define: {
