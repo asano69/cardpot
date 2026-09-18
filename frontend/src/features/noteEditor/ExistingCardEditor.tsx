@@ -16,6 +16,12 @@ export interface ExistingCardEditorProps {
   initialYdoc?: Y.Doc;
   onMergeTarget?: (target: string | null) => void;
   existingTitle?: string;
+  // Called once, synchronously, with a getter for this card's current
+  // Yjs text content -- used by CardForm's debug "info" button to
+  // export a readable snapshot of the live document. Not reactive:
+  // the returned string reflects whatever the doc holds at the
+  // moment the getter is actually invoked, not at registration time.
+  onContentSnapshot?: (getContent: () => string) => void;
 }
 
 // Existing cards own the network lifecycle. Reusing the draft's own Y.Doc
@@ -31,6 +37,11 @@ export interface ExistingCardEditorProps {
 // state -- is needed here anymore.
 export default function ExistingCardEditor(props: ExistingCardEditorProps) {
   const ydoc = props.initialYdoc ?? new Y.Doc();
+  // Hand the caller a getter for this room's live "content" text,
+  // mirroring index.tsx's own `ytext = props.ydoc.getText("content")`.
+  // Synchronous, not an effect: `ydoc` already exists by this point in
+  // the component body, so there's nothing to wait on.
+  props.onContentSnapshot?.(() => ydoc.getText("content").toString());
   const idbProvider = new IndexeddbPersistence(props.cardId, ydoc);
   const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
   const provider = new WebsocketProvider(

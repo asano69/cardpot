@@ -6,7 +6,7 @@ import pb from "@/lib/api/pb";
 import DraftCardEditor from "@/features/noteEditor/DraftCardEditor";
 import ExistingCardEditor from "@/features/noteEditor/ExistingCardEditor";
 import Loading from "@/components/Loading";
-import { Trash2, Pin, PinOff } from "@/lib/icons";
+import { Trash2, Pin, PinOff, About } from "@/lib/icons";
 import {
   cardsById,
   cardsLoaded,
@@ -36,6 +36,11 @@ export default function CardForm() {
   );
   const [draftYdoc, setDraftYdoc] = createSignal<Y.Doc>();
   const [mergeTarget, setMergeTarget] = createSignal<string | null>(null);
+  // Getter for the currently-open card's live Yjs text, handed up by
+  // ExistingCardEditor (see its onContentSnapshot prop). Re-registered
+  // on every card open, since ExistingCardEditor remounts per card
+  // (keyed Show below) -- never stale across a card switch.
+  const [contentSnapshot, setContentSnapshot] = createSignal<() => string>();
   let urlSegment = params.cardSlug ?? "";
 
   // The comparison is still necessary because router params react to our own
@@ -119,6 +124,27 @@ export default function CardForm() {
     if (!id) return;
     await pb.collection("cards").delete(id);
     navigate(`/${params.slug}`);
+  };
+
+  // Debug helper: opens the current card's raw Yjs text content
+  // (plain text, not the rendered editor view) as a text/plain blob
+  // in a new tab, so it can be inspected or copied without leaving
+  // the app's own dev tools. See ExistingCardEditor's
+  // onContentSnapshot for where this getter comes from.
+  const handleShowRawText = () => {
+    const getContent = contentSnapshot();
+    if (!getContent) return;
+    // charset=utf-8 must be explicit: Blob() itself always encodes a
+    // JS string as UTF-8 bytes, but without this in the MIME type the
+    // browser guesses the encoding when rendering the tab and can
+    // misread non-ASCII text (e.g. Japanese) as mojibake.
+    const blob = new Blob([getContent()], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank", "noopener,noreferrer");
+    // Revoking immediately can race the new tab's read of the blob
+    // URL in some browsers, so this waits well past a normal page
+    // load before freeing it.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
   const pinned = () => cardsById[cardId() ?? ""]?.pin ?? false;
@@ -215,6 +241,7 @@ export default function CardForm() {
                 initialYdoc={draftYdoc()}
                 existingTitle={cardsById[id]?.title}
                 onMergeTarget={setMergeTarget}
+                onContentSnapshot={(fn) => setContentSnapshot(() => fn)}
               />
             )}
           </Show>
@@ -241,6 +268,16 @@ export default function CardForm() {
               onClick={handleDelete}
             >
               <Trash2 size={20} />
+            </button>
+            {/* Debug-only: exports the card's raw Yjs text as a
+                text/plain blob in a new tab (see handleShowRawText). */}
+            <button
+              type="button"
+              aria-label="Show raw document text"
+              class="tool-btn"
+              onClick={handleShowRawText}
+            >
+              <About size={20} />
             </button>
           </Show>
         </div>
