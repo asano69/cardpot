@@ -8,6 +8,6 @@
  * here, contributing only the [data-theme="x"][data-mode="y"]
  * override blocks base.css doesn't already cover -- see
  * lib/theme.ts's ThemePreset type for the matching data-theme value. */
-@import "./theme/base.css";
+@import "./theme/default.css";
 @import "./base.css";
 @import "./components.css";
