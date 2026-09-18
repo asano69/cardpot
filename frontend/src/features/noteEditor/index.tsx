@@ -3,11 +3,11 @@ import { useNavigate } from "@solidjs/router";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, drawSelection } from "@codemirror/view";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
-import { hangingIndent } from "./hangingIndent";
-import { wordBreak } from "./wordBreak";
-import { codeBlockLines } from "./codeBlockLines";
-import { imageWidget } from "./imageWidget";
-import { insertNewlineKeepingBullet } from "./bulletEnter";
+import { hangingIndent } from "./plugins/decorations/hangingIndent";
+import { wordBreak } from "./plugins/decorations/wordBreak";
+import { codeBlockLines } from "./plugins/decorations/codeBlockLines";
+import { imageWidget } from "./plugins/decorations/imageWidget";
+import { insertNewlineKeepingBullet } from "./plugins/interactions/bulletEnter";
 import { defaultKeymap, indentMore, indentLess } from "@codemirror/commands";
 import { yCollab, yUndoManagerKeymap } from "y-codemirror.next";
 import * as Y from "yjs";
@@ -16,7 +16,7 @@ import {
   titleCandidateExtension,
   syntheticAnnotation,
 } from "./titleCandidatePlugin";
-import { titleLineHighlight } from "./titleLineHighlight";
+import { titleLineHighlight } from "./plugins/decorations/titleLineHighlight";
 import { editorTheme } from "./editorTheme";
 import {
   indentUnit,
@@ -24,10 +24,10 @@ import {
   defaultHighlightStyle,
 } from "@codemirror/language";
 import { cardpotSyntax } from "./parser/cardpot";
-import { syntaxReveal } from "./syntaxReveal";
-import { wikiLinkNavigation } from "./wikiLinkNavigation";
-import { externalLinkNavigation } from "./externalLinkNavigation";
-import { pasteUrlDecode } from "./pasteUrlDecode";
+import { syntaxReveal } from "./plugins/decorations/syntaxReveal";
+import { wikiLinkNavigation } from "./plugins/interactions/wikiLinkNavigation";
+import { externalLinkNavigation } from "./plugins/interactions/externalLinkNavigation";
+import { pasteUrlDecode } from "./plugins/interactions/pasteUrlDecode";
 import type { TitleCandidate } from "../../lib/models/card";
 
 export interface NoteEditorProps {

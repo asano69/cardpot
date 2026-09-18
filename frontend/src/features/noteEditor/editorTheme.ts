@@ -1,5 +1,5 @@
 import { EditorView } from "@codemirror/view";
-import { INDENT_WIDTH_PX, DOT_SIZE_PX } from "./hangingIndent";
+import { INDENT_WIDTH_PX, DOT_SIZE_PX } from "./plugins/decorations/hangingIndent";
 
 // All CodeMirror-specific styling lives here via EditorView.theme(),
 // not as plain CSS in styles/components.css. CodeMirror injects its

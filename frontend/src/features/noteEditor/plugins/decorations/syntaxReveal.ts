@@ -7,7 +7,7 @@ import {
   type ViewUpdate,
 } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { revealStyle, isMark, hideContent } from "./parser/cardpot";
+import { revealStyle, isMark, hideContent } from "../../parser/cardpot";
 
 // Hides a delimiter/mark node (e.g. "[* " or "]") using a replacing
 // decoration rather than a font-size:0 mark. Decoration.replace()

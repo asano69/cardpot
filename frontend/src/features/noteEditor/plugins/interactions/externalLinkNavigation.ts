@@ -1,7 +1,7 @@
 import { EditorView } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { ExternalLink } from "./parser/cardpot";
-import { decideBracketNodeType } from "./parser/cardpot/rules/bracket";
+import { ExternalLink } from "../../parser/cardpot";
+import { decideBracketNodeType } from "../../parser/cardpot/rules/bracket";
 
 // Makes an ExternalLink node ("[url]", "[url label]", or "[label url]")
 // act as a real hyperlink: clicking anywhere inside the node opens its

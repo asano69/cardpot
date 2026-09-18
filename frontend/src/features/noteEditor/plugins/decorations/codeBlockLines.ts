@@ -6,7 +6,7 @@ import {
   type ViewUpdate,
 } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { CodeBlock } from "./parser/cardpot";
+import { CodeBlock } from "../../parser/cardpot";
 
 // Full-line background for a `code:` block (see
 // parser/cardpot/rules/codeBlock.ts). A plain Decoration.mark only

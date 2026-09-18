@@ -1,7 +1,7 @@
 import type { Command } from "@codemirror/view";
 import { EditorSelection, type EditorState } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
-import { CodeBlock } from "./parser/cardpot";
+import { CodeBlock } from "../../parser/cardpot";
 
 const LEADING_TABS_RE = /^\t+/;
 

@@ -8,8 +8,8 @@ import {
 } from "@codemirror/view";
 import type { EditorState } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
-import { Image, LinkedImage, StrongImage } from "./parser/cardpot";
-import { decideBracketNodeType } from "./parser/cardpot/rules/bracket";
+import { Image, LinkedImage, StrongImage } from "../../parser/cardpot";
+import { decideBracketNodeType } from "../../parser/cardpot/rules/bracket";
 
 // Scrapbox distinguishes a plain image reference ("[url]") from its
 // magnified "strong" form ("[[url]]"): the plain form is capped in

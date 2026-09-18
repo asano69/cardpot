@@ -7,7 +7,7 @@ import {
   type ViewUpdate,
 } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { CodeBlock } from "./parser/cardpot";
+import { CodeBlock } from "../../parser/cardpot";
 
 // Width of one indent level's mark element, in pixels (see
 // IndentMarkWidget below). Also used by editorTheme.ts to size the

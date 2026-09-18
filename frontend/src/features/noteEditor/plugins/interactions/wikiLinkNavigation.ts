@@ -1,7 +1,7 @@
 import { EditorView } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { WikiLink } from "./parser/cardpot";
-import { titleToSegment } from "../../lib/models/slugify";
+import { WikiLink } from "../../parser/cardpot";
+import { titleToSegment } from "../../../lib/models/slugify";
 
 // Makes a WikiLink node ("[title]") act as an internal navigation
 // link, the same way CardItem's own <a href> does: clicking anywhere
