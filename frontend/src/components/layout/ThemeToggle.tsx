@@ -2,15 +2,15 @@ import { For, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { Sun, Moon, SunMoon, Check } from "@/lib/icons";
-import { currentTheme, setTheme, type Theme } from "@/lib/theme";
+import { currentMode, setMode, type Mode } from "@/lib/theme";
 
 interface ThemeOption {
-  value: Theme;
+  value: Mode;
   label: string;
   icon: typeof Sun;
 }
 
-// Options in the order they're listed in the menu. Each pairs a theme
+// Options in the order they're listed in the menu. Each pairs a mode
 // value with the icon shown both in the trigger (when active) and next
 // to its own menu item, so there's a single source of truth for the
 // icon/label/value mapping.
@@ -25,7 +25,7 @@ const OPTIONS: ThemeOption[] = [
 // current setting, so the button doubles as a status indicator.
 export default function ThemeToggle() {
   const activeOption = () =>
-    OPTIONS.find((o) => o.value === currentTheme()) ?? OPTIONS[2];
+    OPTIONS.find((o) => o.value === currentMode()) ?? OPTIONS[2];
 
   return (
     <DropdownMenu>
@@ -37,12 +37,12 @@ export default function ThemeToggle() {
           <For each={OPTIONS}>
             {(option) => (
               <DropdownMenu.Item
-                onSelect={() => setTheme(option.value)}
+                onSelect={() => setMode(option.value)}
                 class="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-text outline-none transition-colors hover:bg-hover-bg data-[highlighted]:bg-hover-bg"
               >
                 <option.icon size={16} />
                 <span class="flex-1">{option.label}</span>
-                <Show when={currentTheme() === option.value}>
+                <Show when={currentMode() === option.value}>
                   <Check size={16} />
                 </Show>
               </DropdownMenu.Item>

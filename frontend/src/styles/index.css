@@ -2,17 +2,12 @@
 
 /* Import order matters: theme/base.css must come right after
  * tailwindcss so its @theme block extends Tailwind's defaults before
- * anything else consumes the resulting var(--color-*) tokens. Preset
- * files (theme/light-*.css, theme/dark-*.css) come after it, so they
- * can supply --theme-*-light/-dark values that base.css's fallback
- * chain already knows how to consume -- this app's own original look
- * is just the "default" preset (light-default.css/dark-default.css),
- * not a hardcoded fallback in base.css itself. Adding a new preset
- * needs only a new file here and one import line -- see lib/theme.ts's
- * ThemePreset type for the matching data-light-theme/data-dark-theme
- * attribute values. */
+ * anything else consumes the resulting var(--color-*) tokens. It also
+ * declares the "default" preset directly (see that file's own
+ * comment). Adding a new preset is a new theme/*.css file imported
+ * here, contributing only the [data-theme="x"][data-mode="y"]
+ * override blocks base.css doesn't already cover -- see
+ * lib/theme.ts's ThemePreset type for the matching data-theme value. */
 @import "./theme/base.css";
-@import "./theme/light-default.css";
-@import "./theme/dark-default.css";
 @import "./base.css";
 @import "./components.css";

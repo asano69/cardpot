@@ -1,27 +1,105 @@
 /* Semantic color tokens live in @theme so Tailwind generates matching
- * utilities (bg-bg, text-text, border-border, ...). Each token resolves
- * through a two-step fallback chain:
+ * utilities (bg-bg, text-text, border-border, ...). Each token's
+ * actual value is declared separately below (in :root and in the
+ * [data-theme][data-mode] override blocks) and only re-exposed here
+ * via `inline`, so Tailwind keeps referencing the CSS variable
+ * instead of baking a static value in at build time.
  *
- *   var(--user-X, var(--theme-X-light/dark))
- *
- * --user-* is set at runtime via inline style on <html> (see
- * lib/theme.ts's applyUserThemeVars, added in a later stage) for an
- * individual end-user override, and always wins when present.
- * --theme-*-light/-dark is supplied by a preset file (see the sibling
- * light-*.css / dark-*.css files in this directory) selected via the
- * data-light-theme/data-dark-theme attributes on <html> (see
- * lib/theme.ts). This app's own original look is just another preset
- * ("default" -- see light-default.css/dark-default.css), not a
- * hardcoded fallback baked into this file, so lib/theme.ts always sets
- * both attributes to a real preset name.
- *
- * Which half of light-dark() applies follows the color-scheme of the
- * element: it defaults to the OS preference (see the
- * <meta name="color-scheme"> tag in index.html) and can be pinned
- * explicitly by toggling the .light/.dark class on <html> (see the
- * :root.light / :root.dark rules below). This is a separate axis from
- * which preset supplies the light/dark values.
+ * Two independent attributes on <html> select a token's value (see
+ * lib/theme.ts):
+ *   - data-theme: which color preset ("default", "blue", ...)
+ *   - data-mode: "light" or "dark"
+ * :root supplies the default preset's light values; every other
+ * combination is an explicit [data-theme="X"][data-mode="Y"] override.
+ * A combination with no override block simply falls back to :root,
+ * which is why "default" only needs a dark block below, not a light
+ * one.
  */
+
+/* Lets `dark:` utilities follow data-mode instead of Tailwind's
+ * default prefers-color-scheme media query, for the rare case a
+ * component wants a one-off dark override instead of a token. Unused
+ * for now -- nothing in this app reaches for `dark:` yet, since
+ * light-dark() already covers non-preset-specific mode differences
+ * (see --shadow-card below). Kept here so it's available once needed. */
+@custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
+
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-text: var(--color-text);
+
+  --color-line-title: var(--color-line-title);
+  --color-line-text: var(--color-line-text);
+
+  --color-panel: var(--color-panel);
+  --color-surface: var(--color-surface);
+  --color-card: var(--color-card);
+  --color-field: var(--color-field);
+  --color-border: var(--color-border);
+  --color-hover-bg: var(--color-hover-bg);
+  --color-hover-border: var(--color-hover-border);
+  --color-active-bg: var(--color-active-bg);
+  --color-active-border: var(--color-active-border);
+  --color-nav: var(--color-nav);
+  --color-card-title-bg: var(--color-card-title-bg);
+}
+
+/* Default preset, light mode -- the fallback used by any
+ * [data-theme][data-mode] combination that has no override block. */
+:root {
+  --color-bg: #e8e9eb;
+  --color-text: #4a4a4a;
+
+  --color-line-title: #000000;
+  --color-line-text: #4a4a4a;
+
+  --color-panel: #f8f8f8;
+  --color-surface: #fcfcfc;
+  --color-card: #f8f8f8;
+  --color-field: #f9fafb;
+  --color-border: #d0d7de;
+  --color-hover-bg: #f0f0f0;
+  --color-hover-border: #777777;
+  --color-active-bg: #e4e4e4;
+  --color-active-border: #666666;
+  --color-nav: #dcdde0;
+  --color-card-title-bg: #f2f2f3;
+}
+
+/* Default preset, dark mode. */
+[data-theme="default"][data-mode="dark"] {
+  --color-bg: #1e1f20;
+  --color-text: #e0e0e0;
+
+  --color-line-title: #e0e0e0;
+  --color-line-text: #c4c4c4;
+
+  --color-panel: #252525;
+  --color-surface: #1e1e1e;
+  --color-card: #2a2a2a;
+  --color-field: #333333;
+  --color-border: #46494f;
+  --color-hover-bg: #3a3a3a;
+  --color-hover-border: #666666;
+  --color-active-bg: #444444;
+  --color-active-border: #777777;
+  --color-nav: #1a1b1e;
+  --color-card-title-bg: #2b2e38;
+}
+
+/* data-mode is the single source of truth for light/dark: it drives
+ * both the token overrides above and color-scheme, so every existing
+ * light-dark() call elsewhere in the app (shadows below,
+ * editorTheme.ts, components.css, ...) stays in sync with it
+ * automatically -- those callers needed no changes for this
+ * refactor. */
+html[data-mode="light"] {
+  color-scheme: light;
+}
+html[data-mode="dark"] {
+  color-scheme: dark;
+}
+
 @theme {
   --font-sans: "Open Sans", Helvetica, Arial, "Hiragino Sans", sans-serif;
   --font-serif: "TeX Gyre Termes", "Nimbus Roman No9 L", Georgia, serif;
@@ -31,101 +109,11 @@
   --font-display: "Fraunces", "TeX Gyre Termes", Georgia, serif;
   --font-brand: "Bebas Neue", sans-serif;
 
-  --color-bg: var(
-    --user-bg,
-    light-dark(var(--theme-bg-light), var(--theme-bg-dark))
-  );
-  --color-text: var(
-    --user-text,
-    light-dark(var(--theme-text-light), var(--theme-text-dark))
-  );
-
-  --color-line-title: var(
-    --user-line-title,
-    light-dark(var(--theme-line-title-light), var(--theme-line-title-dark))
-  );
-  --color-line-text: var(
-    --user-line-text,
-    light-dark(var(--theme-line-text-light), var(--theme-line-text-dark))
-  );
-
-  --color-panel: var(
-    --user-panel,
-    light-dark(var(--theme-panel-light), var(--theme-panel-dark))
-  );
-  --color-surface: var(
-    --user-surface,
-    light-dark(var(--theme-surface-light), var(--theme-surface-dark))
-  );
-  --color-card: var(
-    --user-card,
-    light-dark(var(--theme-card-light), var(--theme-card-dark))
-  );
-  --color-field: var(
-    --user-field,
-    light-dark(var(--theme-field-light), var(--theme-field-dark))
-  );
-  --color-border: var(
-    --user-border,
-    light-dark(var(--theme-border-light), var(--theme-border-dark))
-  );
-  --color-hover-bg: var(
-    --user-hover-bg,
-    light-dark(var(--theme-hover-bg-light), var(--theme-hover-bg-dark))
-  );
-  --color-hover-border: var(
-    --user-hover-border,
-    light-dark(var(--theme-hover-border-light), var(--theme-hover-border-dark))
-  );
-  --color-active-bg: var(
-    --user-active-bg,
-    light-dark(var(--theme-active-bg-light), var(--theme-active-bg-dark))
-  );
-  --color-active-border: var(
-    --user-active-border,
-    light-dark(
-      var(--theme-active-border-light),
-      var(--theme-active-border-dark)
-    )
-  );
-  /* Shared background for the app's outer nav (TopBar, Sidebar).
-   * A dedicated role token, not a literal color name, so it stays
-   * correct if the actual color is swapped in either light or dark. */
-  --color-nav: var(
-    --user-nav,
-    light-dark(var(--theme-nav-light), var(--theme-nav-dark))
-  );
-
-  /* Reusable box-shadow presets, modeled on GitHub Primer's shadow
-   * scale: low-opacity black, tight offsets/blur. The border color
-   * (--color-border) is what actually defines the edge; these shadows
-   * only add a slight sense of elevation, instead of the previous
-   * solid-gray/large-blur combo that read as a glowing halo in light
-   * mode. Dark mode gets a stronger, more opaque shadow since there's
-   * no light backdrop to contrast against. Left out of the
-   * user/preset override chain on purpose -- shadows are a layout
-   * detail, not a color a theme is expected to restyle. */
+  /* Not per-preset -- these only vary between light/dark (via
+   * color-scheme, see html[data-mode] above), so they stay as plain
+   * light-dark() calls instead of a [data-theme][data-mode] override. */
   --shadow-card: 0 1px 0 light-dark(rgba(31, 35, 40, 0.04), rgba(0, 0, 0, 0.3));
   --shadow-popover:
     0 1px 3px light-dark(rgba(31, 35, 40, 0.12), rgba(0, 0, 0, 0.4)),
     0 8px 24px light-dark(rgba(66, 74, 83, 0.12), rgba(0, 0, 0, 0.4));
-
-  /* Accent line above a card grid item's title (see CardItem.tsx /
-   * components.css's .card-grid-item .header). A distinct token from
-   * --color-border since it's decorative, not a structural divider. */
-  --color-card-title-bg: var(
-    --user-card-title-bg,
-    light-dark(var(--theme-card-title-bg-light), var(--theme-card-title-bg-dark))
-  );
-}
-
-/* An explicit user choice overrides the OS preference by pinning
- * color-scheme on <html>. With neither class present, color-scheme
- * falls back to the <meta name="color-scheme"> tag in index.html,
- * which follows the OS setting. */
-:root.light {
-  color-scheme: light;
-}
-:root.dark {
-  color-scheme: dark;
 }
