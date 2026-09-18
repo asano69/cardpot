@@ -1,0 +1,25 @@
+/* Unlayered override stylesheet for local/self-hosted customization.
+ *
+ * Temporary wiring: frontend/src/lib/themeOverrideCss.ts implements a
+ * dynamic version of this same idea (fetching and injecting a <style>
+ * element at runtime) but isn't wired into the app yet. Until it is,
+ * this file is the static equivalent -- edit it directly and rebuild.
+ *
+ * Loaded last in index.css as a plain `@import` (no `layer(...)`), so
+ * per the CSS Cascade Layers spec it is unlayered and therefore always
+ * wins over every Tailwind layer (theme/base/components/utilities)
+ * regardless of selector specificity -- no `!important` needed.
+ *
+ * Target STABLE, semantic class names a component exposes for this
+ * purpose (e.g. .card-grid-item, .btn, .page-menu -- see
+ * components.css), never Tailwind's generated utility classes (e.g.
+ * bg-bg, px-2): those are an implementation detail that can change on
+ * a rebuild, and a single element often carries several of them at
+ * once, making a utility-class override easy to break accidentally.
+ *
+ * Empty by default -- add overrides below.
+ */
+
+.status-bar > div {
+  background-color: #ff5555;
+}

@@ -11,3 +11,7 @@
 @import "./theme/default.css";
 @import "./base.css";
 @import "./components.css";
+
+/* Unlayered on purpose -- must load last so it wins the cascade over
+ * every layered rule above (see user.css's own comment). */
+@import "./user.css";
