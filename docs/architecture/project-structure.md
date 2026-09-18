@@ -30,6 +30,29 @@
 - 使用しているフレームワークはSold.jsであり、VueやSvelteやReactではない。Svelteコンポーネントではなく、jsxコンポーネントを使っている。
 - Solid.jsは、JSXファイルを使ってUIを組み立てるのあり、第一に参考にするべきプロジェクト構成はReactと考えるのが妥当。
 
+```mermaid
+graph LR
+    MAIN["main.tsx<br/>アプリ起動"]
+    PAGES["pages/<br/>URL単位の画面構成"]
+    FEATURES["features/<br/>複雑な自己完結機能"]
+    COMPONENTS["components/<br/>汎用UI部品"]
+    LIB["lib/<br/>共有ロジック"]
+    MODELS["models/<br/>型・変換"]
+    API["api/<br/>通信"]
+    STORES["stores/<br/>共有状態"]
+    DIRECTIVES["directives/<br/>Solid拡張"]
+    MAIN --> PAGES
+    PAGES --> FEATURES
+    PAGES --> COMPONENTS
+    PAGES --> LIB
+    FEATURES --> COMPONENTS
+    FEATURES --> LIB
+    COMPONENTS --> LIB
+    LIB --> MODELS
+    LIB --> API
+    LIB --> STORES
+    LIB --> DIRECTIVES
+```
 
 ## pages - ルーティング先コンポーネント
 - ページ／URLに対応する単位（1ページ=1画面）はpages/にFeature軸で縦割りする。ただし関連ロジックはlibに分散しているので、featuresではなくpagesと命名。
