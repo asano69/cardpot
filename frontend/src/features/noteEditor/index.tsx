@@ -2,15 +2,13 @@ import { onCleanup } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, drawSelection } from "@codemirror/view";
-import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
+import { closeBrackets } from "@codemirror/autocomplete";
 import { hangingIndent } from "./plugins/decorations/hangingIndent";
 import { wordBreak } from "./plugins/decorations/wordBreak";
 import { codeBlockLines } from "./plugins/decorations/codeBlockLines";
 import { imageWidget } from "./plugins/decorations/imageWidget";
-import { insertNewlineKeepingBullet } from "./plugins/interactions/bulletEnter";
-import { wrapBacktick, wrapBold } from "./plugins/interactions/wrapSelection";
-import { defaultKeymap, indentMore, indentLess } from "@codemirror/commands";
-import { yCollab, yUndoManagerKeymap } from "y-codemirror.next";
+import { yCollab } from "y-codemirror.next";
+import { defaultKeymapGroups } from "./keymaps";
 import * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
 import {
@@ -117,32 +115,16 @@ export default function NoteEditor(props: NoteEditorProps) {
         // whatever this unit is. Matches bulletLineDecoration.ts's own
         // LEADING_TABS_RE, which only recognizes literal tabs.
         indentUnit.of("\t"),
-        // Tab/Shift-Tab indent/outdent the current line(s) -- the
-        // plain-text equivalent of the old prosemirror-flat-list
-        // bullet indent/outdent (see prose-mirror.old/index.tsx's
-        // listTabKeymap). Bound ahead of defaultKeymap in the array
-        // below so it wins over defaultKeymap's own plain "insert a
-        // tab character" Tab binding.
-        keymap.of([
-          { key: "Tab", run: indentMore },
-          { key: "Shift-Tab", run: indentLess },
-          { key: "Enter", run: insertNewlineKeepingBullet },
-          // Wraps a selection instead of typing the character
-          // literally -- see wrapSelection.ts. Bound alongside the
-          // other custom single-char keys above so it also wins over
-          // defaultKeymap's plain "insert this character" binding.
-          { key: "`", run: wrapBacktick },
-          { key: "*", run: wrapBold },
-        ]),
-        // yCollab supplies its own undo/redo keymap, backed by Yjs's
-        // UndoManager -- CM6's own history() extension is
+        // Every key binding, grouped by origin and ordered by
+        // precedence (see keymaps.ts): Cardpot's own Tab/Enter/`/`*`
+        // bindings win over the library keymaps that follow them,
+        // since each group becomes its own keymap.of(...) extension
+        // and CodeMirror's keymap() facet lets earlier extensions win
+        // on a clash. yCollab's own yUndoManagerKeymap group is what
+        // backs undo/redo here -- CM6's own history() extension is
         // deliberately not added, to avoid two undo stacks fighting
         // each other.
-        keymap.of([
-          ...closeBracketsKeymap,
-          ...yUndoManagerKeymap,
-          ...defaultKeymap,
-        ]),
+        ...defaultKeymapGroups.map((group) => keymap.of(group.bindings)),
       ],
     });
 
