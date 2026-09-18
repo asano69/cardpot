@@ -1,6 +1,7 @@
 # Overview
 
 - Cardpotは、個人や少人数チームに最適化された汎用カード型ナレッジベースです．
+- 設計は、docs/architectureを参照する。
 
 ## 機能
 
