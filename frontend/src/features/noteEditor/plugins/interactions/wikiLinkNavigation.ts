@@ -12,6 +12,12 @@ import { titleToSegment } from "@/lib/models/slugify";
 // any other revealable syntax (Bold, Code): moving the cursor into
 // the node's range via the keyboard reveals its marks (see
 // syntaxReveal.ts), independent of this click handler.
+// The class syntaxReveal.ts assigns to a WikiLink's rendered span (see
+// index.ts's revealStyle.add config). Used below to confirm a click
+// actually landed on the visible link text, not just on a document
+// position that happens to fall inside the node's range.
+const WIKILINK_CLASS = "cm-wikilink";
+
 export function wikiLinkNavigation(
   potSlug: () => string,
   navigate: (path: string) => void,
@@ -19,6 +25,18 @@ export function wikiLinkNavigation(
   return EditorView.domEventHandlers({
     mousedown(event, view) {
       if (event.button !== 0) return false; // left click only
+
+      // posAtCoords clips horizontally to the nearest document
+      // position on the line, so a click in the blank space past the
+      // end of a line (or past a WikiLink's own shortened, mark-
+      // hidden width) can still resolve to a position inside this
+      // node. syntaxReveal.ts wraps every revealable node's full
+      // range in a <span> carrying its style class, so checking the
+      // click's actual DOM target against that class confirms the
+      // click landed on the rendered text itself, without needing to
+      // compute or compare pixel coordinates by hand.
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest(`.${WIKILINK_CLASS}`)) return false;
 
       const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
       if (pos == null) return false;

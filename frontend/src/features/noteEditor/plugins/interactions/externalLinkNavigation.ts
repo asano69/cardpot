@@ -14,10 +14,20 @@ import { decideBracketNodeType } from "../../parser/cardpot/rules/bracket";
 // same as WikiLink, moving the cursor into the node's range via the
 // keyboard still reveals its raw markup for editing independently of
 // this handler.
+// Shared with wikiLinkNavigation.ts -- both node types render through
+// the same revealStyle class (see parser/cardpot/index.ts).
+const EXTERNAL_LINK_CLASS = "cm-wikilink";
+
 export function externalLinkNavigation() {
   return EditorView.domEventHandlers({
     mousedown(event, view) {
       if (event.button !== 0) return false; // left click only
+
+      // See wikiLinkNavigation.ts's own comment: confirms the click
+      // landed on the rendered span itself, not just on a document
+      // position posAtCoords clipped into this node's range.
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest(`.${EXTERNAL_LINK_CLASS}`)) return false;
 
       const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
       if (pos == null) return false;
