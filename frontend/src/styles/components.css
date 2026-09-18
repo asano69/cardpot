@@ -57,10 +57,10 @@
     overflow: hidden;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
-    background-color: light-dark(#fff, #373b44);
+    background-color: var(--color-card);
     box-shadow: 0 2px 0 light-dark(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.2));
     border-radius: 2px;
-    color: light-dark(#363c49, #f0f0f0);
+    color: var(--color-text);
     word-break: break-word;
     text-decoration: none;
     transition: box-shadow 0.1s;
@@ -82,7 +82,7 @@
 
   .card-grid-item .header {
     width: 100%;
-    border-top: 4px solid light-dark(#f2f2f3, #2b2e38);
+    border-top: 4px solid var(--color-card-title-bg);
     padding: 10px 12px;
   }
 

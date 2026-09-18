@@ -22,4 +22,5 @@ html[data-light-theme="default"] {
   --theme-active-bg-light: #e4e4e4;
   --theme-active-border-light: #666666;
   --theme-nav-light: #dcdde0;
+  --theme-card-title-bg-light: #f2f2f3;
 }

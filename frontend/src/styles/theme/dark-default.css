@@ -18,4 +18,5 @@ html[data-dark-theme="default"] {
   --theme-active-bg-dark: #444444;
   --theme-active-border-dark: #777777;
   --theme-nav-dark: #1a1b1e;
+  --theme-card-title-bg-dark: #2b2e38;
 }

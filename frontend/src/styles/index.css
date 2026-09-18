@@ -14,7 +14,5 @@
 @import "./theme/base.css";
 @import "./theme/light-default.css";
 @import "./theme/dark-default.css";
-@import "./theme/light-blue.css";
-@import "./theme/dark-blue.css";
 @import "./base.css";
 @import "./components.css";

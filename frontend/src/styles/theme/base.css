@@ -109,6 +109,14 @@
   --shadow-popover:
     0 1px 3px light-dark(rgba(31, 35, 40, 0.12), rgba(0, 0, 0, 0.4)),
     0 8px 24px light-dark(rgba(66, 74, 83, 0.12), rgba(0, 0, 0, 0.4));
+
+  /* Accent line above a card grid item's title (see CardItem.tsx /
+   * components.css's .card-grid-item .header). A distinct token from
+   * --color-border since it's decorative, not a structural divider. */
+  --color-card-title-bg: var(
+    --user-card-title-bg,
+    light-dark(var(--theme-card-title-bg-light), var(--theme-card-title-bg-dark))
+  );
 }
 
 /* An explicit user choice overrides the OS preference by pinning
