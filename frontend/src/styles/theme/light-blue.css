@@ -1,0 +1,24 @@
+/* "blue" preset, light half. Only supplies --theme-*-light slots (see
+ * styles/theme/base.css's fallback chain) -- this file has no
+ * business defining a -dark variable, since a light-scheme element
+ * never reads one. Not every token from base.css needs a value here;
+ * an omitted one just falls through to base.css's hardcoded default.
+ */
+html[data-light-theme="blue"] {
+  --theme-bg-light: #eef4ff;
+  --theme-text-light: #1c2b3a;
+
+  --theme-line-title-light: #0f1e2e;
+  --theme-line-text-light: #33475a;
+
+  --theme-panel-light: #e4edfb;
+  --theme-surface-light: #f5f9ff;
+  --theme-card-light: #e4edfb;
+  --theme-field-light: #eaf1fc;
+  --theme-border-light: #b9cbe8;
+  --theme-hover-bg-light: #dce8fa;
+  --theme-hover-border-light: #6b8cbd;
+  --theme-active-bg-light: #cddef5;
+  --theme-active-border-light: #4a6fa5;
+  --theme-nav-light: #dde8fa;
+}

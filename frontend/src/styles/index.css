@@ -1,8 +1,16 @@
 @import "tailwindcss";
 
-/* Import order matters: theme.css must come right after tailwindcss so
- * its @theme block extends Tailwind's defaults before anything else
- * consumes the resulting var(--color-*) tokens. */
-@import "./theme.css";
+/* Import order matters: theme/base.css must come right after
+ * tailwindcss so its @theme block extends Tailwind's defaults before
+ * anything else consumes the resulting var(--color-*) tokens. Preset
+ * files (theme/light-*.css, theme/dark-*.css) come after it, so they
+ * can supply --theme-*-light/-dark values that base.css's fallback
+ * chain already knows how to consume. Adding a new preset needs only
+ * a new file here and one import line -- see lib/theme.ts's
+ * ThemePreset type for the matching data-light-theme/data-dark-theme
+ * attribute values. */
+@import "./theme/base.css";
+@import "./theme/light-blue.css";
+@import "./theme/dark-blue.css";
 @import "./base.css";
 @import "./components.css";

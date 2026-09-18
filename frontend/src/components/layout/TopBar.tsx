@@ -4,6 +4,7 @@ import { Menu, Plus, X } from "@/lib/icons";
 import Logo from "../Logo";
 
 import ThemeToggle from "./ThemeToggle";
+import ThemePresetToggle from "./ThemePresetToggle";
 import UserMenu from "./UserMenu";
 import { topBarActions, topBarPotLink } from "@/lib/topBarSlot";
 
@@ -79,6 +80,7 @@ export default function TopBar(props: TopBarProps) {
               useTopBarActions, e.g. CardForm's pin/delete buttons.
               Empty on pages that register nothing. */}
           {topBarActions()}
+          <ThemePresetToggle />
           <ThemeToggle />
           <UserMenu />
         </nav>

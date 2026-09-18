@@ -1,0 +1,24 @@
+/* "blue" preset, dark half. Only supplies --theme-*-dark slots (see
+ * styles/theme/base.css's fallback chain) -- mirrors light-blue.css
+ * but for the opposite color-scheme half. Independently selectable:
+ * data-dark-theme="blue" can be set without data-light-theme="blue",
+ * and vice versa.
+ */
+html[data-dark-theme="blue"] {
+  --theme-bg-dark: #0d1b2a;
+  --theme-text-dark: #cddcf0;
+
+  --theme-line-title-dark: #e3edfa;
+  --theme-line-text-dark: #a9c1de;
+
+  --theme-panel-dark: #14273b;
+  --theme-surface-dark: #0a1622;
+  --theme-card-dark: #16293e;
+  --theme-field-dark: #1a3049;
+  --theme-border-dark: #2f4c6b;
+  --theme-hover-bg-dark: #1f3c58;
+  --theme-hover-border-dark: #4a6fa5;
+  --theme-active-bg-dark: #24486b;
+  --theme-active-border-dark: #6b8cbd;
+  --theme-nav-dark: #102030;
+}

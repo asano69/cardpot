@@ -1,0 +1,116 @@
+/* Semantic color tokens live in @theme so Tailwind generates matching
+ * utilities (bg-bg, text-text, border-border, ...). Each token resolves
+ * through a two-step fallback chain:
+ *
+ *   var(--user-X, var(--theme-X-light/dark fallback, hardcoded default))
+ *
+ * --user-* is set at runtime via inline style on <html> (see
+ * lib/theme.ts's applyUserThemeVars, added in a later stage) for an
+ * individual end-user override, and always wins when present.
+ * --theme-*-light/-dark is supplied by a preset file (see the sibling
+ * light-*.css / dark-*.css files in this directory) selected via the
+ * data-light-theme/data-dark-theme attributes on <html> (see
+ * lib/theme.ts). With neither set, the hardcoded value at the end of
+ * the chain is used -- so this file alone still reproduces the app's
+ * original look.
+ *
+ * Which half of light-dark() applies follows the color-scheme of the
+ * element: it defaults to the OS preference (see the
+ * <meta name="color-scheme"> tag in index.html) and can be pinned
+ * explicitly by toggling the .light/.dark class on <html> (see the
+ * :root.light / :root.dark rules below). This is a separate axis from
+ * which preset supplies the light/dark values.
+ */
+@theme {
+  --font-sans: system-ui, "Inter", -apple-system, sans-serif;
+  --font-serif: "TeX Gyre Termes", "Nimbus Roman No9 L", Georgia, serif;
+
+  --font-display: "Fraunces", "TeX Gyre Termes", Georgia, serif;
+
+  --color-bg: var(--user-bg, light-dark(
+    var(--theme-bg-light, #e8e9eb),
+    var(--theme-bg-dark, #1e1f20)
+  ));
+  --color-text: var(--user-text, light-dark(
+    var(--theme-text-light, #4a4a4a),
+    var(--theme-text-dark, #e0e0e0)
+  ));
+
+  --color-line-title: var(--user-line-title, light-dark(
+    var(--theme-line-title-light, #000000),
+    var(--theme-line-title-dark, #e0e0e0)
+  ));
+  --color-line-text: var(--user-line-text, light-dark(
+    var(--theme-line-text-light, #4a4a4a),
+    var(--theme-line-text-dark, #c4c4c4)
+  ));
+
+  --color-panel: var(--user-panel, light-dark(
+    var(--theme-panel-light, #f8f8f8),
+    var(--theme-panel-dark, #252525)
+  ));
+  --color-surface: var(--user-surface, light-dark(
+    var(--theme-surface-light, #fcfcfc),
+    var(--theme-surface-dark, #1e1e1e)
+  ));
+  --color-card: var(--user-card, light-dark(
+    var(--theme-card-light, #f8f8f8),
+    var(--theme-card-dark, #2a2a2a)
+  ));
+  --color-field: var(--user-field, light-dark(
+    var(--theme-field-light, #f9fafb),
+    var(--theme-field-dark, #333333)
+  ));
+  --color-border: var(--user-border, light-dark(
+    var(--theme-border-light, #d0d7de),
+    var(--theme-border-dark, #46494f)
+  ));
+  --color-hover-bg: var(--user-hover-bg, light-dark(
+    var(--theme-hover-bg-light, #f0f0f0),
+    var(--theme-hover-bg-dark, #3a3a3a)
+  ));
+  --color-hover-border: var(--user-hover-border, light-dark(
+    var(--theme-hover-border-light, #777777),
+    var(--theme-hover-border-dark, #666666)
+  ));
+  --color-active-bg: var(--user-active-bg, light-dark(
+    var(--theme-active-bg-light, #e4e4e4),
+    var(--theme-active-bg-dark, #444444)
+  ));
+  --color-active-border: var(--user-active-border, light-dark(
+    var(--theme-active-border-light, #666666),
+    var(--theme-active-border-dark, #777777)
+  ));
+  /* Shared background for the app's outer nav (TopBar, Sidebar).
+   * A dedicated role token, not a literal color name, so it stays
+   * correct if the actual color is swapped in either light or dark. */
+  --color-nav: var(--user-nav, light-dark(
+    var(--theme-nav-light, #dcdde0),
+    var(--theme-nav-dark, #1a1b1e)
+  ));
+
+  /* Reusable box-shadow presets, modeled on GitHub Primer's shadow
+   * scale: low-opacity black, tight offsets/blur. The border color
+   * (--color-border) is what actually defines the edge; these shadows
+   * only add a slight sense of elevation, instead of the previous
+   * solid-gray/large-blur combo that read as a glowing halo in light
+   * mode. Dark mode gets a stronger, more opaque shadow since there's
+   * no light backdrop to contrast against. Left out of the
+   * user/preset override chain on purpose -- shadows are a layout
+   * detail, not a color a theme is expected to restyle. */
+  --shadow-card: 0 1px 0 light-dark(rgba(31, 35, 40, 0.04), rgba(0, 0, 0, 0.3));
+  --shadow-popover:
+    0 1px 3px light-dark(rgba(31, 35, 40, 0.12), rgba(0, 0, 0, 0.4)),
+    0 8px 24px light-dark(rgba(66, 74, 83, 0.12), rgba(0, 0, 0, 0.4));
+}
+
+/* An explicit user choice overrides the OS preference by pinning
+ * color-scheme on <html>. With neither class present, color-scheme
+ * falls back to the <meta name="color-scheme"> tag in index.html,
+ * which follows the OS setting. */
+:root.light {
+  color-scheme: light;
+}
+:root.dark {
+  color-scheme: dark;
+}
