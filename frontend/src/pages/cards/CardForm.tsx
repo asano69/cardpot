@@ -2,7 +2,6 @@ import { createSignal, createEffect, Show, untrack } from "solid-js";
 import { useParams, useNavigate } from "@solidjs/router";
 import { Alert } from "@kobalte/core/alert";
 import type * as Y from "yjs";
-import DraftCardEditor
 import DraftCardEditor from "@/features/noteEditor/DraftCardEditor";
 import ExistingCardEditor from "@/features/noteEditor/ExistingCardEditor";
 import Loading from "@/components/Loading";
