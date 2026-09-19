@@ -6,11 +6,7 @@ import { countIndent } from "../indent";
 // without a parser deliberately fall through to Paragraph until their phase is
 // implemented, rather than claiming a line prematurely.
 export type LineBlockKind =
-  | "code"
-  | "table"
-  | "quote"
-  | "helpfeel"
-  | "commandLine";
+  "code" | "table" | "quote" | "helpfeel" | "commandLine";
 
 interface LineBlockMatch {
   kind: LineBlockKind;
@@ -62,7 +58,10 @@ export function parseLineBlock(
   const prefixFrom = cx.lineStart + indent;
   const prefixTo = prefixFrom + match.prefix.length;
   let contentFrom = prefixTo;
-  if (definition.trimFollowingSpace && line.text[contentFrom - cx.lineStart] === " ") {
+  if (
+    definition.trimFollowingSpace &&
+    line.text[contentFrom - cx.lineStart] === " "
+  ) {
     contentFrom++;
   }
 
@@ -73,7 +72,12 @@ export function parseLineBlock(
     ...cx.parser.parseInline(content, contentFrom),
   ];
   cx.addElement(
-    cx.elt(definition.node, cx.lineStart, cx.lineStart + line.text.length, children),
+    cx.elt(
+      definition.node,
+      cx.lineStart,
+      cx.lineStart + line.text.length,
+      children,
+    ),
   );
   cx.nextLine();
   return true;

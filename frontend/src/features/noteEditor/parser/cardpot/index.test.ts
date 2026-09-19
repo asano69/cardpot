@@ -160,7 +160,9 @@ describe("Cardpot Lezer syntax", () => {
   it("parses code: blocks until their indentation returns", () => {
     expect(
       tree("before\ncode:typescript\n\t[not-a-link]\n\tconst x = 1\nafter"),
-    ).toBe("Document(Paragraph,CodeBlock(CodeBlockMark,Indent,Indent),Paragraph)");
+    ).toBe(
+      "Document(Paragraph,CodeBlock(CodeBlockMark,Indent,Indent),Paragraph)",
+    );
     expect(tree("\tcode:main.rs(rust)\n\t\tfn main() {}\n\tnext")).toBe(
       "Document(CodeBlock(Indent,CodeBlockMark,Indent),Paragraph(Indent))",
     );

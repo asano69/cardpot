@@ -22,9 +22,9 @@ const STYLE_ELEMENT_ID = "theme-override";
 // Safe to call repeatedly -- switching themes replaces the previous
 // override outright rather than layering CSS on top of CSS.
 export function applyThemeOverrideCss(css: string): void {
-  let style = document.getElementById(STYLE_ELEMENT_ID) as
-    | HTMLStyleElement
-    | null;
+  let style = document.getElementById(
+    STYLE_ELEMENT_ID,
+  ) as HTMLStyleElement | null;
   if (!style) {
     style = document.createElement("style");
     style.id = STYLE_ELEMENT_ID;

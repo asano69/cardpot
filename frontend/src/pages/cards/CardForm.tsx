@@ -7,7 +7,7 @@ import ExistingCardEditor from "@/features/noteEditor/ExistingCardEditor";
 import { getSyntaxTreeJson } from "@/features/noteEditor/debug";
 import Loading from "@/components/Loading";
 import ActionsMenu from "@/components/menus/ActionsMenu";
-import { Trash2, Pin, PinOff, About, Network } from "@/lib/icons";
+import { Trash2, Pin, PinOff, Wrench } from "@/lib/icons";
 import {
   cardsById,
   cardsLoaded,
@@ -15,7 +15,11 @@ import {
   removeCard,
   setCardPinned,
 } from "@/lib/stores/cardsStore";
-import { titleToSegment, segmentToSlug, slugToTitle } from "@/lib/models/slugify";
+import {
+  titleToSegment,
+  segmentToSlug,
+  slugToTitle,
+} from "@/lib/models/slugify";
 import { useTitle } from "@/lib/useTitle";
 import { useFooterSlot } from "@/lib/footerSlot";
 import { deriveCardGridTitle } from "@/lib/models/card";
@@ -57,7 +61,7 @@ export default function CardForm() {
   createEffect(() => {
     if (!params.cardSlug) {
       setCardId(undefined);
-     setDraftYdoc(undefined);
+      setDraftYdoc(undefined);
       setDraft({});
       setFocusLineOnOpen(undefined);
       return;
@@ -82,7 +86,7 @@ export default function CardForm() {
     // own and resolve cardId here first, so ExistingCardEditor mounted
     // with a brand-new empty Y.Doc instead of the draft's real one.
     const record = untrack(() => findCardByPotAndSlug(potId, slug));
-    setDraftYdoc(undefined)
+    setDraftYdoc(undefined);
     setFocusLineOnOpen(undefined);
     if (record) {
       setCardId(record.id);
@@ -205,7 +209,8 @@ export default function CardForm() {
   // against its own room (see ExistingCardEditor). Surfacing this in
   // the footer makes it easy to tell which one is active without
   // reading logs.
-  const editorMode = () => (cardId() ? "editor" : draft() ? "draft" : undefined);
+  const editorMode = () =>
+    cardId() ? "editor" : draft() ? "draft" : undefined;
 
   useFooterSlot(() => {
     const id = cardId();
@@ -293,12 +298,12 @@ export default function CardForm() {
               items={[
                 {
                   label: "Show raw text",
-                  icon: About,
+                  icon: Wrench,
                   onSelect: handleShowRawText,
                 },
                 {
                   label: "Dump syntax tree",
-                  icon: Network,
+                  icon: Wrench,
                   onSelect: handleDumpSyntaxTree,
                 },
               ]}

@@ -61,7 +61,9 @@ class TitleCandidateTracker implements PluginValue {
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   private lastFired: TitleCandidate | null = null;
 
-  constructor(private readonly onConfirmed: (candidate: TitleCandidate) => void) {}
+  constructor(
+    private readonly onConfirmed: (candidate: TitleCandidate) => void,
+  ) {}
 
   update(update: ViewUpdate) {
     if (!hasUserEdit(update)) return;

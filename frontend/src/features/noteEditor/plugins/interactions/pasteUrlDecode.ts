@@ -15,11 +15,7 @@ export function pasteUrlDecode() {
   return EditorView.domEventHandlers({
     paste(event, view) {
       const text = event.clipboardData?.getData("text/plain").trim();
-      if (
-        !text ||
-        !FULL_URL_RE.test(text) ||
-        !PERCENT_ENCODED_RE.test(text)
-      ) {
+      if (!text || !FULL_URL_RE.test(text) || !PERCENT_ENCODED_RE.test(text)) {
         return false; // not a single percent-encoded URL -- default paste behavior
       }
 

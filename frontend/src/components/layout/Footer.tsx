@@ -7,7 +7,9 @@ import { footerContent } from "@/lib/footerSlot";
 // the outer two layers here carry no border/background of their own,
 // so an empty slot renders nothing visible instead of a stray bar.
 export default function Footer() {
-  return <div class="footer">
-    <div class="status-bar">{footerContent()}</div>
-  </div>;
+  return (
+    <div class="footer">
+      <div class="status-bar">{footerContent()}</div>
+    </div>
+  );
 }

@@ -1,12 +1,6 @@
 // frontend/src/components/layout/UserMenu.tsx
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
-import {
-  EllipsisVertical,
-  LogOut,
-  Settings,
-  Help,
-  About,
-} from "@/lib/icons";
+import { EllipsisVertical, LogOut, Settings, Help, About } from "@/lib/icons";
 import { logout } from "@/lib/api/auth";
 
 // Dropdown menu in the top-right corner, currently holding just logout.
