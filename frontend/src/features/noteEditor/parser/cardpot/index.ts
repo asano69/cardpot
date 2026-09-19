@@ -21,6 +21,7 @@ import { startsIndentedBlock } from "./rules/indentedBlock";
 import { parseParagraph } from "./rules/paragraph";
 import { parseQuote } from "./rules/quote";
 import { parseTable } from "./rules/table";
+import { parseTitle } from "./rules/title";
 
 export { hideContent, isIndent, isMark, revealStyle };
 
@@ -50,6 +51,7 @@ const defaultParsers = [
 const cardpotParser = parser.configure({
   remove: defaultParsers,
   defineNodes: [
+    { name: "Title", block: true },
     { name: "CodeBlock", block: true },
     "CodeBlockMark",
     { name: "Table", block: true },
@@ -130,6 +132,9 @@ const cardpotParser = parser.configure({
     }),
   ],
   parseBlock: [
+    // Must stay first: the title line is plain text, so no other block rule
+    // may see it (see rules/title.ts).
+    { name: "CardpotTitle", parse: parseTitle },
     {
       name: "CardpotCodeBlock",
       parse: parseCodeBlock,
@@ -196,6 +201,7 @@ export const TableMark = node("TableMark");
 export const TableRow = node("TableRow");
 export const TableCell = node("TableCell");
 export const Indent = node("Indent");
+export const Title = node("Title");
 
 const cardpotLanguageData = defineLanguageFacet({});
 

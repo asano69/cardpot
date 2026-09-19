@@ -2,16 +2,30 @@ import { describe, expect, it } from "vitest";
 
 import { cardpotSyntaxLanguage, Indent, isIndent } from ".";
 
+// The first line of every document is its title (see rules/title.ts), so most
+// tests below describe body notation only. These helpers place a throwaway
+// title line above the input and hide it again in the results, so each test
+// can keep talking about the lines it actually cares about.
+const TITLE_LINE = "T\n";
+
 function tree(input: string): string {
-  return cardpotSyntaxLanguage.parser.parse(input).toString();
+  return cardpotSyntaxLanguage.parser
+    .parse(TITLE_LINE + input)
+    .toString()
+    .replace(/^Document\(Title,?/, "Document(");
 }
 
 function indentRanges(input: string): { from: number; to: number }[] {
   const ranges: { from: number; to: number }[] = [];
-  const syntax = cardpotSyntaxLanguage.parser.parse(input);
+  const syntax = cardpotSyntaxLanguage.parser.parse(TITLE_LINE + input);
   syntax.iterate({
     enter(node) {
-      if (node.type === Indent) ranges.push({ from: node.from, to: node.to });
+      if (node.type === Indent) {
+        ranges.push({
+          from: node.from - TITLE_LINE.length,
+          to: node.to - TITLE_LINE.length,
+        });
+      }
     },
   });
   return ranges;
