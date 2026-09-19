@@ -37,6 +37,12 @@ export interface NoteEditorProps {
   initialTitle?: string;
   autofocus?: boolean;
   existingTitle?: string;
+  // Body line to place the caret on when this editor mounts, where 1 is
+  // the first line after the title (document line 1 is always the title
+  // -- see rules/title.ts). Used only for the draft-to-existing-card
+  // transition (see CardForm's focusLineOnOpen), so typing can continue
+  // right into the body instead of leaving the caret wherever it was.
+  focusLine?: number;
   onConfirmedTitle: (candidate: TitleCandidate) => void;
 }
 
@@ -161,6 +167,21 @@ export default function NoteEditor(props: NoteEditorProps) {
     // yet, which makes a synchronous focus() call silently do nothing.
     if (props.autofocus) {
       setTimeout(() => view.focus(), 0);
+    }
+
+    // Moves the caret into the requested body line (see focusLine's own
+    // comment above) and focuses the editor. Deferred to the next task
+    // for the same reason autofocus is above -- right after mount the
+    // element may not be attached to the document yet. Clamped to the
+    // document's actual line count in case the body is still empty (a
+    // draft confirmed with no body text yet has no line 2 to jump to).
+    if (props.focusLine !== undefined) {
+      setTimeout(() => {
+        const lineNumber = Math.min(props.focusLine! + 1, view.state.doc.lines);
+        const line = view.state.doc.line(lineNumber);
+        view.dispatch({ selection: { anchor: line.from } });
+        view.focus();
+      }, 0);
     }
 
     // Only fill the placeholder for a card whose server-confirmed

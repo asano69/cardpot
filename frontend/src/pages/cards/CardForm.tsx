@@ -36,6 +36,13 @@ export default function CardForm() {
   );
   const [draftYdoc, setDraftYdoc] = createSignal<Y.Doc>();
   const [mergeTarget, setMergeTarget] = createSignal<string | null>(null);
+  // Set only right before a draft's title resolves into a real card
+  // (see handleCreated below), so the freshly mounted ExistingCardEditor
+  // knows to move the caret into the body instead of leaving it wherever
+  // autofocus/sync left it. Reset to undefined everywhere else cardId is
+  // set from the normal URL-driven effect, so re-opening an existing
+  // card never inherits a stale value from an earlier draft creation.
+  const [focusLineOnOpen, setFocusLineOnOpen] = createSignal<number>();
   // Getter for the currently-open card's live Yjs text, handed up by
   // ExistingCardEditor (see its onContentSnapshot prop). Re-registered
   // on every card open, since ExistingCardEditor remounts per card
@@ -51,6 +58,7 @@ export default function CardForm() {
       setCardId(undefined);
      setDraftYdoc(undefined);
       setDraft({});
+      setFocusLineOnOpen(undefined);
       return;
     }
     const potId = pot()?.id;
@@ -74,6 +82,7 @@ export default function CardForm() {
     // with a brand-new empty Y.Doc instead of the draft's real one.
     const record = untrack(() => findCardByPotAndSlug(potId, slug));
     setDraftYdoc(undefined)
+    setFocusLineOnOpen(undefined);
     if (record) {
       setCardId(record.id);
       setDraft(undefined);
@@ -114,6 +123,9 @@ export default function CardForm() {
   });
 
   const handleCreated = (id: string, ydoc: Y.Doc) => {
+    // Body line 1: right where typing should continue once the title
+    // line is confirmed (see NoteEditor's focusLine).
+    setFocusLineOnOpen(1);
     setDraftYdoc(ydoc);
     setCardId(id);
     setDraft(undefined);
@@ -242,6 +254,7 @@ export default function CardForm() {
                 existingTitle={cardsById[id]?.title}
                 onMergeTarget={setMergeTarget}
                 onContentSnapshot={(fn) => setContentSnapshot(() => fn)}
+                focusLine={focusLineOnOpen()}
               />
             )}
           </Show>
