@@ -2,7 +2,7 @@ import { createSignal, createEffect, Show, untrack } from "solid-js";
 import { useParams, useNavigate } from "@solidjs/router";
 import { Alert } from "@kobalte/core/alert";
 import type * as Y from "yjs";
-import pb from "@/lib/api/pb";
+import DraftCardEditor
 import DraftCardEditor from "@/features/noteEditor/DraftCardEditor";
 import ExistingCardEditor from "@/features/noteEditor/ExistingCardEditor";
 import Loading from "@/components/Loading";
@@ -10,14 +10,14 @@ import { Trash2, Pin, PinOff, About } from "@/lib/icons";
 import {
   cardsById,
   cardsLoaded,
-  mergeCards,
   findCardByPotAndSlug,
+  removeCard,
+  setCardPinned,
 } from "@/lib/stores/cardsStore";
 import { titleToSegment, segmentToSlug, slugToTitle } from "@/lib/models/slugify";
 import { useTitle } from "@/lib/useTitle";
 import { useFooterSlot } from "@/lib/footerSlot";
-import { computePosition } from "@/lib/position";
-import { deriveCardGridTitle, type CardRecord } from "@/lib/models/card";
+import { deriveCardGridTitle } from "@/lib/models/card";
 import { usePot } from "../pots/PotContext";
 
 type Draft = { initialTitle?: string };
@@ -134,7 +134,7 @@ export default function CardForm() {
   const handleDelete = async () => {
     const id = cardId();
     if (!id) return;
-    await pb.collection("cards").delete(id);
+    await removeCard(id);
     navigate(`/${params.slug}`);
   };
 
@@ -160,26 +160,11 @@ export default function CardForm() {
   };
 
   const pinned = () => cardsById[cardId() ?? ""]?.pin ?? false;
-  const nextPinnedPosition = (excludeId: string) => {
-    const potId = cardsById[excludeId]?.pot;
-    const positions = Object.values(cardsById)
-      .filter((card) => card.pot === potId && card.pin && card.id !== excludeId)
-      .map((card) => card.position);
-    return computePosition(
-      undefined,
-      positions.length ? Math.min(...positions) : undefined,
-    );
-  };
   const togglePin = async () => {
     const id = cardId();
     if (!id) return;
-    const nowPinning = !pinned();
     try {
-      const updated = await pb.collection("cards").update<CardRecord>(id, {
-        pin: nowPinning,
-        ...(nowPinning ? { position: nextPinnedPosition(id) } : {}),
-      });
-      mergeCards([updated]);
+      await setCardPinned(id, !pinned());
     } catch {
       // A failed pin mutation leaves the shared store unchanged.
     }

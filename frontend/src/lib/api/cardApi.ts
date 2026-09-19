@@ -41,3 +41,38 @@ export async function updateCardTitle(
     body: { titleCandidate },
   });
 }
+
+// Fetches every "cards" record, newest first.
+export async function fetchAllCards(): Promise<CardRecord[]> {
+  return await pb
+    .collection("cards")
+    .getFullList<CardRecord>({ sort: "-created" });
+}
+
+// Updates a card's own fields directly. The title is deliberately not
+// in this list: it only ever changes via updateCardTitle above.
+export async function updateCard(
+  id: string,
+  changes: Partial<Pick<CardRecord, "pin" | "position">>,
+): Promise<CardRecord> {
+  return await pb.collection("cards").update<CardRecord>(id, changes);
+}
+
+export async function deleteCard(id: string): Promise<void> {
+  await pb.collection("cards").delete(id);
+}
+
+// One realtime change to a "cards" record. `action` is "create",
+// "update" or "delete".
+export interface CardEvent {
+  action: string;
+  record: CardRecord;
+}
+
+// Subscribes to every "cards" change. Resolves to an unsubscribe
+// function once the subscription is established.
+export async function subscribeToCards(
+  onEvent: (event: CardEvent) => void,
+): Promise<() => void> {
+  return await pb.collection("cards").subscribe<CardRecord>("*", onEvent);
+}

@@ -7,14 +7,14 @@ import {
   Help,
   About,
 } from "@/lib/icons";
-import pb from "@/lib/api/pb";
+import { logout } from "@/lib/api/auth";
 
 // Dropdown menu in the top-right corner, currently holding just logout.
 // Split out of TopBar so TopBar stays focused on layout (toggle + logo)
 // and this file can grow its own menu items without bloating TopBar.
 export default function UserMenu() {
   const handleLogout = () => {
-    pb.authStore.clear();
+    logout();
   };
 
   // Placeholder only -- no settings screen exists yet, so this item

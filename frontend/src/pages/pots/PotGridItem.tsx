@@ -5,7 +5,7 @@ import { Pencil, Trash2 } from "@/lib/icons";
 import ActionsMenu from "@/components/menus/ActionsMenu";
 import PromptDialog from "@/components/dialogs/PromptDialog";
 import ConfirmDialog from "@/components/dialogs/ConfirmDialog";
-import pb from "@/lib/api/pb";
+import { removePot, renamePot } from "@/lib/stores/potsStore";
 import type { PotRecord } from "@/lib/models/pot";
 
 export interface PotGridItemProps {
@@ -15,10 +15,6 @@ export interface PotGridItemProps {
   // (see PotList.tsx's handleDragEnd). Mirrors CardItem's own `index`
   // prop.
   index: number;
-  // Called with the updated record after a successful rename.
-  onChanged: (record: PotRecord) => void;
-  // Called with the (now-deleted) pot after a successful delete.
-  onDeleted: (pot: PotRecord) => void;
 }
 
 // A single pot in PotList's grid, styled identically to CardItem's own
@@ -44,17 +40,9 @@ export default function PotGridItem(props: PotGridItemProps) {
   const [renameOpen, setRenameOpen] = createSignal(false);
   const [deleteOpen, setDeleteOpen] = createSignal(false);
 
-  const handleRename = async (title: string) => {
-    const record = await pb
-      .collection("pots")
-      .update<PotRecord>(props.pot.id, { title });
-    props.onChanged(record);
-  };
+  const handleRename = (title: string) => renamePot(props.pot.id, title);
 
-  const handleDelete = async () => {
-    await pb.collection("pots").delete(props.pot.id);
-    props.onDeleted(props.pot);
-  };
+  const handleDelete = () => removePot(props.pot.id);
 
   return (
     <li

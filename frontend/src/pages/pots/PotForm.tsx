@@ -2,9 +2,7 @@ import { createSignal } from "solid-js";
 import { TextField } from "@kobalte/core/text-field";
 import { Plus } from "@/lib/icons";
 
-import pb from "@/lib/api/pb";
-import { randomKey } from "@/lib/randomKey";
-import type { PotRecord } from "@/lib/models/pot";
+import { addPot } from "@/lib/stores/potsStore";
 
 export interface PotFormProps {
   // Whether at least one pot already exists -- tones down the
@@ -12,15 +10,10 @@ export interface PotFormProps {
   // optional affordance rather than a prompt nagging the user to fill
   // the list.
   hasExistingPots: boolean;
-  // Position to store on the new pot, so it's appended after every
-  // existing pot regardless of any gaps left by earlier deletes.
-  nextPosition: number;
-  onAdded: (record: PotRecord) => void;
 }
 
-// Add-pot input for the Pots page. Saves directly to PocketBase's
-// "pots" collection and reports the created record back via onAdded,
-// since the page owns the actual pot list.
+// Add-pot input for the Pots page. Creates the pot through the pots
+// store (see lib/stores/potsStore.ts), which owns the actual pot list.
 export default function PotForm(props: PotFormProps) {
   const [title, setTitle] = createSignal("");
   const [submitting, setSubmitting] = createSignal(false);
@@ -32,23 +25,7 @@ export default function PotForm(props: PotFormProps) {
     setError("");
     setSubmitting(true);
     try {
-      // The "slug" field is required and pattern-constrained, but the
-      // real id isn't known until after creation -- so this creates
-      // with a throwaway placeholder value (satisfying both the
-      // required and pattern rules) first, then immediately overwrites
-      // it with the record's own id (see the update call below). No
-      // slug-picking UI exists yet; this can be replaced with a real,
-      // user-chosen slug once that UI exists.
-      const record = await pb.collection("pots").create<PotRecord>({
-        title: title().trim(),
-        done: false,
-        position: props.nextPosition,
-        slug: randomKey(),
-      });
-      const withSlug = await pb
-        .collection("pots")
-        .update<PotRecord>(record.id, { slug: record.id });
-      props.onAdded(withSlug);
+      await addPot(title().trim());
       setTitle("");
     } catch {
       setError("Failed to add the pot.");

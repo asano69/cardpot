@@ -11,15 +11,13 @@ import { DragDropProvider } from "@dnd-kit/solid";
 import { isSortable } from "@dnd-kit/solid/sortable";
 import { PointerSensor, KeyboardSensor } from "@dnd-kit/dom";
 
-import pb from "@/lib/api/pb";
 import Loading from "@/components/Loading";
 import CardItem from "./CardItem";
-import { cardsById, cardsLoaded, mergeCards } from "@/lib/stores/cardsStore";
+import { cardsById, cardsLoaded, moveCard } from "@/lib/stores/cardsStore";
 import { computePosition } from "@/lib/position";
 import { useTitle } from "@/lib/useTitle";
 import { useFooterSlot } from "@/lib/footerSlot";
 import { usePot } from "../pots/PotContext";
-import type { CardRecord } from "@/lib/models/card";
 // Detail page for a single pot, reached via the folder-open button on
 // PotItem: the pot's title, an add-card button, and every card
 // belonging to it laid out as a Scrapbox/Cosense-style card grid (see
@@ -117,20 +115,6 @@ export default function CardList() {
   // dnd-kit reports the drop via event.operation.source rather than
   // SortableJS's oldIndex/newIndex; isSortable narrows that source so
   // its initialIndex/index can be read instead.
-  // How long to wait, after the local optimistic reorder is applied,
-  // before sending the new position to PocketBase. This client is
-  // also subscribed to its own realtime "cards" updates (see
-  // startCardsSubscription in lib/stores/cardsStore.ts), and that handler
-  // always runs the FLIP animation, which sets the same element's
-  // `transform` that dnd-kit's own drop animation is still settling
-  // right after a drag ends. Delaying only the network request (not
-  // the local store update below) means the resulting echo arrives
-  // once dnd-kit's animation has long finished, so the FLIP handler
-  // measures identical before/after rects and animates nothing.
-  // Realtime propagation to other users isn't latency-sensitive
-  // enough for this brief delay to matter.
-  const PERSIST_DELAY_MS = 300;
-
   const handleDragEnd = (event) => {
     if (event.canceled) return;
     const { source } = event.operation;
@@ -147,7 +131,7 @@ export default function CardList() {
     // above), but their positions are on a completely separate scale
     // from unpinned ones (each new pin gets half of the lowest
     // existing pinned position -- see nextPinnedPosition in
-    // CardForm.tsx). So neighbor lookups below must never cross into
+    // cardsStore.ts). So neighbor lookups below must never cross into
     // the other pin group: averaging a pinned card's (tiny) position
     // with an unpinned card's (much larger) one could produce a value
     // that isn't actually above every other unpinned card, landing
@@ -174,29 +158,9 @@ export default function CardList() {
       restInGroup[indexInGroup - 1]?.position,
     );
 
-    // Applied immediately, in step with dnd-kit's own drop animation
-    // settling the dragged card into this same slot. skipFlip: true
-    // since this is the local dragger's own move -- there's nothing
-    // left to FLIP-animate once dnd-kit has already shown the card
-    // moving there itself.
-    const previousPosition = moved.position;
-    mergeCards([{ ...moved, position }], { skipFlip: true });
-
-    // Only the PocketBase round-trip (and the realtime echo it
-    // triggers) is deferred -- see PERSIST_DELAY_MS above.
-    setTimeout(async () => {
-      try {
-        const updated = await pb
-          .collection("cards")
-          .update<CardRecord>(moved.id, { position });
-        mergeCards([updated], { skipFlip: true });
-      } catch (err) {
-        console.error("[pots] failed to reorder card:", err);
-        mergeCards([{ ...moved, position: previousPosition }], {
-          skipFlip: true,
-        });
-      }
-    }, PERSIST_DELAY_MS);
+    // The optimistic update and the delayed persist both live in the
+    // store (see moveCard in lib/stores/cardsStore.ts).
+    moveCard(moved, position);
   };
 
   return (

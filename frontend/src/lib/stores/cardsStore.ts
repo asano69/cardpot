@@ -1,7 +1,14 @@
 import { createSignal } from "solid-js";
 import { createStore, produce } from "solid-js/store";
-import pb from "../api/pb";
+import {
+  deleteCard,
+  fetchAllCards,
+  subscribeToCards,
+  updateCard,
+  type CardEvent,
+} from "../api/cardApi";
 import type { CardRecord } from "../models/card";
+import { computePosition } from "../position";
 import { withCardsFlip, registerCardElement } from "../cardFlip";
 
 // Re-exported so CardItem only needs to import from this module
@@ -90,15 +97,36 @@ export function mergeCards(
 // since both write through the same last-write-wins store.
 export async function loadAllCards(): Promise<void> {
   try {
-    const records = await pb
-      .collection("cards")
-      .getFullList<CardRecord>({ sort: "-created" });
+    const records = await fetchAllCards();
     mergeCards(records, { skipFlip: true });
   } catch (err) {
     console.error("[cards] failed to load all cards:", err);
   } finally {
     setCardsLoaded(true);
   }
+}
+
+function deleteFromStore(id: string) {
+  setCardsById(
+    produce((store) => {
+      delete store[id];
+    }),
+  );
+}
+
+// Applies one realtime event to the store. Wrapped in withCardsFlip so
+// a position change from another user's drag animates smoothly into
+// place instead of every card instantly snapping to its new grid slot.
+function handleCardEvent(e: CardEvent) {
+  withCardsFlip(() => {
+    if (e.action === "delete") {
+      deleteFromStore(e.record.id);
+    } else {
+      // Covers both "create" and "update": either way the latest
+      // record replaces whatever this id currently holds.
+      setCardsById(e.record.id, e.record);
+    }
+  });
 }
 
 // Starts the shared "cards" realtime subscription and returns an
@@ -110,39 +138,94 @@ export function startCardsSubscription(): () => void {
   let unsubscribe: (() => void) | undefined;
   let cancelled = false;
 
-  pb.collection("cards")
-    .subscribe<CardRecord>("*", (e) => {
-      // Wrapped in withCardsFlip so a position change from another
-      // user's drag animates smoothly into place instead of every
-      // card instantly snapping to its new grid slot.
-      withCardsFlip(() => {
-        if (e.action === "delete") {
-          setCardsById(
-            produce((store) => {
-              delete store[e.record.id];
-            }),
-          );
-        } else {
-          // Covers both "create" and "update": either way the latest
-          // record replaces whatever this id currently holds.
-          setCardsById(e.record.id, e.record);
-        }
-      });
-    })
-    .then((unsub) => {
-      // subscribe() is async, so the caller could have already
-      // unsubscribed (e.g. fast HMR reload) by the time it resolves --
-      // in that case, tear the subscription straight back down instead
-      // of leaking it.
-      if (cancelled) {
-        unsub();
-      } else {
-        unsubscribe = unsub;
-      }
-    });
+  subscribeToCards(handleCardEvent).then((unsub) => {
+    // subscribe() is async, so the caller could have already
+    // unsubscribed (e.g. fast HMR reload) by the time it resolves --
+    // in that case, tear the subscription straight back down instead
+    // of leaking it.
+    if (cancelled) {
+      unsub();
+    } else {
+      unsubscribe = unsub;
+    }
+  });
 
   return () => {
     cancelled = true;
     unsubscribe?.();
   };
+}
+
+// How long to wait, after the local optimistic reorder is applied,
+// before sending the new position to PocketBase. This client is also
+// subscribed to its own realtime "cards" updates (see
+// startCardsSubscription above), and that handler always runs the FLIP
+// animation, which sets the same element's `transform` that dnd-kit's
+// own drop animation is still settling right after a drag ends.
+// Delaying only the network request (not the local store update in
+// moveCard) means the resulting echo arrives once dnd-kit's animation
+// has long finished, so the FLIP handler measures identical
+// before/after rects and animates nothing. Realtime propagation to
+// other users isn't latency-sensitive enough for this brief delay to
+// matter.
+const PERSIST_DELAY_MS = 300;
+
+// Moves `card` to `position` (see lib/position.ts).
+//
+// The new position is applied immediately, in step with dnd-kit's own
+// drop animation settling the dragged card into this same slot.
+// skipFlip: true since this is the local dragger's own move -- there's
+// nothing left to FLIP-animate once dnd-kit has already shown the card
+// moving there itself. Only the PocketBase round-trip (and the
+// realtime echo it triggers) is deferred -- see PERSIST_DELAY_MS.
+export function moveCard(card: CardRecord, position: number): void {
+  const previousPosition = card.position;
+  mergeCards([{ ...card, position }], { skipFlip: true });
+
+  setTimeout(async () => {
+    try {
+      const updated = await updateCard(card.id, { position });
+      mergeCards([updated], { skipFlip: true });
+    } catch (err) {
+      console.error("[cards] failed to reorder card:", err);
+      mergeCards([{ ...card, position: previousPosition }], {
+        skipFlip: true,
+      });
+    }
+  }, PERSIST_DELAY_MS);
+}
+
+// Position for a card that is being pinned: half of the lowest
+// existing pinned position in its pot, so it sorts first among the
+// pinned cards (CardList sorts by descending position) without
+// renumbering any of them.
+function nextPinnedPosition(excludeId: string): number {
+  const potId = cardsById[excludeId]?.pot;
+  const positions = Object.values(cardsById)
+    .filter((card) => card.pot === potId && card.pin && card.id !== excludeId)
+    .map((card) => card.position);
+  return computePosition(
+    undefined,
+    positions.length ? Math.min(...positions) : undefined,
+  );
+}
+
+// Pins or unpins a card. Pinning also gives it a fresh position on the
+// pinned scale (see nextPinnedPosition). Rejects on failure, leaving
+// the store unchanged.
+export async function setCardPinned(
+  id: string,
+  pinned: boolean,
+): Promise<void> {
+  const changes = pinned
+    ? { pin: true, position: nextPinnedPosition(id) }
+    : { pin: false };
+  mergeCards([await updateCard(id, changes)]);
+}
+
+// Deletes a card and drops it from the store right away, instead of
+// waiting for the realtime "delete" echo.
+export async function removeCard(id: string): Promise<void> {
+  await deleteCard(id);
+  withCardsFlip(() => deleteFromStore(id));
 }

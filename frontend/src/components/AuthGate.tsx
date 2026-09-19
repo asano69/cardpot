@@ -1,7 +1,7 @@
 // frontend/src/components/AuthGate.tsx
 import { createSignal, onCleanup, Show, type JSX } from "solid-js";
 
-import pb from "@/lib/api/pb";
+import { isAuthenticated, onAuthChange } from "@/lib/api/auth";
 import Login from "@/pages/Login";
 
 interface AuthGateProps {
@@ -9,21 +9,19 @@ interface AuthGateProps {
 }
 
 // AuthGate blocks the whole app behind Login until a valid superuser
-// session exists, tracking pb.authStore so it reacts immediately to
-// both login and logout.
+// session exists, tracking the auth state (see lib/api/auth.ts) so it
+// reacts immediately to both login and logout.
 export default function AuthGate(props: AuthGateProps) {
-  const [authed, setAuthed] = createSignal(pb.authStore.isValid);
-  const unsubscribe = pb.authStore.onChange(() =>
-    setAuthed(pb.authStore.isValid),
-  );
+  const [authed, setAuthed] = createSignal(isAuthenticated());
+  const unsubscribe = onAuthChange(() => setAuthed(isAuthenticated()));
   onCleanup(unsubscribe);
 
-  // pb.authStore.isValid already accounts for token expiry, but nothing
+  // isAuthenticated() already accounts for token expiry, but nothing
   // re-checks it while the tab stays open with no login/logout activity.
   // Poll periodically so an expired token falls back to Login on its own,
   // instead of waiting for a page reload or a failed API call.
   const expiryCheck = setInterval(
-    () => setAuthed(pb.authStore.isValid),
+    () => setAuthed(isAuthenticated()),
     30_000,
   );
   onCleanup(() => clearInterval(expiryCheck));

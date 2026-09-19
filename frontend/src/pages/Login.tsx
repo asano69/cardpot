@@ -2,7 +2,7 @@ import { createSignal } from "solid-js";
 
 import Logo from "@/components/Logo";
 
-import pb from "@/lib/api/pb";
+import { login } from "@/lib/api/auth";
 
 // Login screen shown by AuthGate when no valid superuser session exists.
 // This app is single-user, so the PocketBase superuser account also
@@ -18,10 +18,10 @@ export default function Login() {
     setError("");
     setPending(true);
     try {
-      await pb.collection("_superusers").authWithPassword(email(), password());
-      // No further action needed here: AuthGate subscribes to
-      // pb.authStore.onChange and swaps this screen for the app once the
-      // token is stored.
+      await login(email(), password());
+      // No further action needed here: AuthGate subscribes to auth
+      // changes (see lib/api/auth.ts) and swaps this screen for the app
+      // once the token is stored.
     } catch {
       setError("Invalid email or password.");
     } finally {

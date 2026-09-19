@@ -1,11 +1,10 @@
-import { createMemo, createSignal, onMount, For, Show } from "solid-js";
+import { For, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { DragDropProvider } from "@dnd-kit/solid";
 import { useSortable, isSortable } from "@dnd-kit/solid/sortable";
 import { PointerSensor, KeyboardSensor } from "@dnd-kit/dom";
 
-import pb from "@/lib/api/pb";
-import { computePosition } from "@/lib/position";
+import { orderedPots, reorderPot } from "@/lib/stores/potsStore";
 import type { PotRecord } from "@/lib/models/pot";
 
 // Same override as PotList/CardList's own sensors: without it,
@@ -54,75 +53,24 @@ function SidebarPotRow(props: SidebarPotRowProps) {
 
 // Sidebar-only list of pots: read-only besides drag-to-reorder --
 // adding/renaming/deleting a pot still happens on the pots page. Kept
-// as its own component (not folded into Sidebar.tsx) since it owns
-// its own fetch and reorder logic, mirroring PotList.tsx's pattern.
+// as its own component (not folded into Sidebar.tsx) since it owns its
+// own drag-to-reorder wiring, mirroring PotList.tsx's pattern. Both
+// lists read the same pots store (see lib/stores/potsStore.ts), so a
+// reorder or rename in one shows up in the other immediately.
 export default function SidebarPotList() {
-  const [pots, setPots] = createSignal<PotRecord[]>([]);
-
-  onMount(async () => {
-    try {
-      const result = await pb
-        .collection("pots")
-        .getFullList<PotRecord>({ sort: "position" });
-      setPots(result);
-    } catch (err) {
-      console.error("[sidebar] failed to load pots:", err);
-    }
-  });
-
-  const ordered = createMemo(() =>
-    [...pots()].sort((a, b) => a.position - b.position),
-  );
-
-  // Persists a drag-to-reorder drop the same way PotList does: only
-  // the moved pot's own position changes (fractional indexing, see
-  // lib/position.ts), so reordering here stays consistent with
-  // reordering on the pots page.
   const handleDragEnd = (event) => {
     if (event.canceled) return;
     const { source } = event.operation;
     if (!isSortable(source)) return;
 
-    const { initialIndex, index: newIndex } = source;
-    if (initialIndex === newIndex) return;
-
-    const list = ordered();
-    const moved = list[initialIndex];
-    if (!moved) return;
-
-    const rest = list.filter((p) => p.id !== moved.id);
-    const position = computePosition(
-      rest[newIndex - 1]?.position,
-      rest[newIndex]?.position,
-    );
-
-    const previousPosition = moved.position;
-    setPots((prev) =>
-      prev.map((p) => (p.id === moved.id ? { ...p, position } : p)),
-    );
-
-    (async () => {
-      try {
-        const updated = await pb
-          .collection("pots")
-          .update<PotRecord>(moved.id, { position });
-        setPots((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-      } catch (err) {
-        console.error("[sidebar] failed to reorder pot:", err);
-        setPots((prev) =>
-          prev.map((p) =>
-            p.id === moved.id ? { ...p, position: previousPosition } : p,
-          ),
-        );
-      }
-    })();
+    reorderPot(source.initialIndex, source.index);
   };
 
   return (
-    <Show when={ordered().length > 0}>
+    <Show when={orderedPots().length > 0}>
       <DragDropProvider sensors={sensors} onDragEnd={handleDragEnd}>
         <ul class="flex flex-col gap-1 p-2">
-          <For each={ordered()}>
+          <For each={orderedPots()}>
             {(pot, index) => <SidebarPotRow pot={pot} index={index()} />}
           </For>
         </ul>

@@ -1,6 +1,7 @@
 import { onCleanup, onMount, type ParentProps } from "solid-js";
 import MainLayout from "./MainLayout";
 import { startCardsSubscription, loadAllCards } from "@/lib/stores/cardsStore";
+import { loadAllPots } from "@/lib/stores/potsStore";
 
 // Wraps every route so Header and Sidebar render once regardless of page.
 // Passed as Router's `root` prop (see lib/router.tsx) instead of wrapping
@@ -18,7 +19,11 @@ export default function AppShell(props: ParentProps) {
   // for it to resolve -- startCardsSubscription below can start
   // receiving realtime events in the meantime; both write through the
   // same last-write-wins store, so whichever lands last wins.
-  onMount(loadAllCards);
+  // The pot list is loaded the same way (see lib/stores/potsStore.ts).
+  onMount(() => {
+    loadAllCards();
+    loadAllPots();
+  });
   onCleanup(startCardsSubscription());
 
   return <MainLayout>{props.children}</MainLayout>;
