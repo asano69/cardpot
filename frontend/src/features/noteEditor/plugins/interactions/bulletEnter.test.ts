@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { EditorState } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
+import { cardpotSyntax } from "../../parser/cardpot";
 import { insertNewlineKeepingBullet } from "./bulletEnter";
 
 // insertNewlineKeepingBullet only reads `view.state` and calls
@@ -11,6 +12,7 @@ function runCommand(doc: string, cursor: number) {
   const state = EditorState.create({
     doc,
     selection: { anchor: cursor },
+    extensions: [cardpotSyntax()],
   });
 
   let result: EditorState = state;
@@ -35,6 +37,12 @@ describe("insertNewlineKeepingBullet", () => {
   it("keeps the same bullet depth when the line has text", () => {
     const result = runCommand("\t\thello", 7);
     expect(result.doc.toString()).toBe("\t\thello\n\t\t");
+    expect(result.selection.main.head).toBe(10);
+  });
+
+  it("uses the parser's whitespace indentation for a pasted space bullet", () => {
+    const result = runCommand(" \u3000hello", 7);
+    expect(result.doc.toString()).toBe(" \u3000hello\n\t\t");
     expect(result.selection.main.head).toBe(10);
   });
 

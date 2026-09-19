@@ -2,8 +2,7 @@ import type { Command } from "@codemirror/view";
 import { EditorSelection, type EditorState } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
 import { CodeBlock } from "../../parser/cardpot";
-
-const LEADING_TABS_RE = /^\t+/;
+import { indentRangeForLine } from "../../parser/cardpot/indent";
 
 // Whether `pos` falls inside a `code:` block (see
 // codeBlockLines.ts / hangingIndent.ts for the same CodeBlock
@@ -18,13 +17,13 @@ function isInCodeBlock(state: EditorState, pos: number): boolean {
   return false;
 }
 
-// Enter behavior for bulleted (tab-indented) lines, mirroring common
+// Enter behavior for bulleted (parser-indented) lines, mirroring common
 // outliner UX (Workflowy/Scrapbox-style):
 //
 // - A bulleted line that already has text keeps its bullet depth on
 //   the next line, so pressing Enter continues the list at the same
 //   indent instead of resetting to depth 0 every time.
-// - A bulleted line with nothing typed yet (just the leading tabs, no
+// - A bulleted line with nothing typed yet (just its leading indentation, no
 //   real content) is "released" instead: its tabs are stripped in
 //   place and no new line is inserted, exiting bullet mode rather
 //   than nesting an empty bullet under another empty bullet.
@@ -43,8 +42,8 @@ export const insertNewlineKeepingBullet: Command = (view) => {
     }
 
     const line = state.doc.lineAt(range.from);
-    const match = LEADING_TABS_RE.exec(line.text);
-    const depth = match ? match[0].length : 0;
+    const indent = indentRangeForLine(syntaxTree(state), line.from, line.text);
+    const depth = indent ? indent.to - indent.from : 0;
     const rest = line.text.slice(depth);
 
     if (depth > 0 && rest.trim() === "") {

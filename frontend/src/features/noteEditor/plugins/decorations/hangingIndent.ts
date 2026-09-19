@@ -8,6 +8,7 @@ import {
 } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
 import { CodeBlock } from "../../parser/cardpot";
+import { indentRangeForLine } from "../../parser/cardpot/indent";
 
 // Width of one indent level's mark element, in pixels (see
 // IndentMarkWidget below). Also used by editorTheme.ts to size the
@@ -18,13 +19,6 @@ export const INDENT_WIDTH_PX = 22.5;
 // leading indent (see IndentMarkWidget below and editorTheme.ts's
 // ".pad .dot" rule).
 export const DOT_SIZE_PX = 6;
-
-// A single leading indent character: a tab (what Tab/Shift-Tab
-// insert -- see index.tsx's indentUnit), or a half-width/full-width
-// space (which can end up at a line's start via paste or IME input).
-// Only matched at the very start of a line (see buildDecorations
-// below), never mid-line.
-const LEADING_INDENT_RUN_RE = /^[\t \u3000]+/;
 
 // Renders one indent level as a fixed-width "pad" box,
 // replacing the underlying whitespace character 1:1 via
@@ -110,9 +104,13 @@ function buildDecorations(view: EditorView): DecorationSet {
         pos = line.to + 1;
         continue;
       }
-      const match = LEADING_INDENT_RUN_RE.exec(line.text);
-      if (match) {
-        const depth = match[0].length;
+      const indent = indentRangeForLine(
+        syntaxTree(view.state),
+        line.from,
+        line.text,
+      );
+      if (indent) {
+        const depth = indent.to - indent.from;
         const width = depth * INDENT_WIDTH_PX;
         decorations.push(
           Decoration.line({
@@ -125,7 +123,7 @@ function buildDecorations(view: EditorView): DecorationSet {
           decorations.push(
             Decoration.replace({
               widget: new IndentMarkWidget(i === depth - 1),
-            }).range(line.from + i, line.from + i + 1),
+            }).range(indent.from + i, indent.from + i + 1),
           );
         }
       }
