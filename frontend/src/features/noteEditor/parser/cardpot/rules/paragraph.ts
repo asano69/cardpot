@@ -6,7 +6,13 @@ import { countIndent, isBlankLine } from "../indent";
 // treats every source line as an outline row, so claim one non-blank line at a
 // time and make its indentation an explicit syntax child.
 export function parseParagraph(cx: BlockContext, line: Line): boolean {
-  if (isBlankLine(line.text)) return false;
+  // Lezer only treats ASCII whitespace as blank, so lines such as a lone
+  // full-width space reach this rule. Consume them here so they never fall
+  // back to Lezer's multi-line paragraph accumulation.
+  if (isBlankLine(line.text)) {
+    cx.nextLine();
+    return true;
+  }
 
   const from = cx.lineStart;
   const indent = countIndent(line.text);

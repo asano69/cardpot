@@ -202,6 +202,17 @@ describe("Cardpot Lezer syntax", () => {
     expect(Indent.prop(isIndent)).toBe(true);
   });
 
+  it("consumes whitespace-only lines that Lezer itself does not treat as blank", () => {
+    expect(tree("\u3000\n> quote\n\tnext")).toBe(
+      "Document(Quote(QuoteMark),Paragraph(Indent))",
+    );
+  });
+
+  it("records only the block's own indent level for deeper code/table rows", () => {
+    expect(indentRanges("code:x\n\t\tfoo")).toEqual([{ from: 7, to: 8 }]);
+    expect(indentRanges("table:x\n\t\ta\tb")).toEqual([{ from: 8, to: 9 }]);
+  });
+
   it("uses the same indentation rule for code and table continuation rows", () => {
     expect(tree(" code:js\n  const x = 1\n　　nested\nafter")).toBe(
       "Document(CodeBlock(Indent,CodeBlockMark,Indent,Indent),Paragraph)",

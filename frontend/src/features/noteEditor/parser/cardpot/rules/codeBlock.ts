@@ -1,6 +1,5 @@
 import type { BlockContext, Line } from "@lezer/markdown";
 
-import { countIndent } from "../indent";
 import { consumeIndentedLines, startsIndentedBlock } from "./indentedBlock";
 
 // Cosense/Scrapbox code blocks start with `code:` and continue through the
@@ -21,8 +20,9 @@ export function parseCodeBlock(cx: BlockContext, line: Line): boolean {
     // Code is deliberately raw text. Record no inline children, but extend
     // the block through every body line so the editor can style it as code.
     void text;
-    const bodyIndent = countIndent(line.text);
-    children.push(cx.elt("Indent", lineFrom - bodyIndent, lineFrom));
+    // Only the block's own indent level (declaration indent + 1) is syntax;
+    // any deeper whitespace is part of the raw code.
+    children.push(cx.elt("Indent", lineFrom - (indent + 1), lineFrom));
     to = lineFrom + text.length;
   });
   cx.addElement(cx.elt("CodeBlock", from, to, children));

@@ -101,8 +101,15 @@ function buildDecorations(view: EditorView): DecorationSet {
       // node's content is whatever sits between them.
       const openMark = node.node.firstChild;
       const closeMark = node.node.lastChild;
+      // Only a real open/close mark pair can bracket empty content: a node
+      // such as Quote starts with an Indent child and ends with ordinary
+      // inline children, which must not be mistaken for a mark pair.
       const contentIsEmpty =
-        openMark && closeMark && openMark.to === closeMark.from;
+        openMark &&
+        closeMark &&
+        openMark.type.prop(isMark) &&
+        closeMark.type.prop(isMark) &&
+        openMark.to === closeMark.from;
 
       if (contentIsEmpty) {
         decorations.push(

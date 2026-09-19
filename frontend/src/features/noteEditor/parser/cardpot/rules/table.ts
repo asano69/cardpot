@@ -1,6 +1,5 @@
 import type { BlockContext, Line } from "@lezer/markdown";
 
-import { countIndent } from "../indent";
 import { consumeIndentedLines, startsIndentedBlock } from "./indentedBlock";
 
 // A table's rows are indented relative to its `table:` declaration, and
@@ -18,8 +17,10 @@ export function parseTable(cx: BlockContext, line: Line): boolean {
   ];
 
   consumeIndentedLines(cx, line, indent, (row, rowFrom) => {
-    const rowIndent = countIndent(line.text);
-    const rowChildren = [cx.elt("Indent", rowFrom - rowIndent, rowFrom)];
+    // Only the table's own indent level (declaration indent + 1) is syntax;
+    // any deeper whitespace stays in the first cell, as in Scrapbox.
+    const rowStart = rowFrom - (indent + 1);
+    const rowChildren = [cx.elt("Indent", rowStart, rowFrom)];
     let cellFrom = rowFrom;
     for (const cell of row.split("\t")) {
       const cellTo = cellFrom + cell.length;
@@ -34,7 +35,7 @@ export function parseTable(cx: BlockContext, line: Line): boolean {
       cellFrom = cellTo + 1;
     }
     const rowTo = rowFrom + row.length;
-    children.push(cx.elt("TableRow", rowFrom - rowIndent, rowTo, rowChildren));
+    children.push(cx.elt("TableRow", rowStart, rowTo, rowChildren));
     to = rowTo;
   });
 
