@@ -10,7 +10,7 @@ import { NodeType } from "@lezer/common";
 import { parser } from "@lezer/markdown";
 
 import { codeLanguageWrap } from "./codeLanguages";
-import { hideContent, isMark, revealStyle } from "./nodeProps";
+import { hideContent, isIndent, isMark, revealStyle } from "./nodeProps";
 import { parseBlank } from "./rules/blank";
 import { parseBracket } from "./rules/bracket";
 import { parseDecoration } from "./rules/decoration";
@@ -18,10 +18,11 @@ import { parseCodeBlock } from "./rules/codeBlock";
 import { parseHashTag } from "./rules/hashTag";
 import { parseInlineCode } from "./rules/inlineCode";
 import { startsIndentedBlock } from "./rules/indentedBlock";
+import { parseParagraph } from "./rules/paragraph";
 import { parseQuote } from "./rules/quote";
 import { parseTable } from "./rules/table";
 
-export { hideContent, isMark, revealStyle };
+export { hideContent, isIndent, isMark, revealStyle };
 
 const defaultParsers = [
   "LinkReference",
@@ -80,6 +81,7 @@ const cardpotParser = parser.configure({
     "StrongIcon",
     "HashTag",
     "Blank",
+    "Indent",
   ],
   props: [
     revealStyle.add({
@@ -115,6 +117,9 @@ const cardpotParser = parser.configure({
       StrongMark: true,
       QuoteMark: true,
     }),
+    isIndent.add({
+      Indent: true,
+    }),
     // Image/LinkedImage's raw bracketed URL is only shown while the
     // cursor touches it; otherwise it's hidden entirely, since the
     // actual image is already rendered as a widget (see
@@ -136,6 +141,7 @@ const cardpotParser = parser.configure({
       endLeaf: (_, line) => startsIndentedBlock(line, "table:") !== null,
     },
     { name: "CardpotQuote", parse: parseQuote },
+    { name: "CardpotParagraph", parse: parseParagraph },
   ],
   parseInline: [
     { name: "CardpotDecoration", parse: parseDecoration },
@@ -189,6 +195,7 @@ export const Table = node("Table");
 export const TableMark = node("TableMark");
 export const TableRow = node("TableRow");
 export const TableCell = node("TableCell");
+export const Indent = node("Indent");
 
 const cardpotLanguageData = defineLanguageFacet({});
 

@@ -1,8 +1,9 @@
 import type { BlockContext, Line } from "@lezer/markdown";
 
+import { countIndent } from "../indent";
 import { consumeIndentedLines, startsIndentedBlock } from "./indentedBlock";
 
-// A table's rows are tab-indented relative to its `table:` declaration, and
+// A table's rows are indented relative to its `table:` declaration, and
 // cells are separated by literal tab characters. Cell contents are parsed by
 // Cardpot's normal inline parser, matching Scrapbox's table-node behavior.
 export function parseTable(cx: BlockContext, line: Line): boolean {
@@ -11,10 +12,14 @@ export function parseTable(cx: BlockContext, line: Line): boolean {
 
   const from = cx.lineStart;
   let to = from + line.text.length;
-  const children = [cx.elt("TableMark", from + indent, to)];
+  const children = [
+    ...(indent ? [cx.elt("Indent", from, from + indent)] : []),
+    cx.elt("TableMark", from + indent, to),
+  ];
 
   consumeIndentedLines(cx, line, indent, (row, rowFrom) => {
-    const rowChildren = [];
+    const rowIndent = countIndent(line.text);
+    const rowChildren = [cx.elt("Indent", rowFrom - rowIndent, rowFrom)];
     let cellFrom = rowFrom;
     for (const cell of row.split("\t")) {
       const cellTo = cellFrom + cell.length;
@@ -29,7 +34,7 @@ export function parseTable(cx: BlockContext, line: Line): boolean {
       cellFrom = cellTo + 1;
     }
     const rowTo = rowFrom + row.length;
-    children.push(cx.elt("TableRow", rowFrom, rowTo, rowChildren));
+    children.push(cx.elt("TableRow", rowFrom - rowIndent, rowTo, rowChildren));
     to = rowTo;
   });
 

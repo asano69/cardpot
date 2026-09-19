@@ -1,9 +1,20 @@
 import { describe, expect, it } from "vitest";
 
-import { cardpotSyntaxLanguage } from ".";
+import { cardpotSyntaxLanguage, Indent, isIndent } from ".";
 
 function tree(input: string): string {
   return cardpotSyntaxLanguage.parser.parse(input).toString();
+}
+
+function indentRanges(input: string): { from: number; to: number }[] {
+  const ranges: { from: number; to: number }[] = [];
+  const syntax = cardpotSyntaxLanguage.parser.parse(input);
+  syntax.iterate({
+    enter(node) {
+      if (node.type === Indent) ranges.push({ from: node.from, to: node.to });
+    },
+  });
+  return ranges;
 }
 
 describe("Cardpot Lezer syntax", () => {
@@ -12,7 +23,7 @@ describe("Cardpot Lezer syntax", () => {
       "Document(Paragraph(WikiLink(WikiLinkMark,WikiLinkMark),Bold(BoldMark,BoldMark),Code(CodeMark,CodeMark)))",
     );
     expect(tree("# not a CommonMark heading\n**not CommonMark bold**")).toBe(
-      "Document(Paragraph)",
+      "Document(Paragraph,Paragraph)",
     );
   });
 
@@ -132,18 +143,18 @@ describe("Cardpot Lezer syntax", () => {
     );
   });
 
-  it("parses code: blocks until their tab indentation returns", () => {
+  it("parses code: blocks until their indentation returns", () => {
     expect(
       tree("before\ncode:typescript\n\t[not-a-link]\n\tconst x = 1\nafter"),
-    ).toBe("Document(Paragraph,CodeBlock(CodeBlockMark),Paragraph)");
+    ).toBe("Document(Paragraph,CodeBlock(CodeBlockMark,Indent,Indent),Paragraph)");
     expect(tree("\tcode:main.rs(rust)\n\t\tfn main() {}\n\tnext")).toBe(
-      "Document(CodeBlock(CodeBlockMark),Paragraph)",
+      "Document(CodeBlock(Indent,CodeBlockMark,Indent),Paragraph(Indent))",
     );
   });
 
   it("does not treat the removed fenced-code syntax as a block", () => {
     expect(tree("```ts\n[page]\n``` ")).toBe(
-      "Document(Paragraph(Code(CodeMark,CodeMark),WikiLink(WikiLinkMark,WikiLinkMark)),Paragraph(Code(CodeMark,CodeMark)))",
+      "Document(Paragraph(Code(CodeMark,CodeMark)),Paragraph(WikiLink(WikiLinkMark,WikiLinkMark)),Paragraph(Code(CodeMark,CodeMark)))",
     );
   });
 
@@ -151,13 +162,13 @@ describe("Cardpot Lezer syntax", () => {
     expect(
       tree("table:links\n\t[* bold]\t[page]\t`code`\n\t#tag\t[ ]\t\noutside"),
     ).toBe(
-      "Document(Table(TableMark,TableRow(TableCell(Bold(BoldMark,BoldMark)),TableCell(WikiLink(WikiLinkMark,WikiLinkMark)),TableCell(Code(CodeMark,CodeMark))),TableRow(TableCell(HashTag),TableCell(Blank),TableCell)),Paragraph)",
+      "Document(Table(TableMark,TableRow(Indent,TableCell(Bold(BoldMark,BoldMark)),TableCell(WikiLink(WikiLinkMark,WikiLinkMark)),TableCell(Code(CodeMark,CodeMark))),TableRow(Indent,TableCell(HashTag),TableCell(Blank),TableCell)),Paragraph)",
     );
   });
 
-  it("terminates tables at equal or shallower tab indentation", () => {
+  it("terminates tables at equal or shallower indentation", () => {
     expect(tree("\ttable:nested\n\t\ta\tb\n\tnext\ntail")).toBe(
-      "Document(Table(TableMark,TableRow(TableCell,TableCell)),Paragraph)",
+      "Document(Table(Indent,TableMark,TableRow(Indent,TableCell,TableCell)),Paragraph(Indent),Paragraph)",
     );
   });
 
@@ -168,10 +179,35 @@ describe("Cardpot Lezer syntax", () => {
     expect(tree(">no separating space")).toBe("Document(Quote(QuoteMark))");
   });
 
-  it("only recognizes quote prefixes after space indentation", () => {
-    expect(tree("  > indented quote")).toBe("Document(Quote(QuoteMark))");
-    expect(tree("\t> not a cosy-style indented quote")).toBe(
-      "Document(Paragraph)",
+  it("recognizes quote prefixes after any supported indentation", () => {
+    expect(tree("  > indented quote")).toBe(
+      "Document(Quote(Indent,QuoteMark))",
+    );
+    expect(tree("\t> indented quote")).toBe(
+      "Document(Quote(Indent,QuoteMark))",
+    );
+  });
+
+  it("records each non-blank line's ECMAScript whitespace indentation", () => {
+    const input = "plain\n \t　nested\n\fother";
+    expect(tree(input)).toBe(
+      "Document(Paragraph,Paragraph(Indent),Paragraph(Indent))",
+    );
+    // The ranges themselves encode the character-count depth. `isIndent`
+    // gives consumers a NodeProp-based way to recognize these semantic nodes.
+    expect(indentRanges(input)).toEqual([
+      { from: 6, to: 9 },
+      { from: 16, to: 17 },
+    ]);
+    expect(Indent.prop(isIndent)).toBe(true);
+  });
+
+  it("uses the same indentation rule for code and table continuation rows", () => {
+    expect(tree(" code:js\n  const x = 1\n　　nested\nafter")).toBe(
+      "Document(CodeBlock(Indent,CodeBlockMark,Indent,Indent),Paragraph)",
+    );
+    expect(tree("　table:data\n　 a\tb\nnext")).toBe(
+      "Document(Table(Indent,TableMark,TableRow(Indent,TableCell,TableCell)),Paragraph)",
     );
   });
 });

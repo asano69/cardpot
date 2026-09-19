@@ -1,5 +1,7 @@
 import type { BlockContext, Line } from "@lezer/markdown";
 
+import { countIndent } from "../indent";
+
 // Keep this ordered list aligned with cosy's parser/block.rs dispatch. Entries
 // without a parser deliberately fall through to Paragraph until their phase is
 // implemented, rather than claiming a line prematurely.
@@ -22,16 +24,10 @@ const blockPrefixes: readonly LineBlockMatch[] = [
   { kind: "helpfeel", prefix: "? " },
 ];
 
-function countLeadingSpaces(text: string): number {
-  let indent = 0;
-  while (text[indent] === " ") indent++;
-  return indent;
-}
-
 function matchLineBlock(text: string): LineBlockMatch | null {
-  // This is the same first step as cosy's parse_block: calculate the indent
-  // before testing prefixes. cosy currently defines indentation as spaces.
-  const indent = countLeadingSpaces(text);
+  // Measure indentation before testing prefixes so every block shares the
+  // parser's character-count based indentation model.
+  const indent = countIndent(text);
   const content = text.slice(indent);
 
   for (const match of blockPrefixes) {
@@ -62,7 +58,7 @@ export function parseLineBlock(
   const match = matchLineBlock(line.text);
   if (!match || match.kind !== definition.kind) return false;
 
-  const indent = countLeadingSpaces(line.text);
+  const indent = countIndent(line.text);
   const prefixFrom = cx.lineStart + indent;
   const prefixTo = prefixFrom + match.prefix.length;
   let contentFrom = prefixTo;
@@ -72,6 +68,7 @@ export function parseLineBlock(
 
   const content = line.text.slice(contentFrom - cx.lineStart);
   const children = [
+    ...(indent ? [cx.elt("Indent", cx.lineStart, prefixFrom)] : []),
     cx.elt(definition.mark, prefixFrom, prefixTo),
     ...cx.parser.parseInline(content, contentFrom),
   ];

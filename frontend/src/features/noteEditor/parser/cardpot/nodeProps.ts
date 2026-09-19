@@ -28,3 +28,9 @@ export const isMark = new NodeProp<true>();
 // prop have their whole range replaced with nothing instead of only
 // hiding mark children (see syntaxReveal.ts).
 export const hideContent = new NodeProp<true>();
+
+// The indentation value is represented by an `Indent` child node's source
+// range. A NodeProp cannot vary per individual tree node (it belongs to a
+// NodeType), so this prop identifies those children while `to - from` provides
+// the character-count depth.
+export const isIndent = new NodeProp<true>();
