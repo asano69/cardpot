@@ -52,19 +52,29 @@ export function registerDebugView(view: EditorView): () => void {
 }
 
 // Forces a complete parse of the current editor's document (the editor
-// itself normally parses lazily) and logs the resulting tree as-is.
-function dumpCurrentEditor(): void {
-  if (!currentView) {
-    console.warn("[cardpotDebug] no editor is mounted");
-    return;
-  }
+// itself normally parses lazily) and returns the resulting tree as
+// nested plain objects. Returns null if no editor is mounted, or if
+// parsing did not finish within PARSE_TIMEOUT_MS. Shared by the
+// browser-console entry point below and by CardForm's own "dump
+// syntax tree" debug action (see pages/cards/CardForm.tsx).
+export function getSyntaxTreeJson(): DebugNode | null {
+  if (!currentView) return null;
   const { state } = currentView;
   const tree = ensureSyntaxTree(state, state.doc.length, PARSE_TIMEOUT_MS);
-  if (!tree) {
-    console.error("[cardpotDebug] parsing did not finish in time");
+  if (!tree) return null;
+  return syntaxTreeToJson(tree, state.doc.toString());
+}
+
+// Logs the current editor's syntax tree to the console.
+function dumpCurrentEditor(): void {
+  const json = getSyntaxTreeJson();
+  if (!json) {
+    console.warn(
+      "[cardpotDebug] no editor is mounted, or parsing did not finish in time",
+    );
     return;
   }
-  console.log(syntaxTreeToJson(tree, state.doc.toString()));
+  console.log(json);
 }
 
 // Usage from the browser console: cardpotDebug.dumpTree()

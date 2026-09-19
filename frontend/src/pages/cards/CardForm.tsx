@@ -4,8 +4,10 @@ import { Alert } from "@kobalte/core/alert";
 import type * as Y from "yjs";
 import DraftCardEditor from "@/features/noteEditor/DraftCardEditor";
 import ExistingCardEditor from "@/features/noteEditor/ExistingCardEditor";
+import { getSyntaxTreeJson } from "@/features/noteEditor/debug";
 import Loading from "@/components/Loading";
-import { Trash2, Pin, PinOff, About } from "@/lib/icons";
+import ActionsMenu from "@/components/menus/ActionsMenu";
+import { Trash2, Pin, PinOff, About, Network } from "@/lib/icons";
 import {
   cardsById,
   cardsLoaded,
@@ -158,6 +160,21 @@ export default function CardForm() {
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
+  // Debug helper: opens the current editor's syntax tree (see
+  // features/noteEditor/debug.ts) as a JSON blob in a new tab, the
+  // same way handleShowRawText does for the raw text. Replaces the
+  // need to run cardpotDebug.dumpTree() from the browser console.
+  const handleDumpSyntaxTree = () => {
+    const json = getSyntaxTreeJson();
+    if (!json) return;
+    const blob = new Blob([JSON.stringify(json, null, 2)], {
+      type: "application/json;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank", "noopener,noreferrer");
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
+
   const pinned = () => cardsById[cardId() ?? ""]?.pin ?? false;
   const togglePin = async () => {
     const id = cardId();
@@ -266,16 +283,26 @@ export default function CardForm() {
             >
               <Trash2 size={20} />
             </button>
-            {/* Debug-only: exports the card's raw Yjs text as a
-                text/plain blob in a new tab (see handleShowRawText). */}
-            <button
-              type="button"
-              aria-label="Show raw document text"
-              class="tool-btn"
-              onClick={handleShowRawText}
-            >
-              <About size={20} />
-            </button>
+            {/* Debug-only dropdown: exports either the card's raw Yjs
+                text (handleShowRawText) or its parsed syntax tree
+                (handleDumpSyntaxTree) as a blob in a new tab, replacing
+                the About button's old single-action click. */}
+            <ActionsMenu
+              label="Debug options"
+              triggerClass="tool-btn"
+              items={[
+                {
+                  label: "Show raw text",
+                  icon: About,
+                  onSelect: handleShowRawText,
+                },
+                {
+                  label: "Dump syntax tree",
+                  icon: Network,
+                  onSelect: handleDumpSyntaxTree,
+                },
+              ]}
+            />
           </Show>
         </div>
       </div>
