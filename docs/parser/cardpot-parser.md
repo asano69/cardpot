@@ -42,4 +42,17 @@ Lezerの`parseBlock`コールバックも「現在の行から呼ばれて、自
 実装を始める際は、まずcosyの`parser/mod.rs`にある記法一覧（block: 22行付近のディスパッチ条件、inline: `alt((...))`の並び）を「サポートすべき記法のチェックリスト」として使い、各記法の正規表現・文字境界処理だけscrapbox-parserの該当ファイルから移すのが一番手戻りが少ないと思います。
 
 
+---
+
+## scrapbox-paserとlezer再実装パーサの比較
+
+
+**1. Decorationの構造がそもそも逆**
+scrapbox-parserの`decoration`は「1ノードに`rawDecos`（複数文字をまとめた文字列）を持つフラットな形」です。一方Cardpotの`rules/decoration.ts`は、**Lezerのノード型が静的にしか定義できない制約のため、あえて`Bold`/`Italic`を入れ子にして表現**しています（`[*/ text]` → `Bold(Italic(...))`）。
+
+**2. Quoteの階層がずれている**
+scrapbox-parserでは`quote`は「行の中のインライン要素の1つ」（`{type: "line", nodes: [{type: "quote", nodes: [...]}]}`）として表現されますが、Cardpotの`Quote`は`CodeBlock`/`Table`/`Paragraph`と並ぶ**トップレベルのブロック**です
+
+**3. ProjectLinkと"root"の曖昧さ**
+scrapbox-parserは、`[/page]`（同一プロジェクト内のroot相対リンク）と`[/project/page]`（他プロジェクトへのクロスリンク）を区別せず、両方`pathType: "root"`に潰しています。
 
