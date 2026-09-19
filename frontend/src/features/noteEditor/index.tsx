@@ -64,8 +64,8 @@ export default function NoteEditor(props: NoteEditorProps) {
         EditorView.lineWrapping,
         // Draws the cursor/selection itself (via coordsAtPos) instead
         // of relying on the browser's native contenteditable caret.
-        // Needed because IndentMarkWidget replaces a tab character
-        // with a widget (see bulletLineDecoration.ts): right after
+        // Needed because IndentMarkWidget replaces an indent character
+        // with a widget (see hangingIndent.ts): right after
         // Tab inserts a new widget, the native caret can render at a
         // stale layout position until the next reflow (e.g. another
         // keystroke or Shift-Tab) forces the browser to recompute it.
@@ -85,8 +85,8 @@ export default function NoteEditor(props: NoteEditorProps) {
         editorTheme,
         // Hanging indent for wrapped lines, and the Scrapbox/Cosense-
         // style bullet dot on a line's leading indent (see
-        // hangingIndent.ts) -- each leading tab/space character is
-        // replaced 1:1 with a fixed-width "pad" element, so deleting
+        // hangingIndent.ts) -- each character of the parser's Indent
+        // node is replaced 1:1 with a fixed-width "pad" element, so deleting
         // one behaves like deleting any other single character (no
         // separate atomic-range handling needed for that anymore).
         hangingIndent,
@@ -98,11 +98,12 @@ export default function NoteEditor(props: NoteEditorProps) {
         wordBreak,
         codeBlockLines,
         imageWidget,
-        // Cardpot's own inline syntax parser (see
-        // parser/cardpot/index.ts) -- currently just "[* text]" ->
-        // Bold. syntaxReveal reads this same syntax tree to decide when
-        // to hide/show the raw markup around the cursor, Obsidian-
-        // style (see syntaxReveal.ts).
+        // Cardpot's own Scrapbox-style syntax parser (see
+        // parser/cardpot/index.ts): block notation (indentation, quotes,
+        // `code:` and `table:` blocks) and inline notation (decorations,
+        // links, images, hashtags, ...). syntaxReveal reads this same
+        // syntax tree to decide when to hide/show the raw markup around
+        // the cursor, Obsidian-style (see syntaxReveal.ts).
         cardpotSyntax(),
         // Colors tokens inside `code:` blocks once their
         // language has resolved (see parser/cardpot/codeLanguages.ts).
@@ -113,8 +114,10 @@ export default function NoteEditor(props: NoteEditorProps) {
         pasteUrlDecode(),
         // A single real tab character per indent level, not spaces --
         // indentMore/indentLess (bound below) both insert/remove
-        // whatever this unit is. Matches bulletLineDecoration.ts's own
-        // LEADING_TABS_RE, which only recognizes literal tabs.
+        // whatever this unit is. The parser itself accepts any
+        // ECMAScript whitespace as indentation (see
+        // parser/cardpot/indent.ts), so a tab is just the unit this
+        // editor produces.
         indentUnit.of("\t"),
         // Every key binding, grouped by origin and ordered by
         // precedence (see keymaps.ts): Cardpot's own Tab/Enter/`/`*`

@@ -45,10 +45,14 @@ export const codeBlockLines = ViewPlugin.fromClass(
     }
 
     update(update: ViewUpdate) {
-      // The syntax tree only changes shape when the doc itself
-      // changes -- a pure selection or viewport change never needs a
-      // new set of code-block line ranges.
-      if (update.docChanged) {
+      // Code-block ranges come from the syntax tree, which can be
+      // extended by a background parse without any document change, so
+      // a new tree must also trigger a rebuild. A pure selection or
+      // viewport change never needs a new set of ranges.
+      if (
+        update.docChanged ||
+        syntaxTree(update.startState) !== syntaxTree(update.state)
+      ) {
         this.decorations = buildDecorations(update.view);
       }
     }

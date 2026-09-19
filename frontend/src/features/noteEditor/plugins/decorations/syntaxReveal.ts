@@ -140,7 +140,13 @@ export const syntaxReveal = ViewPlugin.fromClass(
     }
 
     update(update: ViewUpdate) {
-      if (update.docChanged || update.selectionSet) {
+      // A new syntax tree (e.g. after a background parse of a long
+      // document) also changes which nodes exist to be styled or hidden.
+      if (
+        update.docChanged ||
+        update.selectionSet ||
+        syntaxTree(update.startState) !== syntaxTree(update.state)
+      ) {
         this.decorations = buildDecorations(update.view);
       }
     }

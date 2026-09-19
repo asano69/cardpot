@@ -82,7 +82,7 @@ class IndentMarkWidget extends WidgetType {
 function buildDecorations(view: EditorView): DecorationSet {
   const decorations = [];
 
-  // Fenced code block ranges (see codeBlockLines.ts for the same
+  // `code:` block ranges (see codeBlockLines.ts for the same
   // pattern): a line's leading whitespace inside one of these is code
   // content, not a bullet indent, so it must never be replaced with a
   // "pad" widget below.
@@ -142,7 +142,15 @@ export const hangingIndent = ViewPlugin.fromClass(
     }
 
     update(update: ViewUpdate) {
-      if (update.docChanged || update.viewportChanged) {
+      // Indent ranges come from the syntax tree, which the language parses
+      // incrementally and can extend without any document change (e.g. once
+      // a long document finishes its background parse), so a new tree must
+      // also trigger a rebuild.
+      if (
+        update.docChanged ||
+        update.viewportChanged ||
+        syntaxTree(update.startState) !== syntaxTree(update.state)
+      ) {
         this.decorations = buildDecorations(update.view);
       }
     }

@@ -127,7 +127,13 @@ export const imageWidget = ViewPlugin.fromClass(
     }
 
     update(update: ViewUpdate) {
-      if (update.docChanged || update.selectionSet) {
+      // A new syntax tree (e.g. after a background parse of a long
+      // document) can add Image nodes that need their widget.
+      if (
+        update.docChanged ||
+        update.selectionSet ||
+        syntaxTree(update.startState) !== syntaxTree(update.state)
+      ) {
         this.decorations = buildDecorations(update.view);
       }
     }
