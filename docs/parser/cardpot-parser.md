@@ -56,3 +56,8 @@ scrapbox-parserでは`quote`は「行の中のインライン要素の1つ」（
 **3. ProjectLinkと"root"の曖昧さ**
 scrapbox-parserは、`[/page]`（同一プロジェクト内のroot相対リンク）と`[/project/page]`（他プロジェクトへのクロスリンク）を区別せず、両方`pathType: "root"`に潰しています。
 
+## cosyとlezer再実装パーサの比較
+
+- Cardpotの角括弧ディスパッチャ（rules/bracket.ts）は、cosyのparser/bracket.rsの分類構造をそのまま移植したも。BracketKind（Math/Icon/ProjectLink/GoogleMap/Image/ExternalLink/LinkedImage/WikiLink）は、cosyのNode::Link(Link::Page/Url/WithLabel/Project/ProjectPage)・Node::Image・Node::LinkedImageと実質1:1対応。scrapbox-parserは全部を"type": "link"＋pathTypeフィールドに潰しており、WikiLinkとExternalLinkを構造的に分けているCardpotの実態とは逆に情報が失われます。
+
+- Decorationも同様：cosyはNode::Decoration { decos: String, nodes }という単一のフラットな型を持ち、JSON化する際に「複数の装飾文字が1つのノードに乗る」という実態を素直に表現できます。scrapbox-parserの"type": "decoration"も実は同じ形（rawDecos/decos配列）なのでここは両者互角ですが、CardpotのLezer実装がBold/Italicをネストした別ノードとして生成している点を考えると、JSON出力時に「1つのDecorationノードにdecos文字列を持たせる」cosy式の方が、Lezerの入れ子構造をシンプルな形に潰しやすいです。
