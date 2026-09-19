@@ -28,6 +28,7 @@ import { wikiLinkNavigation } from "./plugins/interactions/wikiLinkNavigation";
 import { externalLinkNavigation } from "./plugins/interactions/externalLinkNavigation";
 import { pasteUrlDecode } from "./plugins/interactions/pasteUrlDecode";
 import type { TitleCandidate } from "@/lib/models/card";
+import { registerDebugView } from "./debug";
 
 export interface NoteEditorProps {
   ydoc: Y.Doc;
@@ -129,6 +130,8 @@ export default function NoteEditor(props: NoteEditorProps) {
     });
 
     const view = new EditorView({ state, parent: el });
+    // Lets cardpotDebug.dumpTree() in the browser console find this editor.
+    const unregisterDebug = registerDebugView(view);
 
     // Seed the document's first line with initialTitle for a
     // brand-new draft opened from a URL slug that matched no existing
@@ -188,6 +191,7 @@ export default function NoteEditor(props: NoteEditorProps) {
 
     onCleanup(() => {
       if (fillUntitledIfEmpty) props.provider?.off("sync", fillUntitledIfEmpty);
+      unregisterDebug();
       view.destroy();
     });
   };
