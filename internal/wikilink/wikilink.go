@@ -14,7 +14,7 @@ import (
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/asano69/cardpot/internal/notation"
+	"github.com/asano69/cardpot/internal/parser"
 	"github.com/asano69/cardpot/internal/slug"
 )
 
@@ -31,7 +31,7 @@ func Sync(app core.App, cardID, text string) error {
 		return err
 	}
 
-	targets, err := resolveTargets(app, card.GetString("pot"), cardID, notation.ExtractWikiLinkTitles(text))
+	targets, err := resolveTargets(app, card.GetString("pot"), cardID, parser.Parse(text).WikiLinkTitles())
 	if err != nil {
 		return err
 	}

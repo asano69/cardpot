@@ -41,6 +41,7 @@ import (
 	"github.com/reearth/ygo/crdt"
 	yjsws "github.com/reearth/ygo/provider/websocket"
 
+	"github.com/asano69/cardpot/internal/parser"
 	"github.com/asano69/cardpot/internal/wikilink"
 )
 
@@ -261,16 +262,10 @@ func (p *ydocPersistence) store(ctx context.Context, room string, update []byte)
 	return p.compactIfNeeded(room)
 }
 
-// updatePreview refreshes a card's "description" field from text --
+// updatePreview refreshes a card's derived description and image fields from text --
 // the room's live "content" YText, already read once by the caller
 // (see store). "title" and "slug" are resolved elsewhere (see
 // slug.go's resolveSlugAndTitle), not here.
-//
-// TODO(codemirror-migration): the "image" field is no longer updated
-// here -- it used to be extracted from an XML <image> node (see
-// internal/xmldoc.FirstImageSrc), which no longer exists now that the
-// document is plain text. Re-add this once image markdown syntax is
-// parsed directly out of the text.
 func (p *ydocPersistence) updatePreview(room, text string) error {
 	record, err := p.app.FindRecordById("cards", room)
 	if err != nil {
@@ -278,22 +273,13 @@ func (p *ydocPersistence) updatePreview(room, text string) error {
 	}
 
 	description := buildPreview(text)
-	if record.GetString("description") == description {
+	image := parser.Parse(text).FirstImageSrc()
+	if record.GetString("description") == description && record.GetString("image") == image {
 		return nil // unchanged -- avoid a no-op write and its "updated" bump
 	}
 	record.Set("description", description)
+	record.Set("image", image)
 	return p.app.Save(record)
-}
-
-// firstLine returns the text up to (but excluding) the first newline
-// -- the document's line 0, which doubles as the title candidate (see
-// slug.go's resolveTitle). Returns the whole string when there is no
-// newline yet (e.g. a brand-new, single-line draft).
-func firstLine(text string) string {
-	if i := strings.IndexByte(text, '\n'); i >= 0 {
-		return text[:i]
-	}
-	return text
 }
 
 // descriptionMaxRunes caps how much text buildPreview keeps, counted

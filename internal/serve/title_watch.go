@@ -17,6 +17,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/reearth/ygo/crdt"
 
+	"github.com/asano69/cardpot/internal/parser"
 	"github.com/asano69/cardpot/internal/slug"
 )
 
@@ -54,11 +55,11 @@ func (w *titleWatcher) observe(app core.App, room string, doc *crdt.Doc) {
 	text := doc.GetText("content")
 
 	w.mu.Lock()
-	w.lastRaw[room] = firstLine(text.ToString())
+	w.lastRaw[room] = parser.Parse(text.ToString()).Title()
 	w.mu.Unlock()
 
 	text.Observe(func(_ crdt.YTextEvent) {
-		raw := firstLine(text.ToString())
+		raw := parser.Parse(text.ToString()).Title()
 
 		w.mu.Lock()
 		if w.lastRaw[room] == raw {
