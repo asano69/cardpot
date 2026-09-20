@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Package notation is a proof of concept: Cardpot's Scrapbox-compatible note
 // syntax parsed with goldmark used as a framework (no fork, no CommonMark).
 //

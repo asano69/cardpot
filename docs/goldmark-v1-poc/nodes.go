@@ -1,3 +1,5 @@
+//go:build ignore
+
 package notation
 
 import "github.com/yuin/goldmark/ast"
