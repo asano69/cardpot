@@ -1,0 +1,957 @@
+package ast // import "github.com/yuin/goldmark/v2/ast"
+
+Package ast defines AST nodes that represent markdown elements.
+
+VARIABLES
+
+var KindAutoLink = NewNodeKind("AutoLink")
+    KindAutoLink is a NodeKind of the AutoLink node.
+
+var KindBlockquote = NewNodeKind("Blockquote")
+    KindBlockquote is a NodeKind of the Blockquote node.
+
+var KindCodeBlock = NewNodeKind("CodeBlock")
+    KindCodeBlock is a NodeKind of the CodeBlock node.
+
+var KindCodeSpan = NewNodeKind("CodeSpan")
+    KindCodeSpan is a NodeKind of the CodeSpan node.
+
+var KindDocument = NewNodeKind("Document")
+    KindDocument is a NodeKind of the Document node.
+
+var KindEmphasis = NewNodeKind("Emphasis")
+    KindEmphasis is a NodeKind of the Emphasis node.
+
+var KindHTMLBlock = NewNodeKind("HTMLBlock")
+    KindHTMLBlock is a NodeKind of the HTMLBlock node.
+
+var KindHeading = NewNodeKind("Heading")
+    KindHeading is a NodeKind of the Heading node.
+
+var KindImage = NewNodeKind("Image")
+    KindImage is a NodeKind of the Image node.
+
+var KindLink = NewNodeKind("Link")
+    KindLink is a NodeKind of the Link node.
+
+var KindLinkReferenceDefinition = NewNodeKind("LinkReferenceDefinition")
+    KindLinkReferenceDefinition is a NodeKind of the LinkReferenceDefinition
+    node.
+
+var KindList = NewNodeKind("List")
+    KindList is a NodeKind of the List node.
+
+var KindListItem = NewNodeKind("ListItem")
+    KindListItem is a NodeKind of the ListItem node.
+
+var KindParagraph = NewNodeKind("Paragraph")
+    KindParagraph is a NodeKind of the Paragraph node.
+
+var KindRawHTML = NewNodeKind("RawHTML")
+    KindRawHTML is a NodeKind of the RawHTML node.
+
+var KindStrong = NewNodeKind("Strong")
+    KindStrong is a NodeKind of the Strong node.
+
+var KindText = NewNodeKind("Text")
+    KindText is a NodeKind of the Text node.
+
+var KindThematicBreak = NewNodeKind("ThematicBreak")
+    KindThematicBreak is a NodeKind of the ThematicBreak node.
+
+
+FUNCTIONS
+
+func IsParagraph(node Node) bool
+    IsParagraph returns true if the given node is a Paragraph node, otherwise
+    false.
+
+func Walk(n Node, walker Walker) error
+    Walk walks a AST tree by the depth first search algorithm.
+
+func WithLinkReference(kind ReferenceLinkKind, value text.MultiLineValue) interface {
+	LinkOption
+	ImageOption
+}
+    WithLinkReference returns a LinkOption that sets the reference of a link or
+    image.
+
+func WithLinkTitle(title text.MultiLineValue) interface {
+	LinkOption
+	ImageOption
+	LinkReferenceDefinitionOption
+}
+    WithLinkTitle returns a LinkOption that sets the title of a link or image.
+
+
+TYPES
+
+type Attribute struct {
+	Name  string
+	Value text.MultiLineValue
+}
+    An Attribute is an attribute of the Node.
+
+type AutoLink struct {
+	BaseInline
+
+	// Destination is the URL used for the href attribute.
+	// For email autolinks, it includes the "mailto:" prefix.
+	Destination text.SingleLineValue
+
+	// Label is the display text shown inside the link element.
+	Label text.SingleLineValue
+
+	// Text is the original text as parsed from source, including any
+	// surrounding syntax characters (e.g. "<" and ">" for CommonMark autolinks).
+	Text text.SingleLineValue
+}
+    An AutoLink struct represents an autolink of the Markdown text.
+
+func NewAutoLink(destination, label text.SingleLineValue, opts ...AutoLinkOption) *AutoLink
+    NewAutoLink returns a new AutoLink node with the given destination, label,
+    and options.
+
+func (n *AutoLink) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump.
+
+func (n *AutoLink) Kind() NodeKind
+    Kind implements Node.Kind.
+
+type AutoLinkOption interface {
+	// Has unexported methods.
+}
+    AutoLinkOption is an option for AutoLink nodes.
+
+func WithAutoLinkText(text text.SingleLineValue) AutoLinkOption
+    WithAutoLinkText returns an AutoLinkOption that sets the original source
+    text of an autolink.
+
+type BaseBlock struct {
+	BaseNode
+
+	// Has unexported fields.
+}
+    A BaseBlock struct implements the Node interface partially.
+
+func (b *BaseBlock) AppendSource(seg text.Segment)
+    AppendSource implements BlockNode.AppendSource.
+
+func (b *BaseBlock) HasBlankPreviousLines() bool
+    HasBlankPreviousLines implements Node.HasBlankPreviousLines.
+
+func (b *BaseBlock) SetBlankPreviousLines(v bool)
+    SetBlankPreviousLines implements Node.SetBlankPreviousLines.
+
+func (b *BaseBlock) SetSource(v []text.Segment)
+    SetSource implements BlockNode.SetSource.
+
+func (b *BaseBlock) Source() []text.Segment
+    Source implements BlockNode.Source.
+
+type BaseInline struct {
+	BaseNode
+}
+    A BaseInline struct implements the Node interface partially.
+
+func (b *BaseInline) FirstRune(source []byte) (rune, bool)
+    FirstRune implements InlineNode.FirstRune.
+
+func (b *BaseInline) LastRune(source []byte) (rune, bool)
+    LastRune implements InlineNode.LastRune.
+
+type BaseNode struct {
+	// Has unexported fields.
+}
+    A BaseNode struct implements the Node interface partially.
+
+func (n *BaseNode) AppendChild(v Node)
+    AppendChild implements Node.AppendChild .
+
+func (n *BaseNode) Attribute(name string) (text.MultiLineValue, bool)
+    Attribute implements Node.Attribute.
+
+func (n *BaseNode) Attributes() []Attribute
+    Attributes implements Node.Attributes.
+
+func (n *BaseNode) ChildCount() int
+    ChildCount implements Node.ChildCount .
+
+func (n *BaseNode) Children() iter.Seq[Node]
+    Children implements Node.Children .
+
+func (n *BaseNode) FirstChild() Node
+    FirstChild implements Node.FirstChild .
+
+func (n *BaseNode) HasChildren() bool
+    HasChildren implements Node.HasChildren .
+
+func (n *BaseNode) Init(self Node)
+    Init initializes this node. Init must be called in each node's constructor.
+
+func (n *BaseNode) InsertAfter(target, insertee Node)
+    InsertAfter implements Node.InsertAfter .
+
+func (n *BaseNode) InsertBefore(target, insertee Node)
+    InsertBefore implements Node.InsertBefore .
+
+func (n *BaseNode) LastChild() Node
+    LastChild implements Node.LastChild .
+
+func (n *BaseNode) NextSibling() Node
+    NextSibling implements Node.NextSibling .
+
+func (n *BaseNode) OwnerDocument() *Document
+    OwnerDocument implements Node.OwnerDocument.
+
+func (n *BaseNode) Parent() Node
+    Parent implements Node.Parent .
+
+func (n *BaseNode) Pos() int
+    Pos implements Node.Pos .
+
+func (n *BaseNode) PreviousSibling() Node
+    PreviousSibling implements Node.PreviousSibling .
+
+func (n *BaseNode) RemoveAttributes()
+    RemoveAttributes implements Node.RemoveAttributes.
+
+func (n *BaseNode) RemoveChild(v Node)
+    RemoveChild implements Node.RemoveChild .
+
+func (n *BaseNode) RemoveChildren()
+    RemoveChildren implements Node.RemoveChildren .
+
+func (n *BaseNode) ReplaceChild(target, insertee Node)
+    ReplaceChild implements Node.ReplaceChild .
+
+func (n *BaseNode) SetAttribute(name string, value text.MultiLineValue)
+    SetAttribute implements Node.SetAttribute.
+
+func (n *BaseNode) SetNextSibling(v Node)
+    SetNextSibling implements Node.SetNextSibling .
+
+func (n *BaseNode) SetParent(v Node)
+    SetParent implements Node.SetParent .
+
+func (n *BaseNode) SetPos(v int)
+    SetPos implements Node.SetPos .
+
+func (n *BaseNode) SetPreviousSibling(v Node)
+    SetPreviousSibling implements Node.SetPreviousSibling .
+
+type BlockNode interface {
+	Node
+
+	// HasBlankPreviousLines returns true if the row before this node is blank,
+	// otherwise false.
+	HasBlankPreviousLines() bool
+
+	// SetBlankPreviousLines sets whether the row before this node is blank.
+	SetBlankPreviousLines(v bool)
+
+	// Source returns text segments that hold positions in a source.
+	// For nodes whose content is parsed into inline nodes, this holds the raw
+	// source text used as the input for inline parsing. Nodes that do not parse
+	// their content as inline elements return an empty slice.
+	Source() []text.Segment
+
+	// SetSource sets text segments that hold positions in a source.
+	SetSource([]text.Segment)
+
+	// AppendSource appends a text segment to the source.
+	AppendSource(text.Segment)
+	// Has unexported methods.
+}
+    A BlockNode interface is a Node that represents a block element. Some block
+    nodes (e.g. Paragraph, Heading) hold source text segments that are later
+    parsed into inline nodes; others (e.g. CodeBlock, HTMLBlock) do not use this
+    mechanism and leave Source empty.
+
+type Blockquote struct {
+	BaseBlock
+}
+    A Blockquote struct represents an blockquote block of Markdown text.
+
+func NewBlockquote() *Blockquote
+    NewBlockquote returns a new Blockquote node.
+
+func (n *Blockquote) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump .
+
+func (n *Blockquote) Kind() NodeKind
+    Kind implements Node.Kind.
+
+type CodeBlock struct {
+	BaseBlock
+
+	// CodeBlockKind indicates whether this is an indented or fenced code block.
+	CodeBlockKind CodeBlockKind
+
+	// Info is the info string of a fenced code block (e.g. language identifier).
+	// It is empty for indented code blocks.
+	Info text.SingleLineValue
+
+	// Value holds the raw content of this code block for rendering.
+	Value text.Lines
+}
+    A CodeBlock struct represents a code block of Markdown text.
+
+func NewCodeBlock(kind CodeBlockKind, value text.Lines, opts ...CodeBlockOption) *CodeBlock
+    NewCodeBlock returns a new CodeBlock node with the given kind and value.
+
+func (n *CodeBlock) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump.
+
+func (n *CodeBlock) Kind() NodeKind
+    Kind implements Node.Kind.
+
+func (n *CodeBlock) Language(source []byte) (string, bool)
+    Language returns the language extracted from the info string. Language
+    returns false if there is no info string.
+
+type CodeBlockKind int
+    CodeBlockKind represents the kind of a CodeBlock: indented or fenced.
+
+const (
+	// CodeBlockKindIndented indicates an indented code block (4-space or tab indent).
+	CodeBlockKindIndented CodeBlockKind = iota + 1
+	// CodeBlockKindFenced indicates a fenced code block (``` or ~~~).
+	CodeBlockKindFenced
+)
+func (k CodeBlockKind) String() string
+    String returns a human-readable name of the CodeBlockKind.
+
+type CodeBlockOption interface {
+	// Has unexported methods.
+}
+    CodeBlockOption is an option for CodeBlock nodes.
+
+func WithCodeBlockInfo(info text.SingleLineValue) CodeBlockOption
+    WithCodeBlockInfo returns a CodeBlockOption that sets the info string of a
+    fenced code block.
+
+type CodeSpan struct {
+	BaseInline
+
+	// Value holds the content of this code span.
+	// The content is sourced from the raw Markdown text and may span multiple
+	// source lines.
+	//
+	// This value is expected to be a single line; CommonMark requires that code span content is
+	// normalized to a single line by replacing newlines with spaces.
+	//
+	// Code spans that span multiple lines and return multiple indices from [text.Value].Indices()
+	// should return normalized single-line data from the Bytes, Str, and Value methods of [text.Value].
+	Value text.Value
+}
+    A CodeSpan struct represents a code span of Markdown text.
+
+func NewCodeSpan(value text.Value) *CodeSpan
+    NewCodeSpan returns a new CodeSpan node with the given value.
+
+    Given value is expected to be a single line; CommonMark requires that code
+    span content is normalized to a single line by replacing newlines with
+    spaces.
+
+    You should use CodeBlock for code that you really want to treat as multiple
+    lines.
+
+    Code spans that span multiple lines and return multiple indices from
+    text.Value.Indices() should return normalized single-line data from the
+    Bytes, Str, and Value methods of text.Value.
+
+func (n *CodeSpan) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump.
+
+func (n *CodeSpan) FirstRune(source []byte) (rune, bool)
+    FirstRune implements InlineNode.FirstRune.
+
+func (n *CodeSpan) IsBlank(source []byte) bool
+    IsBlank returns true if this node consists of spaces, otherwise false.
+
+func (n *CodeSpan) Kind() NodeKind
+    Kind implements Node.Kind.
+
+func (n *CodeSpan) LastRune(source []byte) (rune, bool)
+    LastRune implements InlineNode.LastRune.
+
+type Document struct {
+	BaseBlock
+
+	// Has unexported fields.
+}
+    A Document struct is a root node of Markdown text.
+
+func NewDocument() *Document
+    NewDocument returns a new Document node.
+
+func (n *Document) AddMeta(key string, value any)
+    AddMeta adds given metadata to this document.
+
+func (n *Document) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump .
+
+func (n *Document) Kind() NodeKind
+    Kind implements Node.Kind.
+
+func (n *Document) Metadata() map[string]any
+    Metadata returns metadata of this document.
+
+func (n *Document) OwnerDocument() *Document
+    OwnerDocument implements Node.OwnerDocument.
+
+func (n *Document) Pos() int
+    Pos implements Node.Pos.
+
+func (n *Document) SetMetadata(meta map[string]any)
+    SetMetadata sets given metadata to this document.
+
+type Emphasis struct {
+	BaseInline
+}
+    An Emphasis struct represents an emphasis of Markdown text (e.g. *text* or
+    _text_).
+
+func NewEmphasis() *Emphasis
+    NewEmphasis returns a new Emphasis node.
+
+func (n *Emphasis) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump.
+
+func (n *Emphasis) Kind() NodeKind
+    Kind implements Node.Kind.
+
+type HTMLBlock struct {
+	BaseBlock
+
+	// HTMLBlockKind is the kind of this html block.
+	HTMLBlockKind HTMLBlockKind
+
+	// Value holds the raw HTML content of this block for rendering.
+	Value text.Lines
+}
+    An HTMLBlock struct represents an html block of Markdown text.
+
+func NewHTMLBlock(kind HTMLBlockKind) *HTMLBlock
+    NewHTMLBlock returns a new HTMLBlock node.
+
+func (n *HTMLBlock) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump.
+
+func (n *HTMLBlock) Kind() NodeKind
+    Kind implements Node.Kind.
+
+type HTMLBlockKind int
+    HTMLBlockKind represents the kind of an HTMLBlock. See
+    https://spec.commonmark.org/0.30/#html-blocks
+
+const (
+	// HTMLBlockKind1 represents type 1 html blocks.
+	HTMLBlockKind1 HTMLBlockKind = iota + 1
+	// HTMLBlockKind2 represents type 2 html blocks.
+	HTMLBlockKind2
+	// HTMLBlockKind3 represents type 3 html blocks.
+	HTMLBlockKind3
+	// HTMLBlockKind4 represents type 4 html blocks.
+	HTMLBlockKind4
+	// HTMLBlockKind5 represents type 5 html blocks.
+	HTMLBlockKind5
+	// HTMLBlockKind6 represents type 6 html blocks.
+	HTMLBlockKind6
+	// HTMLBlockKind7 represents type 7 html blocks.
+	HTMLBlockKind7
+)
+func (k HTMLBlockKind) String() string
+    String returns a human-readable name of the HTMLBlockKind.
+
+type Heading struct {
+	BaseBlock
+	// Level is the level of this heading.
+	// This value is between 1 and 6.
+	Level int
+	// HeadingKind indicates whether this is an ATX or Setext heading.
+	HeadingKind HeadingKind
+}
+    A Heading struct represents headings like SetextHeading and ATXHeading.
+
+func NewHeading(level int, kind HeadingKind) *Heading
+    NewHeading returns a new Heading node.
+
+func (n *Heading) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump .
+
+func (n *Heading) Kind() NodeKind
+    Kind implements Node.Kind.
+
+type HeadingKind int
+    HeadingKind represents the kind of a Heading: ATX or Setext.
+
+const (
+	// HeadingKindATX represents an ATX heading (e.g. ## heading).
+	HeadingKindATX HeadingKind = iota + 1
+	// HeadingKindSetext represents a Setext heading (underline style).
+	HeadingKindSetext
+)
+func (k HeadingKind) String() string
+    String returns a human-readable name of the HeadingKind.
+
+type Image struct {
+	BaseInline
+
+	// Destination is a destination(URL) of this link.
+	Destination text.SingleLineValue
+
+	// Title is a title of this link.
+	Title text.MultiLineValue
+
+	// Reference is a reference of this link. This field is used for reference links.
+	// If this link is not a reference link, this field is nil.
+	Reference *ReferenceLink
+}
+    An Image struct represents an image of the Markdown text.
+
+func NewImage(destination text.SingleLineValue, opts ...ImageOption) *Image
+    NewImage returns a new Image node with the given destination and options.
+
+func (n *Image) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump.
+
+func (n *Image) Kind() NodeKind
+    Kind implements Node.Kind.
+
+type ImageOption interface {
+	// Has unexported methods.
+}
+    ImageOption is an option for Image nodes.
+
+type InlineNode interface {
+	Node
+
+	// FirstRune returns the first visible rune of this node's value
+	// and true if the node has a visible rune, otherwise false.
+	FirstRune(source []byte) (rune, bool)
+
+	// LastRune returns the last visible rune of this node's value
+	// and true if the node has a visible rune, otherwise false.
+	LastRune(source []byte) (rune, bool)
+	// Has unexported methods.
+}
+    An InlineNode interface is a Node that represents an inline element.
+
+type Link struct {
+	BaseInline
+
+	// Destination is a destination(URL) of this link.
+	Destination text.SingleLineValue
+
+	// Title is a title of this link.
+	Title text.MultiLineValue
+
+	// Reference is a reference of this link. This field is used for reference links.
+	// If this link is not a reference link, this field is nil.
+	Reference *ReferenceLink
+}
+    A Link struct represents a link of the Markdown text.
+
+func NewLink(destination text.SingleLineValue, opts ...LinkOption) *Link
+    NewLink returns a new Link node with the given destination and options.
+
+func (n *Link) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump.
+
+func (n *Link) Kind() NodeKind
+    Kind implements Node.Kind.
+
+type LinkOption interface {
+	// Has unexported methods.
+}
+    LinkOption is an option for Link and Image nodes.
+
+type LinkReferenceDefinition struct {
+	BaseBlock
+
+	// Label is a label of this link reference definition.
+	Label text.MultiLineValue
+
+	// Destination is a destination of this link reference definition.
+	Destination text.SingleLineValue
+
+	// Title is a title of this link reference definition.
+	Title text.MultiLineValue
+}
+    A LinkReferenceDefinition struct represents a list of Markdown text.
+
+func NewLinkReferenceDefinition(
+	label text.MultiLineValue, destination text.SingleLineValue,
+	opts ...LinkReferenceDefinitionOption) *LinkReferenceDefinition
+    NewLinkReferenceDefinition returns a new LinkReferenceDefinition node.
+
+func (l *LinkReferenceDefinition) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump.
+
+func (l *LinkReferenceDefinition) Kind() NodeKind
+    Kind implements Node.Kind.
+
+type LinkReferenceDefinitionOption interface {
+	// Has unexported methods.
+}
+    LinkReferenceDefinitionOption is an option for LinkReferenceDefinition
+    nodes.
+
+type List struct {
+	BaseBlock
+
+	// Marker is a marker character like '-', '+', ')' and '.'.
+	Marker byte
+
+	// IsTight is a true if this list is a 'tight' list.
+	// See https://spec.commonmark.org/0.30/#loose for details.
+	IsTight bool
+
+	// Start is an initial number of this ordered list.
+	// If this list is not an ordered list, Start is 0.
+	Start int
+}
+    A List struct represents a list of Markdown text.
+
+func NewList(marker byte) *List
+    NewList returns a new List node.
+
+func (l *List) CanContinue(marker byte, isOrdered bool) bool
+    CanContinue returns true if this list can continue with the given marker
+    character and orderedness, otherwise false.
+
+func (l *List) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump.
+
+func (l *List) IsOrdered() bool
+    IsOrdered returns true if this list is an ordered list, otherwise false.
+
+func (l *List) Kind() NodeKind
+    Kind implements Node.Kind.
+
+type ListItem struct {
+	BaseBlock
+
+	// Has unexported fields.
+}
+    A ListItem struct represents a list item of Markdown text.
+
+func NewListItem() *ListItem
+    NewListItem returns a new ListItem node.
+
+func (n *ListItem) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump.
+
+func (n *ListItem) Kind() NodeKind
+    Kind implements Node.Kind.
+
+func (n *ListItem) Offset() int
+    Offset returns the content indentation offset used during parsing. This is
+    set by the list parser and is not meaningful for programmatic construction.
+
+func (n *ListItem) SetOffset(v int)
+    SetOffset sets the content indentation offset. This is called by the list
+    parser during parsing.
+
+type Node interface {
+	// Kind returns a kind of this node.
+	Kind() NodeKind
+
+	// Pos returns a position of this node in a source.
+	// If this node position is not defined, Pos returns -1.
+	Pos() int
+
+	// SetPos sets a position of this node in a source.
+	// Some node may ignore this method. For example, Paragraph node ignores this method because
+	// it calculates its position from its lines.
+	SetPos(v int)
+
+	// NextSibling returns a next sibling node of this node.
+	NextSibling() Node
+
+	// PreviousSibling returns a previous sibling node of this node.
+	PreviousSibling() Node
+
+	// Parent returns a parent node of this node.
+	Parent() Node
+
+	// SetParent sets a parent node to this node.
+	SetParent(Node)
+
+	// SetPreviousSibling sets a previous sibling node to this node.
+	SetPreviousSibling(Node)
+
+	// SetNextSibling sets a next sibling node to this node.
+	SetNextSibling(Node)
+
+	// HasChildren returns true if this node has any children, otherwise false.
+	HasChildren() bool
+
+	// ChildCount returns a total number of children.
+	ChildCount() int
+
+	// Children returns an iterator of children of this node.
+	Children() iter.Seq[Node]
+
+	// FirstChild returns a first child of this node.
+	FirstChild() Node
+
+	// LastChild returns a last child of this node.
+	LastChild() Node
+
+	// AppendChild append a node child to the tail of the children.
+	AppendChild(child Node)
+
+	// RemoveChild removes a node child from this node.
+	// If a node child is not children of this node, RemoveChild nothing to do.
+	RemoveChild(child Node)
+
+	// RemoveChildren removes all children from this node.
+	RemoveChildren()
+
+	// ReplaceChild replaces a node target with a node insertee.
+	// If target is not a child of this node, ReplaceChild appends insertee to the
+	// tail of the children.
+	ReplaceChild(target, insertee Node)
+
+	// InsertBefore inserts a node insertee before a node target.
+	// If target is not a child of this node, InsertBefore appends insertee to the
+	// tail of the children.
+	InsertBefore(target, insertee Node)
+
+	// InsertAfter inserts a node insertee after a node target.
+	// If target is not a child of this node, InsertAfter appends insertee to the
+	// tail of the children.
+	InsertAfter(target, insertee Node)
+
+	// OwnerDocument returns this node's owner document.
+	// If this node is not a child of the Document node, OwnerDocument
+	// returns nil.
+	OwnerDocument() *Document
+
+	// Dump dumps an AST node.
+	Dump(source []byte) *NodeDump
+
+	// SetAttribute sets the given value to the attributes.
+	SetAttribute(name string, value text.MultiLineValue)
+
+	// Attribute returns a (attribute value, true) if an attribute
+	// associated with the given name is found, otherwise
+	// (zero MultiLineValue, false)
+	Attribute(name string) (text.MultiLineValue, bool)
+
+	// Attributes returns a list of attributes.
+	// This may be a nil if there are no attributes.
+	Attributes() []Attribute
+
+	// RemoveAttributes removes all attributes from this node.
+	RemoveAttributes()
+}
+    A Node interface defines basic AST node functionalities.
+
+func N(node Node, children ...any) Node
+    N is a helper function to create a new node with children.
+
+    Children must be a Node or a string. If a child is a string, N creates a
+    Text node with the string and append it to the children. Given string must
+    be a decoded string:
+
+    - Good: `N(NewParagraph(), "Hello, World!")` - Bad: `N(NewParagraph(),
+    "Hello, World&#33;")`
+
+    N panics if a child is not a Node or a string.
+
+type NodeDump struct {
+	// Node is the node to be dumped.
+	Node Node
+
+	// Properties is a map of additional properties to be dumped.
+	// Property names should be PascalCase.
+	Properties map[string]any
+}
+    NodeDump is a struct that holds information for dumping a node.
+
+func NewNodeDump(node Node, properties map[string]any) *NodeDump
+    NewNodeDump returns a new NodeDump.
+
+func (d *NodeDump) Children(source []byte) iter.Seq[*NodeDump]
+    Children returns an iterator of children of this node dump.
+
+func (d *NodeDump) PrettyPrint(w io.Writer, source []byte, opts ...PrettyPrintOption) error
+    PrettyPrint pretty prints this node dump to the given writer.
+
+    PrettyPrint format may change in the future. Do not rely on the format.
+    This method is intended for debugging purpose only. The returned error is
+    from the writer. If the writer never returns an error, the returned error is
+    always nil.
+
+type NodeKind int
+    NodeKind identifies the concrete type of a Node.
+
+var CurrentKindValue NodeKind
+    CurrentKindValue is the current value of NodeKind.
+
+    You **MUST NOT** use this value. This value is public for the goldmark
+    internal package to use.
+
+func NewNodeKind(name string) NodeKind
+    NewNodeKind returns a new Kind value.
+
+func (k NodeKind) String() string
+
+type Paragraph struct {
+	BaseBlock
+}
+    A Paragraph struct represents a paragraph of Markdown text.
+
+func NewParagraph() *Paragraph
+    NewParagraph returns a new Paragraph node.
+
+func (n *Paragraph) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump .
+
+func (n *Paragraph) Kind() NodeKind
+    Kind implements Node.Kind.
+
+func (n *Paragraph) Pos() int
+    Pos implements Node.Pos.
+
+type PrettyPrintOption func(*ppCfg)
+    PrettyPrintOption is a function that modifies the configuration of
+    PrettyPrint.
+
+func WithLevel(level int) PrettyPrintOption
+    WithLevel returns an option that sets the indentation level for PrettyPrint.
+
+func WithSource(include bool) PrettyPrintOption
+    WithSource returns an option that sets whether to include the source text in
+    the PrettyPrint output.
+
+type RawHTML struct {
+	BaseInline
+
+	// Value holds the raw HTML content.
+	Value text.MultiLineValue
+}
+    A RawHTML struct represents an inline raw HTML of the Markdown text.
+
+func NewRawHTML(value text.MultiLineValue) *RawHTML
+    NewRawHTML returns a new RawHTML node with the given value.
+
+func (n *RawHTML) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump.
+
+func (n *RawHTML) Kind() NodeKind
+    Kind implements Node.Kind.
+
+type ReferenceLink struct {
+	// ReferenceLinkKind is the kind of this reference link.
+	ReferenceLinkKind ReferenceLinkKind
+
+	// Value is a value of this reference link.
+	Value text.MultiLineValue
+}
+    ReferenceLink struct represents a reference link of the Markdown text.
+
+func NewReferenceLink(kind ReferenceLinkKind, value text.MultiLineValue) *ReferenceLink
+    NewReferenceLink returns a new ReferenceLink with the given kind and value.
+
+type ReferenceLinkKind int
+    ReferenceLinkKind represents the kind of a reference link.
+
+const (
+	// ReferenceLinkKindFull indicates that a reference link has a full reference like [foo][bar].
+	ReferenceLinkKindFull ReferenceLinkKind = iota + 1
+	// ReferenceLinkKindCollapsed indicates that a reference link has a collapsed reference like [foo][].
+	ReferenceLinkKindCollapsed
+	// ReferenceLinkKindShortcut indicates that a reference link has a shortcut reference like [foo].
+	ReferenceLinkKindShortcut
+)
+func (t ReferenceLinkKind) String() string
+    String returns a string representation of this reference link kind.
+
+type Strong struct {
+	BaseInline
+}
+    A Strong struct represents strong importance of Markdown text (e.g. **text**
+    or __text__).
+
+func NewStrong() *Strong
+    NewStrong returns a new Strong node.
+
+func (n *Strong) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump.
+
+func (n *Strong) Kind() NodeKind
+    Kind implements Node.Kind.
+
+type Text struct {
+	BaseInline
+	// Value is the text value. It is either a source position or an owned string.
+	Value text.SingleLineValue
+
+	// Has unexported fields.
+}
+    A Text struct represents a textual content of the Markdown text.
+
+func NewText(value text.SingleLineValue) *Text
+    NewText returns a new Text node.
+
+func (n *Text) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump.
+
+func (n *Text) HardLineBreak() bool
+    HardLineBreak returns true if this node ends with a hard line break.
+    See https://spec.commonmark.org/0.30/#hard-line-breaks for details.
+
+func (n *Text) Kind() NodeKind
+    Kind implements Node.Kind.
+
+func (n *Text) Pos() int
+    Pos implements Node.Pos.
+
+func (n *Text) SetHardLineBreak(v bool)
+    SetHardLineBreak sets whether this node ends with a hard line break.
+
+func (n *Text) SetSoftLineBreak(v bool)
+    SetSoftLineBreak sets whether this node ends with a new line.
+
+func (n *Text) SoftLineBreak() bool
+    SoftLineBreak returns true if this node ends with a new line, otherwise
+    false.
+
+type ThematicBreak struct {
+	BaseBlock
+}
+    A ThematicBreak struct represents a thematic break of Markdown text.
+
+func NewThematicBreak() *ThematicBreak
+    NewThematicBreak returns a new ThematicBreak node.
+
+func (n *ThematicBreak) Dump(_ []byte) *NodeDump
+    Dump implements Node.Dump .
+
+func (n *ThematicBreak) Kind() NodeKind
+    Kind implements Node.Kind.
+
+type WalkStatus int
+    WalkStatus represents a current status of the Walk function.
+
+const (
+	// WalkStop indicates no more walking needed.
+	WalkStop WalkStatus = iota + 1
+
+	// WalkSkipChildren indicates that Walk will not walk on children of the current
+	// node.
+	WalkSkipChildren
+
+	// WalkContinue indicates that Walk can continue to walk.
+	WalkContinue
+)
+type Walker func(n Node, entering bool) (WalkStatus, error)
+    Walker is a function that will be called when Walk find a new node.
+    entering is set true before walks children, false after walked children.
+    If Walker returns error, Walk function immediately stop walking.
+
