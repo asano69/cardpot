@@ -40,6 +40,8 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/reearth/ygo/crdt"
 	yjsws "github.com/reearth/ygo/provider/websocket"
+
+	"github.com/asano69/cardpot/internal/wikilink"
 )
 
 // compactionThreshold is how many stored increments a room's update
@@ -246,6 +248,13 @@ func (p *ydocPersistence) store(ctx context.Context, room string, update []byte)
 		// this periodic snapshot.
 		if err := p.updatePreview(room, text); err != nil {
 			slog.Warn("update card preview", "room", room, "error", err)
+		}
+
+		// Wiki links feed the "card_links" collection (1-hop / 2-hop link
+		// views). Like the preview, a failure is only logged: it must
+		// never block persisting the document itself.
+		if err := wikilink.Sync(p.app, room, text); err != nil {
+			slog.Warn("sync card links", "room", room, "error", err)
 		}
 	}
 
