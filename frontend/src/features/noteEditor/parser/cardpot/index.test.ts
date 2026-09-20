@@ -86,6 +86,18 @@ describe("Cardpot Lezer syntax", () => {
     );
   });
 
+  it("treats a URL ending in an image extension as an image even when the extension is not in its path", () => {
+    // Scrapbox-compatible trick: appending ".png" (e.g. "&s=10.png" or
+    // "#.png") forces an extensionless URL to be treated as an image.
+    expect(
+      tree("[https://example.com/images?q=abc&s=10.png] [https://example.com/img#.png]"),
+    ).toBe("Document(Paragraph(Image,Image))");
+    // An extension in the middle of the query is not a trailing one.
+    expect(tree("[https://example.com/page?file=a.png&x=1]")).toBe(
+      "Document(Paragraph(ExternalLink(ExternalLinkMark,ExternalLinkMark)))",
+    );
+  });
+
   it("parses double brackets as Strong and preserves nested bracket pairing", () => {
     expect(
       tree("[[strong [page]]] [[https://example.com/a.png]] [[me.icon]]"),

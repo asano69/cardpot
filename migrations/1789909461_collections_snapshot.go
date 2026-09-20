@@ -988,6 +988,18 @@ func init() {
 						"type": "text"
 					},
 					{
+						"exceptDomains": null,
+						"help": "",
+						"hidden": false,
+						"id": "url3309110367",
+						"name": "image",
+						"onlyDomains": null,
+						"presentable": false,
+						"required": false,
+						"system": false,
+						"type": "url"
+					},
+					{
 						"help": "",
 						"hidden": false,
 						"id": "number1177347317",
@@ -1009,21 +1021,6 @@ func init() {
 						"required": false,
 						"system": false,
 						"type": "bool"
-					},
-					{
-						"autogeneratePattern": "",
-						"help": "",
-						"hidden": false,
-						"id": "text3309110367",
-						"max": 0,
-						"min": 0,
-						"name": "image",
-						"pattern": "",
-						"presentable": false,
-						"primaryKey": false,
-						"required": false,
-						"system": false,
-						"type": "text"
 					},
 					{
 						"hidden": false,
@@ -1057,6 +1054,17 @@ func init() {
 						"required": false,
 						"system": false,
 						"type": "number"
+					},
+					{
+						"help": "",
+						"hidden": false,
+						"id": "json3367362480",
+						"maxSize": 100000,
+						"name": "description2",
+						"presentable": false,
+						"required": false,
+						"system": false,
+						"type": "json"
 					}
 				],
 				"id": "pbc_2527524235",

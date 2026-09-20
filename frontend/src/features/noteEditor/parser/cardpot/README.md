@@ -207,7 +207,7 @@ parse 関数の契約（`(cx: InlineContext, next: number, pos: number) => numbe
 | 9 | 末尾トークンがURL | ExternalLink（ラベル = 末尾以外） | 同上 |
 | 10 | それ以外 | WikiLink | `WikiLink(Mark, Mark)` |
 
-- 「URL」= `://` を含み `new URL()` で解釈できるもの。「画像URL」= Gyazo か、パスの拡張子が画像（png, jpg, gif, svg, webp など）。
+- 「URL」= `://` を含み `new URL()` で解釈できるもの。「画像URL」= Gyazo か、URL 末尾（クエリ・フラグメントを除く直前）の拡張子が画像（png, jpg, gif, svg, webp など）。`...&s=10.png` や `...#.png` のように拡張子をクエリ側に足した URL も画像になる（Scrapbox 互換）。
 - ラベル付き ExternalLink のラベルだけがインライン再帰解析される。**WikiLink の中身は解析しない**（`[a [b] c]` は1つの WikiLink で、内側の `[b]` はノードにならない）。
 - `parseStrong`（`[[...]]`）: 中身が Image なら `StrongImage`、Icon なら `StrongIcon`、それ以外はインライン解析。`StrongMark` は `[[` と `]]`（各2文字）。`[[]]` や閉じ括弧が揃わない場合は `-1`。
 

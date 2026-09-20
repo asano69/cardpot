@@ -17,7 +17,9 @@ var (
 	projectRe    = regexp.MustCompile(`^/[^/]+(?:/.*)?$`)
 	coordinateRe = regexp.MustCompile(`^[NS]\d+(?:\.\d+)?,[EW]\d+(?:\.\d+)?(?:,Z\d+)?$`)
 	gyazoRe      = regexp.MustCompile(`(?i)^https?://(?:[0-9a-z-]+\.)?gyazo\.com/[0-9a-f]{32}(?:/raw)?$`)
-	imageExtRe   = regexp.MustCompile(`(?i)\.(?:avif|bmp|gif|ico|jpe?g|png|svg|tiff?|webp)$`)
+	// Matched against the whole URL so that a trailing ".png" in the query
+	// or fragment counts too; keep in sync with frontend rules/bracket.ts.
+	imageExtRe = regexp.MustCompile(`(?i)\.(?:avif|bmp|gif|ico|jpe?g|png|svg|tiff?|webp)(?:[?#].*)?$`)
 )
 
 type urlKind int
@@ -36,7 +38,7 @@ func inferURL(value string) urlKind {
 	if err != nil || u.Scheme == "" {
 		return urlNone
 	}
-	if gyazoRe.MatchString(value) || imageExtRe.MatchString(u.Path) {
+	if gyazoRe.MatchString(value) || imageExtRe.MatchString(value) {
 		return urlImage
 	}
 	return urlLink

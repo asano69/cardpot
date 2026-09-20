@@ -80,7 +80,11 @@ export default function CardItem(props: CardItemProps) {
           >
             <div
               class="thumbnail m-1.5"
-              style={{ "background-image": `url(${props.card.image})` }}
+              // JSON.stringify quotes and escapes the URL as a CSS string,
+              // so characters such as "(" or ")" cannot end url() early.
+              style={{
+                "background-image": `url(${JSON.stringify(props.card.image)})`,
+              }}
             />
           </Show>
         </div>

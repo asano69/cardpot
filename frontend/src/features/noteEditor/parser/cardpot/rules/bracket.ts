@@ -30,18 +30,17 @@ const PROJECT_RE = /^\/[^/]+(?:\/.*)?$/u;
 const COORDINATE_RE = /^[NS]\d+(?:\.\d+)?,[EW]\d+(?:\.\d+)?(?:,Z\d+)?$/u;
 const GYAZO_RE =
   /^https?:\/\/(?:[0-9a-z-]+\.)?gyazo\.com\/[0-9a-f]{32}(?:\/raw)?$/iu;
-const IMAGE_EXTENSION_RE = /\.(?:avif|bmp|gif|ico|jpe?g|png|svg|tiff?|webp)$/iu;
+// Tested against the whole URL, not just its path, so that Scrapbox's
+// "append .png" trick (e.g. "...?q=abc&s=10.png" or "...#.png") works.
+// The extension may only be followed by a query or fragment.
+const IMAGE_EXTENSION_RE =
+  /\.(?:avif|bmp|gif|ico|jpe?g|png|svg|tiff?|webp)(?:[?#].*)?$/iu;
 
 function inferUrl(value: string): UrlKind | undefined {
-  if (!value.includes("://")) return undefined;
-  try {
-    const url = new URL(value);
-    return GYAZO_RE.test(value) || IMAGE_EXTENSION_RE.test(url.pathname)
-      ? "image"
-      : "link";
-  } catch {
-    return undefined;
-  }
+  if (!value.includes("://") || !URL.canParse(value)) return undefined;
+  return GYAZO_RE.test(value) || IMAGE_EXTENSION_RE.test(value)
+    ? "image"
+    : "link";
 }
 
 // Classifies the already-paired content of a single bracket. Keep this pure:
