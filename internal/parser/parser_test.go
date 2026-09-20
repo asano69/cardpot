@@ -67,6 +67,17 @@ func TestFirstImageSrc(t *testing.T) {
 	}
 }
 
+func TestImageWithExtensionInQuery(t *testing.T) {
+	const src = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTr7Q2-iOUXeta4efD3d8FAPLTOfSN1lKRhOGJInoa6mA&s=10.png"
+
+	if got := DecideBracket(src); got.Kind != KindImage || got.Src != src {
+		t.Errorf("DecideBracket() = %#v, want Kind=%q Src=%q", got, KindImage, src)
+	}
+	if got := Parse(testTitle + "[" + src + "]").FirstImageSrc(); got != src {
+		t.Errorf("FirstImageSrc() = %q, want %q", got, src)
+	}
+}
+
 func TestWalkCanStop(t *testing.T) {
 	count := 0
 	finished := Parse(testTitle + "[a] [b]").Walk(func(*Node) bool {
