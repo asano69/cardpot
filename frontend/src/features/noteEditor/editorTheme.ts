@@ -62,6 +62,15 @@ export const editorTheme = EditorView.theme({
     marginLeft: "var(--indent-width, 0px)",
     textIndent: "calc(-1 * var(--indent-width, 0px))",
   },
+  // A code line hangs its wrapped rows with a transparent border
+  // instead of a margin: the border sits inside the line box, so the
+  // line's background (see ".cm-line.cm-code-block-line" below) still
+  // fills it, while a margin would leave a gap. The negative
+  // text-indent above still cancels it for the first row.
+  ".cm-line.indent.cm-code-block-line": {
+    marginLeft: "0",
+    borderLeft: "var(--indent-width, 0px) solid transparent",
+  },
   // One indent level's mark box (see hangingIndent.ts's
   // IndentMarkWidget), replacing the underlying whitespace character
   // 1:1. Fixed-width and non-editable so it renders and behaves like

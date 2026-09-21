@@ -83,9 +83,10 @@ function buildDecorations(view: EditorView): DecorationSet {
   const decorations = [];
 
   // `code:` block ranges (see codeBlockLines.ts for the same
-  // pattern): a line's leading whitespace inside one of these is code
-  // content, not a bullet indent, so it must never be replaced with a
-  // "pad" widget below.
+  // pattern): inside one of these, the parser's Indent node is the
+  // block's own indent level, not a bullet, so its pads get no dot.
+  // Any whitespace deeper than that Indent node is raw code and is
+  // left untouched.
   const codeBlockRanges: { from: number; to: number }[] = [];
   syntaxTree(view.state).iterate({
     enter(node) {
@@ -100,10 +101,7 @@ function buildDecorations(view: EditorView): DecorationSet {
     let pos = from;
     while (pos <= to) {
       const line = view.state.doc.lineAt(pos);
-      if (inCodeBlock(line.from)) {
-        pos = line.to + 1;
-        continue;
-      }
+      const inCode = inCodeBlock(line.from);
       const indent = indentRangeForLine(
         syntaxTree(view.state),
         line.from,
@@ -122,7 +120,7 @@ function buildDecorations(view: EditorView): DecorationSet {
         for (let i = 0; i < depth; i++) {
           decorations.push(
             Decoration.replace({
-              widget: new IndentMarkWidget(i === depth - 1),
+              widget: new IndentMarkWidget(!inCode && i === depth - 1),
             }).range(indent.from + i, indent.from + i + 1),
           );
         }
