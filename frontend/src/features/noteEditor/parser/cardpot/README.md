@@ -240,7 +240,7 @@ parse 関数の契約（`(cx: InlineContext, next: number, pos: number) => numbe
 
 | ノード | 子 | `revealStyle` | 備考 |
 | --- | --- | --- | --- |
-| `Bold` / `Italic` | Mark, 本文, Mark | `cm-bold` / `cm-italic` | 入れ子で組み合わせる |
+| `Bold` / `Italic` | Mark, 本文, Mark | `cm-strong` / `cm-italic` | 入れ子で組み合わせる。`Bold` は `<strong class="level-N">` として描画され、N は開き mark の `*` の数（最大10。`syntaxReveal.ts`） |
 | `Code` | `CodeMark` ×2 | `cm-inline-code` | |
 | `WikiLink` | `WikiLinkMark` ×2 | `cm-wikilink` | クリックで内部遷移 |
 | `ExternalLink` | Mark, ラベル, Mark | `cm-wikilink` | クリックで新規タブ |

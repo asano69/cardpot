@@ -105,6 +105,22 @@ export const editorTheme = EditorView.theme({
     fontWeight: "bold",
   },
 
+  // Bold notation ("[* x]", "[** x]", ...): the number of asterisks picks
+  // the level class (see syntaxReveal.ts's strongLevel). Level 1 is plain
+  // bold; higher levels also grow the font and the line height.
+  strong: {
+    fontWeight: "bold",
+  },
+  "strong.level-2": { fontSize: "1.2em", lineHeight: "28px" },
+  "strong.level-3": { fontSize: "1.44em", lineHeight: "35px" },
+  "strong.level-4": { fontSize: "1.73em", lineHeight: "42px" },
+  "strong.level-5": { fontSize: "2.07em", lineHeight: "49px" },
+  "strong.level-6": { fontSize: "2.49em", lineHeight: "56px" },
+  "strong.level-7": { fontSize: "3em", lineHeight: "63px" },
+  "strong.level-8": { fontSize: "3.58em", lineHeight: "77px" },
+  "strong.level-9": { fontSize: "4.3em", lineHeight: "91px" },
+  "strong.level-10": { fontSize: "5.16em", lineHeight: "105px" },
+
   ".cm-italic": {
     fontStyle: "italic",
   },

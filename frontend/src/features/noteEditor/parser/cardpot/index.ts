@@ -87,7 +87,9 @@ const cardpotParser = parser.configure({
   ],
   props: [
     revealStyle.add({
-      Bold: "cm-bold",
+      // Rendered as a <strong> element with a level class (see
+      // syntaxReveal.ts), so this class only marks the node as revealable.
+      Bold: "cm-strong",
       Italic: "cm-italic",
       Code: "cm-inline-code",
       WikiLink: "cm-wikilink",

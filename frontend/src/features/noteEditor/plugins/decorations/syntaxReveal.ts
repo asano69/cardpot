@@ -7,7 +7,33 @@ import {
   type ViewUpdate,
 } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { revealStyle, isMark, hideContent } from "../../parser/cardpot";
+import type { SyntaxNodeRef } from "@lezer/common";
+import { Bold, revealStyle, isMark, hideContent } from "../../parser/cardpot";
+
+// Highest emphasis level styled in editorTheme.ts ("[********** x]").
+const MAX_STRONG_LEVEL = 10;
+
+// Emphasis level of a Bold node: the number of "*" in its opening mark, so
+// "[* x]" is level 1 and "[** x]" is level 2. The count is read from the
+// source text here rather than stored in the tree, because Lezer node types
+// are static and cannot carry a per-node level.
+function strongLevel(view: EditorView, bold: SyntaxNodeRef): number {
+  const open = bold.node.firstChild;
+  if (!open) return 1;
+  const stars = view.state.sliceDoc(open.from, open.to).split("*").length - 1;
+  return Math.min(Math.max(stars, 1), MAX_STRONG_LEVEL);
+}
+
+// The mark decoration styling a revealable node's whole range. Bold becomes a
+// <strong> element carrying its level class; every other node just gets its
+// revealStyle class.
+function revealMark(view: EditorView, node: SyntaxNodeRef, styleClass: string) {
+  if (node.type !== Bold) return Decoration.mark({ class: styleClass });
+  return Decoration.mark({
+    tagName: "strong",
+    class: `${styleClass} level-${strongLevel(view, node)}`,
+  });
+}
 
 // Hides a delimiter/mark node (e.g. "[* " or "]") using a replacing
 // decoration rather than a font-size:0 mark. Decoration.replace()
@@ -70,7 +96,7 @@ function buildDecorations(view: EditorView): DecorationSet {
       if (!styleClass) return; // not a revealable node type
 
       const { from, to } = node;
-      decorations.push(Decoration.mark({ class: styleClass }).range(from, to));
+      decorations.push(revealMark(view, node, styleClass).range(from, to));
 
       // "Touching" means the current selection overlaps the node's
       // range at all -- not just an empty cursor inside it. Without
