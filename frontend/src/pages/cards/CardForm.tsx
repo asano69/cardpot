@@ -24,6 +24,7 @@ import { useTitle } from "@/lib/useTitle";
 import { useFooterSlot } from "@/lib/footerSlot";
 import { deriveCardGridTitle } from "@/lib/models/card";
 import { usePot } from "../pots/PotContext";
+import { isRenameOfOpenCard, type SyncedCard } from "./cardUrlSync";
 
 type Draft = { initialTitle?: string };
 
@@ -119,12 +120,18 @@ export default function CardForm() {
   // (see internal/serve/title_watch.go). replaceUrl() only touches
   // history.replaceState, so this causes no visible re-render or remount
   // (see replaceUrl's own comment above).
+  // Only a rename of the card that is already open may rewrite the address
+  // bar (see isRenameOfOpenCard for why a plain navigation must not).
+  let synced: SyncedCard = {};
   createEffect(() => {
     const id = cardId();
-    if (!id) return;
-    const title = cardsById[id]?.title;
-    if (!title) return;
-    replaceUrl(titleToSegment(title));
+    const next: SyncedCard = {
+      id,
+      title: id ? cardsById[id]?.title : undefined,
+    };
+    const rename = isRenameOfOpenCard(synced, next);
+    synced = next;
+    if (rename) replaceUrl(titleToSegment(next.title!));
   });
 
   const handleCreated = (id: string, ydoc: Y.Doc) => {
@@ -132,6 +139,9 @@ export default function CardForm() {
     // line is confirmed (see NoteEditor's focusLine).
     setFocusLineOnOpen(1);
     setDraftYdoc(ydoc);
+    // The draft's URL is already committed, so it is safe to replace it now.
+    const title = cardsById[id]?.title;
+    if (title) replaceUrl(titleToSegment(title));
     setCardId(id);
     setDraft(undefined);
   };
