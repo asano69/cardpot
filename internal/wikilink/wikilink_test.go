@@ -4,6 +4,10 @@ import (
 	"testing"
 
 	"github.com/pocketbase/pocketbase/core"
+	// Registers PocketBase's system migrations, which create the internal
+	// tables (_collections, ...) that Bootstrap reads. Nothing else this test
+	// package imports pulls them in.
+	_ "github.com/pocketbase/pocketbase/migrations"
 )
 
 // newTestApp boots a throwaway PocketBase app with just the two collections
