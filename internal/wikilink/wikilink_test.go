@@ -4,12 +4,11 @@ import (
 	"testing"
 
 	"github.com/pocketbase/pocketbase/core"
-
-	"github.com/asano69/cardpot/internal/slug"
 )
 
 // newTestApp boots a throwaway PocketBase app with just the two collections
-// Sync touches. Relation fields are plain text here, same as
+// Sync touches. Sync only needs a card to exist, so "cards" has no extra
+// fields, and the relation fields of card_links are plain text here, same as
 // internal/serve's own test helpers.
 func newTestApp(t *testing.T) core.App {
 	t.Helper()
@@ -20,21 +19,15 @@ func newTestApp(t *testing.T) core.App {
 	}
 	t.Cleanup(func() { _ = app.ResetBootstrapState() })
 
-	cards := core.NewBaseCollection("cards")
-	cards.Fields.Add(
-		&core.TextField{Name: "pot"},
-		&core.TextField{Name: "title"},
-		&core.TextField{Name: "slug"},
-	)
-	if err := app.Save(cards); err != nil {
+	if err := app.Save(core.NewBaseCollection("cards")); err != nil {
 		t.Fatalf("create cards collection: %v", err)
 	}
 
 	links := core.NewBaseCollection("card_links")
 	links.Fields.Add(
 		&core.TextField{Name: "source"},
-		&core.TextField{Name: "target"},
 		&core.TextField{Name: "target_title"},
+		&core.TextField{Name: "target_slug"},
 	)
 	if err := app.Save(links); err != nil {
 		t.Fatalf("create card_links collection: %v", err)
@@ -42,16 +35,13 @@ func newTestApp(t *testing.T) core.App {
 	return app
 }
 
-func createCard(t *testing.T, app core.App, pot, title string) *core.Record {
+func createCard(t *testing.T, app core.App) *core.Record {
 	t.Helper()
 	collection, err := app.FindCollectionByNameOrId("cards")
 	if err != nil {
 		t.Fatalf("find cards collection: %v", err)
 	}
 	record := core.NewRecord(collection)
-	record.Set("pot", pot)
-	record.Set("title", title)
-	record.Set("slug", slug.FromTitle(title))
 	if err := app.Save(record); err != nil {
 		t.Fatalf("save card: %v", err)
 	}
@@ -74,20 +64,20 @@ func mustSync(t *testing.T, app core.App, cardID, text string) {
 	}
 }
 
-func TestSync_LinksToExistingCard(t *testing.T) {
+func TestSync_StoresLinksWithoutCheckingTargets(t *testing.T) {
+	// No card named "B" exists anywhere: the link is stored all the same.
 	app := newTestApp(t)
-	a := createCard(t, app, "pot1", "A")
-	b := createCard(t, app, "pot1", "B")
+	a := createCard(t, app)
 
-	mustSync(t, app, a.Id, "A\nsee [B]")
+	mustSync(t, app, a.Id, "A\nsee [B] and [a b]")
 
-	got := linksFrom(t, app, a.Id)
-	if len(got) != 1 {
-		t.Fatalf("got %d links, want 1", len(got))
+	got := map[string]string{}
+	for _, record := range linksFrom(t, app, a.Id) {
+		got[record.GetString("target_slug")] = record.GetString("target_title")
 	}
-	if got[0].GetString("target") != b.Id || got[0].GetString("target_title") != "B" {
-		t.Errorf("link = target %q title %q, want target %q title %q",
-			got[0].GetString("target"), got[0].GetString("target_title"), b.Id, "B")
+	want := map[string]string{"B": "B", "a_b": "a b"}
+	if len(got) != len(want) || got["B"] != "B" || got["a_b"] != "a b" {
+		t.Errorf("links = %v, want %v", got, want)
 	}
 }
 
@@ -95,8 +85,7 @@ func TestSync_IdentityIsTheSlug(t *testing.T) {
 	// "a b" and "a_b" derive the same slug, so they are one link; the first
 	// spelling in the text is the one kept.
 	app := newTestApp(t)
-	a := createCard(t, app, "pot1", "A")
-	createCard(t, app, "pot1", "a b")
+	a := createCard(t, app)
 
 	mustSync(t, app, a.Id, "A\n[a_b] [a b]")
 
@@ -104,17 +93,32 @@ func TestSync_IdentityIsTheSlug(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("got %d links, want 1", len(got))
 	}
-	if got[0].GetString("target_title") != "a_b" {
-		t.Errorf("target_title = %q, want %q", got[0].GetString("target_title"), "a_b")
+	if got[0].GetString("target_slug") != "a_b" || got[0].GetString("target_title") != "a_b" {
+		t.Errorf("link = slug %q title %q, want %q / %q",
+			got[0].GetString("target_slug"), got[0].GetString("target_title"), "a_b", "a_b")
 	}
 }
 
-func TestSync_SkipsSelfUnresolvedAndOtherPots(t *testing.T) {
+func TestSync_KeepsSelfLinks(t *testing.T) {
+	// Whether a link points back at its own card is decided at query time,
+	// so Sync stores it like any other.
 	app := newTestApp(t)
-	a := createCard(t, app, "pot1", "A")
-	createCard(t, app, "pot2", "Elsewhere")
+	a := createCard(t, app)
 
-	mustSync(t, app, a.Id, "A\n[A] [Nope] [Elsewhere]")
+	mustSync(t, app, a.Id, "A\n[A]")
+
+	if got := linksFrom(t, app, a.Id); len(got) != 1 {
+		t.Errorf("got %d links, want 1", len(got))
+	}
+}
+
+func TestSync_SkipsLinksWithEmptySlug(t *testing.T) {
+	// A link made only of brackets and spaces derives an empty slug, which
+	// the schema cannot store.
+	app := newTestApp(t)
+	a := createCard(t, app)
+
+	mustSync(t, app, a.Id, "A\n[ [ ] ]")
 
 	if got := linksFrom(t, app, a.Id); len(got) != 0 {
 		t.Errorf("got %d links, want 0", len(got))
@@ -123,8 +127,7 @@ func TestSync_SkipsSelfUnresolvedAndOtherPots(t *testing.T) {
 
 func TestSync_IgnoresTitleLine(t *testing.T) {
 	app := newTestApp(t)
-	a := createCard(t, app, "pot1", "A")
-	createCard(t, app, "pot1", "B")
+	a := createCard(t, app)
 
 	mustSync(t, app, a.Id, "[B]\nbody")
 
@@ -135,16 +138,14 @@ func TestSync_IgnoresTitleLine(t *testing.T) {
 
 func TestSync_AddsAndRemovesLinks(t *testing.T) {
 	app := newTestApp(t)
-	a := createCard(t, app, "pot1", "A")
-	b := createCard(t, app, "pot1", "B")
-	c := createCard(t, app, "pot1", "C")
+	a := createCard(t, app)
 
 	mustSync(t, app, a.Id, "A\n[B]")
 	mustSync(t, app, a.Id, "A\n[C]")
 
 	got := linksFrom(t, app, a.Id)
-	if len(got) != 1 || got[0].GetString("target") != c.Id {
-		t.Fatalf("links after edit = %d (want 1 to %s, not %s)", len(got), c.Id, b.Id)
+	if len(got) != 1 || got[0].GetString("target_slug") != "C" {
+		t.Fatalf("links after edit = %d (want 1 to %q)", len(got), "C")
 	}
 
 	mustSync(t, app, a.Id, "A\nno links")
@@ -155,8 +156,7 @@ func TestSync_AddsAndRemovesLinks(t *testing.T) {
 
 func TestSync_UnchangedLinksAreNotRewritten(t *testing.T) {
 	app := newTestApp(t)
-	a := createCard(t, app, "pot1", "A")
-	createCard(t, app, "pot1", "B")
+	a := createCard(t, app)
 
 	mustSync(t, app, a.Id, "A\n[B]")
 	first := linksFrom(t, app, a.Id)

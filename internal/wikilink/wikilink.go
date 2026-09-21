@@ -2,9 +2,12 @@
 // [wiki links] found in each card's text, so 1-hop and 2-hop link views
 // can be answered from the database instead of re-parsing every card.
 //
-// A link row stores its target as a card id, so renaming the target card
-// never touches card_links. Links to titles that match no card in the
-// same pot are not stored (yet).
+// A link row stores its target only as text (target_title and target_slug,
+// mirroring the "cards" fields of the same names). The target card may not
+// exist yet, may be renamed, or may be created later, so a link never needs
+// to know whether its target exists. Its identity is the target_slug -- the
+// same key the frontend uses to resolve a title to a card -- and a target is
+// matched to a card only at query time, by (pot, slug).
 package wikilink
 
 import (
@@ -20,10 +23,14 @@ import (
 
 // Sync makes card_links match the wiki links in text for the card cardID:
 // rows for links that disappeared are deleted and rows for new links are
-// created, all in one transaction. When nothing changed, nothing is
-// written. A card that no longer exists is ignored.
+// created, all in one transaction. When nothing changed, nothing is written.
+// A card that no longer exists is ignored.
+//
+// Every link is stored, including links to the card itself: whether that is
+// a self link depends on the card's current slug, which can change without
+// Sync running again, so it is left to whoever queries the links.
 func Sync(app core.App, cardID, text string) error {
-	card, err := app.FindRecordById("cards", cardID)
+	_, err := app.FindRecordById("cards", cardID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil // card deleted concurrently
 	}
@@ -31,10 +38,7 @@ func Sync(app core.App, cardID, text string) error {
 		return err
 	}
 
-	targets, err := resolveTargets(app, card.GetString("pot"), cardID, parser.Parse(text).WikiLinkTitles())
-	if err != nil {
-		return err
-	}
+	targets := targetTitles(parser.Parse(text).WikiLinkTitles())
 
 	existing, err := app.FindRecordsByFilter(
 		"card_links", "source = {:source}", "", 0, 0,
@@ -59,13 +63,11 @@ func Sync(app core.App, cardID, text string) error {
 				return err
 			}
 		}
-		for _, target := range missing {
+		for _, targetSlug := range missing {
 			record := core.NewRecord(collection)
 			record.Set("source", cardID)
-			record.Set("target", target)
-			// Required by the schema; only a placeholder for now (it is
-			// not used to decide what changed).
-			record.Set("target_title", targets[target])
+			record.Set("target_slug", targetSlug)
+			record.Set("target_title", targets[targetSlug])
 			if err := tx.Save(record); err != nil {
 				return err
 			}
@@ -74,62 +76,43 @@ func Sync(app core.App, cardID, text string) error {
 	})
 }
 
-// resolveTargets maps each linked card id to the raw title under which it
-// was first linked. Links are the same when their slugs are (see
+// targetTitles maps each linked slug to the raw title under which it was
+// first linked. Links are the same when their slugs are (see
 // slug.FromTitle), matching how the frontend resolves a title to a card.
-// Links to the card itself and to titles with no card in the pot are
-// dropped.
-func resolveTargets(app core.App, pot, sourceID string, titles []string) (map[string]string, error) {
+// Titles that derive an empty slug (e.g. a link made only of brackets and
+// spaces) cannot be stored and are dropped.
+func targetTitles(titles []string) map[string]string {
 	titleBySlug := make(map[string]string, len(titles))
 	for _, title := range titles {
 		s := slug.FromTitle(title)
+		if s == "" {
+			continue
+		}
 		if _, seen := titleBySlug[s]; !seen {
 			titleBySlug[s] = title
 		}
 	}
-	if len(titleBySlug) == 0 {
-		return nil, nil
-	}
-
-	slugs := make([]any, 0, len(titleBySlug))
-	for s := range titleBySlug {
-		slugs = append(slugs, s)
-	}
-	var cards []*core.Record
-	err := app.RecordQuery("cards").
-		AndWhere(dbx.HashExp{"pot": pot}).
-		AndWhere(dbx.In("slug", slugs...)).
-		All(&cards)
-	if err != nil {
-		return nil, err
-	}
-
-	targets := make(map[string]string, len(cards))
-	for _, card := range cards {
-		if card.Id == sourceID {
-			continue
-		}
-		targets[card.Id] = titleBySlug[card.GetString("slug")]
-	}
-	return targets, nil
+	return titleBySlug
 }
 
-// diff compares the stored rows with the wanted targets. stale rows (a link
-// that is gone, or a duplicate row) must be deleted; missing targets need a
-// new row.
+// diff compares the stored rows with the wanted targets (keyed by slug).
+// stale rows (a link that is gone, or a duplicate row) must be deleted;
+// missing slugs need a new row. The stored target_title of a kept row is left
+// as is: the row's identity is its slug, so a different spelling of the same
+// slug is not a change.
 func diff(existing []*core.Record, targets map[string]string) (stale []*core.Record, missing []string) {
 	kept := make(map[string]bool, len(existing))
 	for _, record := range existing {
-		target := record.GetString("target")
-		if _, wanted := targets[target]; wanted && !kept[target] {
-			kept[target] = true
+		targetSlug := record.GetString("target_slug")
+		if _, wanted := targets[targetSlug]; wanted && !kept[targetSlug] {
+			kept[targetSlug] = true
 			continue
 		}
 		stale = append(stale, record)
 	}
-	for target := range targets {
-		if !kept[target] {
-			missing = append(missing, target)
+	for targetSlug := range targets {
+		if !kept[targetSlug] {
+			missing = append(missing, targetSlug)
 		}
 	}
 	return stale, missing
