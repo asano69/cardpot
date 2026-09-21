@@ -1,67 +1,102 @@
 import type { Command } from "@codemirror/view";
-import { EditorSelection, type EditorState } from "@codemirror/state";
-import { syntaxTree } from "@codemirror/language";
+import {
+  EditorSelection,
+  type EditorState,
+  type Line,
+} from "@codemirror/state";
+import { indentUnit, syntaxTree } from "@codemirror/language";
+import type { SyntaxNode } from "@lezer/common";
 import { CodeBlock } from "../../parser/cardpot";
-import { indentRangeForLine } from "../../parser/cardpot/indent";
+import { countIndent, indentRangeForLine } from "../../parser/cardpot/indent";
 
-// Whether `pos` falls inside a `code:` block (see
+// Returns the `code:` block containing `pos`, or null (see
 // codeBlockLines.ts / hangingIndent.ts for the same CodeBlock
-// lookup). Leading whitespace there is code content, not a bullet to
-// continue or release.
-function isInCodeBlock(state: EditorState, pos: number): boolean {
-  let node = syntaxTree(state).resolveInner(pos, -1);
+// lookup). Leading whitespace there is raw code, not a bullet to
+// release.
+function enclosingCodeBlock(
+  state: EditorState,
+  pos: number,
+): SyntaxNode | null {
+  let node: SyntaxNode | null = syntaxTree(state).resolveInner(pos, -1);
   while (node) {
-    if (node.type === CodeBlock) return true;
+    if (node.type === CodeBlock) return node;
     node = node.parent;
   }
-  return false;
+  return null;
 }
 
-// Enter behavior for bulleted (parser-indented) lines, mirroring common
+// How many leading characters of `line` count as its indentation.
+//
+// Inside a `code:` block that is the whole leading whitespace run: the
+// parser's Indent node only covers the block's own level, but any
+// deeper whitespace is code indentation that should be carried over
+// as well. Elsewhere the parser's Indent node is authoritative, so a
+// title line (which has none) never counts as indented.
+function indentLength(
+  state: EditorState,
+  line: Line,
+  inCodeBlock: boolean,
+): number {
+  if (inCodeBlock) return countIndent(line.text);
+  const indent = indentRangeForLine(syntaxTree(state), line.from, line.text);
+  return indent ? indent.to - indent.from : 0;
+}
+
+// Enter behavior for indented (bulleted) lines, mirroring common
 // outliner UX (Workflowy/Scrapbox-style):
 //
-// - A bulleted line that already has text keeps its bullet depth on
-//   the next line, so pressing Enter continues the list at the same
-//   indent instead of resetting to depth 0 every time.
-// - A bulleted line with nothing typed yet (just its leading indentation, no
-//   real content) is "released" instead: its tabs are stripped in
-//   place and no new line is inserted, exiting bullet mode rather
-//   than nesting an empty bullet under another empty bullet.
+// - The new line starts with a verbatim copy of the current line's own
+//   indentation characters (tabs, half-width or full-width spaces, in
+//   the same order), so the list continues at the same depth without
+//   normalizing the indentation to tabs. Only the indentation left of
+//   the cursor is copied: whitespace to its right travels down with
+//   the rest of the text, so pressing Enter in the middle of the
+//   indentation never doubles it.
+// - A bulleted line with nothing typed yet (just its indentation) is
+//   "released" instead: its indentation is stripped in place and a
+//   plain newline follows, exiting bullet mode rather than nesting an
+//   empty bullet under another empty bullet.
+// - Inside a `code:` block the same copy applies, but nothing is ever
+//   released: a code line holding only whitespace is still part of
+//   the block, and flattening it would end the block. The new line
+//   therefore always stays deeper than the `code:` declaration.
 export const insertNewlineKeepingBullet: Command = (view) => {
   const { state } = view;
   const changes = state.changeByRange((range) => {
-    // Inside a `code:` block, Enter always inserts a plain
-    // newline -- indentation here is code content, not a bullet to
-    // continue or release (see hangingIndent.ts's own CodeBlock
-    // guard for the display-side counterpart of this fix).
-    if (isInCodeBlock(state, range.from)) {
-      return {
-        changes: { from: range.from, to: range.to, insert: "\n" },
-        range: EditorSelection.cursor(range.from + 1),
-      };
-    }
-
     const line = state.doc.lineAt(range.from);
-    const indent = indentRangeForLine(syntaxTree(state), line.from, line.text);
-    const depth = indent ? indent.to - indent.from : 0;
-    const rest = line.text.slice(depth);
+    const codeBlock = enclosingCodeBlock(state, range.from);
+    const depth = indentLength(state, line, codeBlock !== null);
+    const column = range.from - line.from;
 
-    if (depth > 0 && rest.trim() === "") {
+    if (!codeBlock && depth > 0 && line.text.slice(depth).trim() === "") {
       // Empty bullet: release bullet mode and still insert a newline,
       // so the cursor moves down to a fresh, unindented line rather
       // than staying on the now-flattened one. The whole line (not
-      // just its leading tabs) is replaced, since `rest` may still
-      // hold trailing whitespace after the tabs that must not survive
-      // into the new line either.
+      // just its indentation) is replaced, since the remainder may
+      // still hold trailing whitespace that must not survive into the
+      // new line either.
       return {
         changes: { from: line.from, to: line.to, insert: "\n" },
         range: EditorSelection.cursor(line.from + 1),
       };
     }
 
-    // Non-empty bulleted line (or depth 0): continue at the same
-    // indent depth on the new line.
-    const insert = "\n" + "\t".repeat(depth);
+    let indent = line.text.slice(0, Math.min(depth, column));
+
+    // The `code:` declaration line is the one place a plain copy is not
+    // enough: a new line at the declaration's own depth would fall
+    // outside the block, so the first body line gets one more indent
+    // unit. Not applied while the cursor is still before the `code:`
+    // text, where Enter just moves the declaration itself down.
+    if (
+      codeBlock &&
+      column > depth &&
+      state.doc.lineAt(codeBlock.from).number === line.number
+    ) {
+      indent += state.facet(indentUnit);
+    }
+
+    const insert = "\n" + indent;
     return {
       changes: { from: range.from, to: range.to, insert },
       range: EditorSelection.cursor(range.from + insert.length),

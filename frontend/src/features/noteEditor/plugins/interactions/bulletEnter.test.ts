@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EditorState } from "@codemirror/state";
+import { indentUnit } from "@codemirror/language";
 import type { EditorView } from "@codemirror/view";
 import { cardpotSyntax } from "../../parser/cardpot";
 import { insertNewlineKeepingBullet } from "./bulletEnter";
@@ -12,7 +13,8 @@ function runCommand(doc: string, cursor: number) {
   const state = EditorState.create({
     doc,
     selection: { anchor: cursor },
-    extensions: [cardpotSyntax()],
+    // Same unit index.tsx configures: one real tab per indent level.
+    extensions: [cardpotSyntax(), indentUnit.of("\t")],
   });
 
   let result: EditorState = state;
@@ -54,9 +56,9 @@ describe("insertNewlineKeepingBullet", () => {
     expect(result.head).toBe(10);
   });
 
-  it("uses the parser's whitespace indentation for a pasted space bullet", () => {
+  it("copies a space bullet's own whitespace characters verbatim", () => {
     const result = runOnBody(" \u3000hello", 7);
-    expect(result.doc).toBe(" \u3000hello\n\t\t");
+    expect(result.doc).toBe(" \u3000hello\n \u3000");
     expect(result.head).toBe(10);
   });
 
@@ -93,5 +95,62 @@ describe("insertNewlineKeepingBullet", () => {
     const result = runCommand("\thello", 6);
     expect(result.doc.toString()).toBe("\thello\n");
     expect(result.selection.main.head).toBe(7);
+  });
+
+  it("copies only the indentation left of the cursor", () => {
+    // The tab right of the cursor travels down with the text.
+    const result = runOnBody("\t\tfoo", 1);
+    expect(result.doc).toBe("\t\n\t\tfoo");
+    expect(result.head).toBe(3);
+  });
+
+  it("moves the whole line down when the cursor is at column 0", () => {
+    const result = runOnBody("\tfoo", 0);
+    expect(result.doc).toBe("\n\tfoo");
+    expect(result.head).toBe(1);
+  });
+});
+
+describe("insertNewlineKeepingBullet inside a code: block", () => {
+  it("copies the whole leading whitespace of a body line", () => {
+    // The parser's Indent only covers the block's own level; the
+    // second tab is code indentation and is carried over as well.
+    const doc = "code:x\n\t\tfoo";
+    const result = runOnBody(doc, doc.length);
+    expect(result.doc).toBe("code:x\n\t\tfoo\n\t\t");
+    expect(result.head).toBe(doc.length + 3);
+  });
+
+  it("copies non-tab indentation characters too", () => {
+    const doc = "code:x\n \u3000foo";
+    const result = runOnBody(doc, doc.length);
+    expect(result.doc).toBe("code:x\n \u3000foo\n \u3000");
+  });
+
+  it("never releases an empty code line, so the block stays open", () => {
+    const doc = "code:x\n\t\t";
+    const result = runOnBody(doc, doc.length);
+    expect(result.doc).toBe("code:x\n\t\t\n\t\t");
+    expect(result.head).toBe(doc.length + 3);
+  });
+
+  it("indents the first body line deeper than the declaration", () => {
+    const doc = "code:x";
+    const result = runOnBody(doc, doc.length);
+    expect(result.doc).toBe("code:x\n\t");
+    expect(result.head).toBe(doc.length + 2);
+  });
+
+  it("keeps the declaration's own indentation on the first body line", () => {
+    const doc = "\tcode:x";
+    const result = runOnBody(doc, doc.length);
+    expect(result.doc).toBe("\tcode:x\n\t\t");
+  });
+
+  it("adds no extra indent when Enter is pressed before the declaration text", () => {
+    // The declaration itself moves down; it is not a continuation.
+    const result = runOnBody("\tcode:x", 1);
+    expect(result.doc).toBe("\t\n\tcode:x");
+    expect(result.head).toBe(3);
   });
 });
