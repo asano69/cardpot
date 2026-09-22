@@ -30,13 +30,14 @@ import (
 // a self link depends on the card's current slug, which can change without
 // Sync running again, so it is left to whoever queries the links.
 func Sync(app core.App, cardID, text string) error {
-	_, err := app.FindRecordById("cards", cardID)
+	source, err := app.FindRecordById("cards", cardID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil // card deleted concurrently
 	}
 	if err != nil {
 		return err
 	}
+	pot := source.GetString("pot")
 
 	targets := targetTitles(parser.Parse(text).WikiLinkTitles())
 
@@ -66,6 +67,12 @@ func Sync(app core.App, cardID, text string) error {
 		for _, targetSlug := range missing {
 			record := core.NewRecord(collection)
 			record.Set("source", cardID)
+			// A wiki link's target is resolved within the same pot as its
+			// source card (see slug.go's resolveTitle), so this is stored
+			// alongside target_slug/target_title to make the reverse lookup
+			// (which cards link to a given card) possible without having to
+			// re-derive the pot from the source card each time.
+			record.Set("target_pot", pot)
 			record.Set("target_slug", targetSlug)
 			record.Set("target_title", targets[targetSlug])
 			if err := tx.Save(record); err != nil {
