@@ -88,7 +88,7 @@ func newSlugTestApp(t *testing.T) core.App {
 	cardLines := core.NewBaseCollection("card_lines")
 	cardLines.Fields.Add(
 		&core.TextField{Name: "card"},
-		&core.NumberField{Name: "position"},
+		&core.NumberField{Name: "ln"},
 		&core.TextField{Name: "content"},
 	)
 	if err := app.Save(cardLines); err != nil {
@@ -117,7 +117,7 @@ func createCard(t *testing.T, app core.App, pot, title string) *core.Record {
 	return record
 }
 
-// setFirstLine inserts this card's position-0 card_lines row, i.e. its
+// setFirstLine inserts this card's ln-0 card_lines row, i.e. its
 // header (see lines.go: the header is always line 0).
 func setFirstLine(t *testing.T, app core.App, cardID, content string) {
 	t.Helper()
@@ -127,7 +127,7 @@ func setFirstLine(t *testing.T, app core.App, cardID, content string) {
 	}
 	record := core.NewRecord(collection)
 	record.Set("card", cardID)
-	record.Set("position", 0)
+	record.Set("ln", 0)
 	record.Set("content", content)
 	if err := app.Save(record); err != nil {
 		t.Fatalf("save card_lines: %v", err)

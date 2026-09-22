@@ -959,7 +959,7 @@ func init() {
 					},
 					{
 						"autogeneratePattern": "",
-						"help": "",
+						"help": "Because title → titleLc is deterministic, enforcing uniqueness on titleLc implicitly enforces uniqueness on title. As a result, the (pot, title) uniqueness constraint is redundant.",
 						"hidden": false,
 						"id": "text293159488",
 						"max": 240,

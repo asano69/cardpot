@@ -49,10 +49,16 @@ func resolveUniqueTitleInPot(app core.App, pot, base, excludeID string) (string,
 	value := base
 	for suffix := 2; ; suffix++ {
 		candidateSlug := slug.FromTitle(value)
+		// titleLc must also be checked: the (pot, titleLc) unique index is
+		// case-insensitive, so "A" and "a" collide there even though their
+		// slugs differ. Checking it here lets a case-only collision resolve
+		// to "a_2" directly, instead of only being caught after a failed
+		// Save on the DB's own unique constraint.
+		candidateTitleLc := slug.ToLowerKey(value)
 		_, err := app.FindFirstRecordByFilter(
 			"cards",
-			"pot = {:pot} && slug = {:slug} && id != {:id}",
-			dbx.Params{"pot": pot, "slug": candidateSlug, "id": excludeID},
+			"pot = {:pot} && id != {:id} && (slug = {:slug} || titleLc = {:titleLc})",
+			dbx.Params{"pot": pot, "slug": candidateSlug, "titleLc": candidateTitleLc, "id": excludeID},
 		)
 		if errors.Is(err, sql.ErrNoRows) {
 			return value, nil
@@ -157,7 +163,7 @@ func headersMatch(a, b TitleCandidate) bool {
 func firstLineContent(app core.App, cardID string) (TitleCandidate, error) {
 	record, err := app.FindFirstRecordByFilter(
 		"card_lines",
-		"card = {:card} && position = 0",
+		"card = {:card} && ln = 0",
 		dbx.Params{"card": cardID},
 	)
 	if errors.Is(err, sql.ErrNoRows) {
