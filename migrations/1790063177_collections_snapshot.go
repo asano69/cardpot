@@ -1121,21 +1121,6 @@ func init() {
 						"autogeneratePattern": "",
 						"help": "",
 						"hidden": false,
-						"id": "text675907466",
-						"max": 0,
-						"min": 0,
-						"name": "nameLc",
-						"pattern": "",
-						"presentable": false,
-						"primaryKey": false,
-						"required": false,
-						"system": false,
-						"type": "text"
-					},
-					{
-						"autogeneratePattern": "",
-						"help": "",
-						"hidden": false,
 						"id": "text724990059",
 						"max": 60,
 						"min": 1,
@@ -1211,7 +1196,9 @@ func init() {
 					}
 				],
 				"id": "pbc_575754128",
-				"indexes": [],
+				"indexes": [
+					"CREATE UNIQUE INDEX ` + "`" + `idx_1zt5k21ybq` + "`" + `\nON ` + "`" + `pots` + "`" + ` (` + "`" + `name` + "`" + ` COLLATE NOCASE);"
+				],
 				"listRule": null,
 				"name": "pots",
 				"system": false,
