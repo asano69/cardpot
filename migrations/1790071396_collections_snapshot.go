@@ -1349,21 +1349,6 @@ func init() {
 						"type": "text"
 					},
 					{
-						"autogeneratePattern": "",
-						"help": " title → slug is deterministic",
-						"hidden": false,
-						"id": "text1434815955",
-						"max": 240,
-						"min": 1,
-						"name": "target_slug",
-						"pattern": "^[^\\[\\] ]*$",
-						"presentable": false,
-						"primaryKey": false,
-						"required": true,
-						"system": false,
-						"type": "text"
-					},
-					{
 						"hidden": false,
 						"id": "autodate2990389176",
 						"name": "created",
@@ -1387,7 +1372,6 @@ func init() {
 				"id": "pbc_449060851",
 				"indexes": [
 					"CREATE INDEX ` + "`" + `idx_xpwo6k1rx9` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (` + "`" + `source` + "`" + `)",
-					"CREATE INDEX ` + "`" + `idx_iy23prqvly` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (\n  ` + "`" + `target_slug` + "`" + `,\n  ` + "`" + `target_pot` + "`" + `\n)",
 					"CREATE INDEX ` + "`" + `idx_vqvthaafz5` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (\n  ` + "`" + `target_title` + "`" + `,\n  ` + "`" + `target_pot` + "`" + `\n)",
 					"CREATE UNIQUE INDEX ` + "`" + `idx_4alpksbb3u` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (\n  ` + "`" + `target_pot` + "`" + `,\n  ` + "`" + `target_titleLc` + "`" + `\n)"
 				],
