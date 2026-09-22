@@ -41,7 +41,7 @@ function SidebarPotRow(props: SidebarPotRowProps) {
   return (
     <li ref={ref} classList={{ "opacity-40": isDragging() }}>
       <A
-        href={`/${props.pot.slug}`}
+        href={`/${props.pot.name}`}
         activeClass="bg-active-bg"
         class="block truncate rounded-md border border-border bg-card px-2 py-1.5 text-sm text-text shadow-card transition-colors hover:bg-hover-bg"
       >

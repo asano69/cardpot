@@ -50,7 +50,7 @@ export default function PotGridItem(props: PotGridItemProps) {
       class="card-grid-item"
       classList={{ "opacity-40": isDragging() }}
     >
-      <A href={`/${props.pot.slug}`}>
+      <A href={`/${props.pot.name}`}>
         <div class="content">
           <div class="header">
             <h3 class="title">{props.pot.title}</h3>

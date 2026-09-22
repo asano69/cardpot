@@ -19,9 +19,9 @@ export default function AppRouter() {
     <Router root={AppShell}>
       <Route path="/" component={PotList} />
       {/* The pot segment in the URL is now the pot's unique
-          "slug" field, not its PocketBase id (see CardList.tsx
+          "name" field, not its PocketBase id (see CardList.tsx
           and CardForm.tsx, which resolve the actual record via
-          this slug). PotLayout owns fetching the pot and registering
+          this name). PotLayout owns fetching the pot and registering
           TopBar's pot-name link (see PotLayout.tsx), so it stays
           mounted continuously while navigating between CardList and
           CardForm below instead of flickering on every transition. */}

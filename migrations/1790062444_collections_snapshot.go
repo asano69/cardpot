@@ -1109,7 +1109,7 @@ func init() {
 						"id": "text2560465762",
 						"max": 48,
 						"min": 1,
-						"name": "slug",
+						"name": "name",
 						"pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$",
 						"presentable": true,
 						"primaryKey": false,

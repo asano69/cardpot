@@ -29,7 +29,7 @@ import urllib.parse
 import urllib.request
 
 DEFAULT_BASE_URL = "http://localhost:3000"
-DEFAULT_POT_SLUG = "sample"
+DEFAULT_POT_NAME = "sample"
 DEFAULT_CARD_COUNT = 3000
 
 
@@ -64,14 +64,14 @@ def authenticate(base_url, email, password):
     return result["token"]
 
 
-def find_or_create_pot(base_url, token, slug):
-    """Returns the id of the pot with `slug`, creating it if missing."""
+def find_or_create_pot(base_url, token, name):
+    """Returns the id of the pot with `name`, creating it if missing."""
     result = api_request(
         base_url,
         "GET",
         "/api/collections/pots/records",
         token=token,
-        params={"filter": f'slug="{slug}"'},
+        params={"filter": f'name="{name}"'},
     )
     if result["items"]:
         return result["items"][0]["id"]
@@ -82,8 +82,8 @@ def find_or_create_pot(base_url, token, slug):
         "/api/collections/pots/records",
         token=token,
         body={
-            "slug": slug,
-            "title": slug.capitalize(),
+            "name": name,
+            "title": name.capitalize(),
             "done": False,
             "position": 0,
         },
@@ -110,7 +110,7 @@ def create_cards(base_url, token, pot_id, count):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL)
-    parser.add_argument("--pot-slug", default=DEFAULT_POT_SLUG)
+    parser.add_argument("--pot-name", default=DEFAULT_POT_NAME)
     parser.add_argument("--count", type=int, default=DEFAULT_CARD_COUNT)
     parser.add_argument(
         "--email", default=os.environ.get("CARDPOT_ADMIN_EMAIL", "admin@mail.internal")
@@ -121,8 +121,8 @@ def main():
     args = parser.parse_args()
 
     token = authenticate(args.base_url, args.email, args.password)
-    pot_id = find_or_create_pot(args.base_url, token, args.pot_slug)
-    print(f"using pot '{args.pot_slug}' ({pot_id})")
+    pot_id = find_or_create_pot(args.base_url, token, args.pot_name)
+    print(f"using pot '{args.pot_name}' ({pot_id})")
 
     create_cards(args.base_url, token, pot_id, args.count)
 

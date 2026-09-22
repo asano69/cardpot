@@ -2,14 +2,14 @@ import pb from "./pb";
 import { randomKey } from "../randomKey";
 import type { PotRecord } from "../models/pot";
 
-// Looks up an pot by its unique "slug" field. Pots are addressed by
-// slug in the URL instead of their PocketBase id, so any page that
-// needs the parent pot for a "/:slug/..." route resolves it here
-// rather than duplicating the same filtered lookup.
-export async function fetchPotBySlug(slug: string): Promise<PotRecord> {
+// Looks up an pot by its unique "name" field. Pots are addressed by
+// this field in the URL instead of their PocketBase id, so any page
+// that needs the parent pot for a "/:slug/..." route resolves it
+// here rather than duplicating the same filtered lookup.
+export async function fetchPotByName(name: string): Promise<PotRecord> {
   return await pb
     .collection("pots")
-    .getFirstListItem<PotRecord>(pb.filter("slug = {:slug}", { slug }));
+    .getFirstListItem<PotRecord>(pb.filter("name = {:name}", { name }));
 }
 
 // Fetches every "pots" record, ordered by position.
@@ -19,12 +19,12 @@ export async function fetchAllPots(): Promise<PotRecord[]> {
     .getFullList<PotRecord>({ sort: "position" });
 }
 
-// Creates a pot. The "slug" field is required and pattern-constrained,
+// Creates a pot. The "name" field is required and pattern-constrained,
 // but the real id isn't known until after creation -- so this creates
 // with a throwaway placeholder value (satisfying both the required and
 // pattern rules) first, then immediately overwrites it with the
-// record's own id. No slug-picking UI exists yet; this can be replaced
-// with a real, user-chosen slug once that UI exists.
+// record's own id. No name-picking UI exists yet; this can be replaced
+// with a real, user-chosen name once that UI exists.
 export async function createPot(
   title: string,
   position: number,
@@ -33,11 +33,11 @@ export async function createPot(
     title,
     done: false,
     position,
-    slug: randomKey(),
+    name: randomKey(),
   });
   return await pb
     .collection("pots")
-    .update<PotRecord>(record.id, { slug: record.id });
+    .update<PotRecord>(record.id, { name: record.id });
 }
 
 export async function updatePot(

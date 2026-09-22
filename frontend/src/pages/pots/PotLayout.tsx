@@ -1,7 +1,7 @@
 import { createResource, type ParentProps } from "solid-js";
 import { useParams } from "@solidjs/router";
 
-import { fetchPotBySlug } from "@/lib/api/pots";
+import { fetchPotByName } from "@/lib/api/pots";
 import { useTopBarPotLink } from "@/lib/topBarSlot";
 import PotContext from "./PotContext";
 
@@ -23,7 +23,7 @@ import PotContext from "./PotContext";
 // duplicate, breaking navigation.
 export default function PotLayout(props: ParentProps) {
   const params = useParams();
-  const [pot] = createResource(() => params.slug, fetchPotBySlug);
+  const [pot] = createResource(() => params.slug, fetchPotByName);
 
   useTopBarPotLink(() =>
     pot() ? { name: pot()!.title, slug: params.slug } : undefined,
