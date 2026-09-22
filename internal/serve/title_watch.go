@@ -102,11 +102,10 @@ func (w *titleWatcher) resolve(app core.App, room, raw string) {
 		}
 
 		record.Set("title", string(title))
-		// Derived from title (see internal/slug.FromTitle), same as
-		// cards.go's own handlers -- the (pot, slug) unique index is
-		// what actually enforces uniqueness.
-		record.Set("slug", slug.FromTitle(string(title)))
-		// See cards.go's own comment on titleLc.
+		// See cards.go's own comment on titleLc: this is what actually
+		// enforces uniqueness now. The URL segment is derived from
+		// title on demand (see internal/slug.FromTitle) instead of
+		// being stored.
 		record.Set("titleLc", slug.ToLowerKey(string(title)))
 		if err := app.Save(record); err != nil {
 			if attempt < maxTitleRetries-1 {

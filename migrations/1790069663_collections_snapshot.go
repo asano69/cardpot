@@ -974,21 +974,6 @@ func init() {
 					},
 					{
 						"autogeneratePattern": "",
-						"help": "Because title → slug is deterministic, enforcing uniqueness on slug implicitly enforces uniqueness on title. As a result, the (pot, title) uniqueness constraint is redundant.",
-						"hidden": false,
-						"id": "text2560465762",
-						"max": 240,
-						"min": 1,
-						"name": "slug",
-						"pattern": "^[^\\[\\] ]*$",
-						"presentable": false,
-						"primaryKey": false,
-						"required": true,
-						"system": false,
-						"type": "text"
-					},
-					{
-						"autogeneratePattern": "",
 						"help": "",
 						"hidden": false,
 						"id": "text3112513328",

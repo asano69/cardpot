@@ -91,15 +91,12 @@ func createCardHandler(e *core.RequestEvent) error {
 		record := core.NewRecord(collection)
 		record.Set("pot", req.Pot)
 		record.Set("title", string(title))
-		// Derived straight from title (see internal/slug.FromTitle) and
-		// stored so the (pot, slug) unique index -- not (pot, title) --
-		// is what actually enforces one card per URL segment (see
-		// resolveUniqueTitleInPot's own comment on why title alone
-		// can't guard against this).
-		record.Set("slug", slug.FromTitle(string(title)))
 		// A case-insensitive search key, kept in sync with title on
 		// every save since PocketBase has no generated columns (see
-		// internal/slug.ToLowerKey's own comment).
+		// internal/slug.ToLowerKey's own comment). This is what
+		// actually enforces one card per URL segment now -- the URL
+		// segment itself is derived from title on demand (see
+		// internal/slug.FromTitle) rather than stored.
 		record.Set("titleLc", slug.ToLowerKey(string(title)))
 		record.Set("position", position)
 		if err := e.App.Save(record); err != nil {
@@ -147,9 +144,6 @@ func updateCardTitleHandler(e *core.RequestEvent) error {
 		}
 
 		record.Set("title", string(title))
-		// See createCardHandler's own comment: slug is the actual
-		// uniqueness boundary the DB index enforces.
-		record.Set("slug", slug.FromTitle(string(title)))
 		// See createCardHandler's own comment on titleLc.
 		record.Set("titleLc", slug.ToLowerKey(string(title)))
 		if err := e.App.Save(record); err != nil {

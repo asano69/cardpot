@@ -8,6 +8,7 @@ import {
   type CardEvent,
 } from "../api/cardApi";
 import type { CardRecord } from "../models/card";
+import { titleToSlug } from "../models/slugify";
 import { computePosition } from "../position";
 import { withCardsFlip, registerCardElement } from "../cardFlip";
 
@@ -31,13 +32,16 @@ export { cardsById };
 // already-loaded cardsById store instead of asking the server (see
 // CardForm.tsx). A plain linear scan is cheap even for a few thousand
 // cards, and it avoids the network round-trip the old server-side
-// lookup (fetchCardBySlug) required on every card open.
+// lookup (fetchCardBySlug) required on every card open. Cards no
+// longer store their own slug (see lib/models/card.ts) -- it's
+// derived from title on demand here, the same way titleToSegment
+// derives a card's own edit link (see CardItem.tsx).
 export function findCardByPotAndSlug(
   potId: string,
   slug: string,
 ): CardRecord | undefined {
   return Object.values(cardsById).find(
-    (card) => card.pot === potId && card.slug === slug,
+    (card) => card.pot === potId && titleToSlug(card.title) === slug,
   );
 }
 

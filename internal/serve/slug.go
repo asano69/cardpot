@@ -34,31 +34,26 @@ import (
 const defaultTitle = "Untitled"
 
 // resolveUniqueTitleInPot returns a value derived from base that is
-// unique among "cards" records in pot -- unique on its DERIVED SLUG,
-// not on the raw title string. This matters because slug.FromTitle is
-// not injective: "a b" and "a_b" both normalize to the slug "a_b", so
-// checking title equality alone would let two different titles land
-// on the same slug and become indistinguishable by URL (see
-// internal/slug/slug.go's own doc comment on this exact ambiguity).
+// unique among "cards" records in pot -- unique on its DERIVED
+// titleLc (see internal/slug.ToLowerKey), not on the raw title
+// string. This matters because ToLowerKey is not injective: "a b"
+// and "a_b" both normalize to "a_b" (case-insensitive, spaces mapped
+// to underscores), so checking title equality alone would let two
+// different titles land on the same URL segment (see
+// internal/slug.FromTitle, which derives that segment from title on
+// demand) and become indistinguishable by URL.
 // excludeID lets a record keep resolving against its own current
 // title without colliding with itself (pass "" for a brand-new
 // record). Collisions are disambiguated with a numeric suffix ("_2",
-// "_3", ...) appended to the title; the corresponding slug is
-// recomputed from the bumped title, not appended separately.
+// "_3", ...) appended to the title.
 func resolveUniqueTitleInPot(app core.App, pot, base, excludeID string) (string, error) {
 	value := base
 	for suffix := 2; ; suffix++ {
-		candidateSlug := slug.FromTitle(value)
-		// titleLc must also be checked: the (pot, titleLc) unique index is
-		// case-insensitive, so "A" and "a" collide there even though their
-		// slugs differ. Checking it here lets a case-only collision resolve
-		// to "a_2" directly, instead of only being caught after a failed
-		// Save on the DB's own unique constraint.
 		candidateTitleLc := slug.ToLowerKey(value)
 		_, err := app.FindFirstRecordByFilter(
 			"cards",
-			"pot = {:pot} && id != {:id} && (slug = {:slug} || titleLc = {:titleLc})",
-			dbx.Params{"pot": pot, "slug": candidateSlug, "titleLc": candidateTitleLc, "id": excludeID},
+			"pot = {:pot} && id != {:id} && titleLc = {:titleLc}",
+			dbx.Params{"pot": pot, "titleLc": candidateTitleLc, "id": excludeID},
 		)
 		if errors.Is(err, sql.ErrNoRows) {
 			return value, nil

@@ -160,57 +160,58 @@ func saveResolvedCard(t *testing.T, app core.App, pot string, candidate TitleCan
 		record.Set("pot", pot)
 	}
 	record.Set("title", string(title))
-	record.Set("slug", slug.FromTitle(string(title)))
+	record.Set("titleLc", slug.ToLowerKey(string(title)))
 	if err := app.Save(record); err != nil {
 		t.Fatalf("save card: %v", err)
 	}
 	return record
 }
 
-// TestScenario_SpaceVsUnderscoreNeverCollideOnSlug is a regression
-// test for the slug-collision bug: "a b" and "a_b" are different
-// titles but normalize to the same slug "a_b" (see
-// internal/slug.FromTitle). Confirming the second one must never
-// silently share the first one's slug -- it has to get bumped to a
-// numbered suffix instead, or the two cards become indistinguishable
-// by URL.
-func TestScenario_SpaceVsUnderscoreNeverCollideOnSlug(t *testing.T) {
+// TestScenario_SpaceVsUnderscoreNeverCollideOnTitleLc is a regression
+// test for the URL-segment-collision bug: "a b" and "a_b" are
+// different titles but normalize to the same URL segment "a_b" (see
+// internal/slug.FromTitle) -- and, not coincidentally, the same
+// titleLc too (see internal/slug.ToLowerKey). Confirming the second
+// one must never silently share the first one's titleLc -- it has to
+// get bumped to a numbered suffix instead, or the two cards would
+// become indistinguishable by URL.
+func TestScenario_SpaceVsUnderscoreNeverCollideOnTitleLc(t *testing.T) {
 	app := newSlugTestApp(t)
 
 	first := saveResolvedCard(t, app, "pot1", "a b", nil)
-	if first.GetString("title") != "a b" || first.GetString("slug") != "a_b" {
-		t.Fatalf("first card = title %q slug %q, want title %q slug %q",
-			first.GetString("title"), first.GetString("slug"), "a b", "a_b")
+	if first.GetString("title") != "a b" || first.GetString("titleLc") != "a_b" {
+		t.Fatalf("first card = title %q titleLc %q, want title %q titleLc %q",
+			first.GetString("title"), first.GetString("titleLc"), "a b", "a_b")
 	}
 
 	second := saveResolvedCard(t, app, "pot1", "a_b", nil)
-	if second.GetString("title") != "a_b_2" || second.GetString("slug") != "a_b_2" {
-		t.Fatalf("second card = title %q slug %q, want title %q slug %q",
-			second.GetString("title"), second.GetString("slug"), "a_b_2", "a_b_2")
+	if second.GetString("title") != "a_b_2" || second.GetString("titleLc") != "a_b_2" {
+		t.Fatalf("second card = title %q titleLc %q, want title %q titleLc %q",
+			second.GetString("title"), second.GetString("titleLc"), "a_b_2", "a_b_2")
 	}
 }
 
-// TestScenario_RepeatedCandidateChainBumpsThroughSlugCollisions
+// TestScenario_RepeatedCandidateChainBumpsThroughTitleLcCollisions
 // extends the same idea across three successive saves ("a b", then
 // "a b" again, then "a_b"), each of which must resolve to a distinct
-// slug even though only two distinct raw candidates are ever typed.
-func TestScenario_RepeatedCandidateChainBumpsThroughSlugCollisions(t *testing.T) {
+// titleLc even though only two distinct raw candidates are ever typed.
+func TestScenario_RepeatedCandidateChainBumpsThroughTitleLcCollisions(t *testing.T) {
 	app := newSlugTestApp(t)
 
 	first := saveResolvedCard(t, app, "pot1", "a b", nil)
-	if first.GetString("slug") != "a_b" {
-		t.Fatalf("first slug = %q, want %q", first.GetString("slug"), "a_b")
+	if first.GetString("titleLc") != "a_b" {
+		t.Fatalf("first titleLc = %q, want %q", first.GetString("titleLc"), "a_b")
 	}
 
 	second := saveResolvedCard(t, app, "pot1", "a b", nil)
-	if second.GetString("title") != "a b_2" || second.GetString("slug") != "a_b_2" {
-		t.Fatalf("second card = title %q slug %q, want title %q slug %q",
-			second.GetString("title"), second.GetString("slug"), "a b_2", "a_b_2")
+	if second.GetString("title") != "a b_2" || second.GetString("titleLc") != "a_b_2" {
+		t.Fatalf("second card = title %q titleLc %q, want title %q titleLc %q",
+			second.GetString("title"), second.GetString("titleLc"), "a b_2", "a_b_2")
 	}
 
 	third := saveResolvedCard(t, app, "pot1", "a_b", nil)
-	if third.GetString("title") != "a_b_3" || third.GetString("slug") != "a_b_3" {
-		t.Fatalf("third card = title %q slug %q, want title %q slug %q",
-			third.GetString("title"), third.GetString("slug"), "a_b_3", "a_b_3")
+	if third.GetString("title") != "a_b_3" || third.GetString("titleLc") != "a_b_3" {
+		t.Fatalf("third card = title %q titleLc %q, want title %q titleLc %q",
+			third.GetString("title"), third.GetString("titleLc"), "a_b_3", "a_b_3")
 	}
 }

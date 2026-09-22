@@ -45,7 +45,6 @@ export function asCardTitle(title: string): CardTitle {
 export interface CardRecord {
   id: string;
   title: CardTitle;
-  slug: string;
   description: string;
   image: string;
   pot: string;
