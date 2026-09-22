@@ -18,25 +18,6 @@ package slug
 
 import "strings"
 
-// reserved is the set of segments FromTitle must never produce, since
-// they collide with a static route (see
-// frontend/src/lib/router.tsx's "/:slug/new").
-var reserved = map[string]bool{
-	"new": true,
-}
-
-// IsReserved reports whether title, compared case-insensitively, is
-// exactly one of the reserved words above ("new", "New", "NEW", ...
-// -- 8 case variants in all). It performs no other normalization: a
-// title that merely contains a reserved word (e.g. "News",
-// "new_spaper") is not itself reserved -- only an exact match is.
-// Used by the "cards" collection's OnRecordValidate hook (see
-// internal/serve/validate.go) to reject a card title that would
-// otherwise collide with a reserved route segment.
-func IsReserved(title string) bool {
-	return reserved[strings.ToLower(title)]
-}
-
 // splitWords splits s on runs of "[", "]", and space, dropping empty
 // fields. Brackets commonly show up in text imported from
 // bracket-link wikis (e.g. "[some page]") and act as a word separator
@@ -109,7 +90,7 @@ func FromTitle(title string) string {
 	} else {
 		joined = strings.ReplaceAll(title, " ", "_")
 	}
-	if reserved[joined] {
+	if cardTitleReserved[joined] {
 		return joined + "_"
 	}
 	return joined
