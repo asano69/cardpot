@@ -7,6 +7,7 @@ import PotLayout from "../pages/pots/PotLayout";
 import PotList from "../pages/pots/PotList";
 import CardList from "../pages/cards/CardList";
 import CardForm from "../pages/cards/CardForm";
+import ApiDocs from "../pages/admin/ApiDocs";
 
 // All top-level routes in one place, so adding or removing a page never
 // requires touching main.tsx.
@@ -17,6 +18,10 @@ import CardForm from "../pages/cards/CardForm";
 export default function AppRouter() {
   return (
     <Router root={AppShell}>
+      {/* GET-only API tester (see ApiDocs.tsx). Lives under AppShell/
+          AuthGate like every other route, so it reuses the same
+          PocketBase session -- no separate login needed. */}
+      <Route path="/admin/api-docs" component={ApiDocs} />
       <Route path="/" component={PotList} />
       {/* The pot segment in the URL is now the pot's unique
           "name" field, not its PocketBase id (see CardList.tsx
