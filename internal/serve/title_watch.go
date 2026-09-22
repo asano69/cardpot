@@ -106,6 +106,8 @@ func (w *titleWatcher) resolve(app core.App, room, raw string) {
 		// cards.go's own handlers -- the (pot, slug) unique index is
 		// what actually enforces uniqueness.
 		record.Set("slug", slug.FromTitle(string(title)))
+		// See cards.go's own comment on titleLc.
+		record.Set("titleLc", slug.ToLowerKey(string(title)))
 		if err := app.Save(record); err != nil {
 			if attempt < maxTitleRetries-1 {
 				candidate = TitleCandidate(fmt.Sprintf("%s_%d", raw, attempt+2))

@@ -97,6 +97,10 @@ func createCardHandler(e *core.RequestEvent) error {
 		// resolveUniqueTitleInPot's own comment on why title alone
 		// can't guard against this).
 		record.Set("slug", slug.FromTitle(string(title)))
+		// A case-insensitive search key, kept in sync with title on
+		// every save since PocketBase has no generated columns (see
+		// internal/slug.ToLowerKey's own comment).
+		record.Set("titleLc", slug.ToLowerKey(string(title)))
 		record.Set("position", position)
 		if err := e.App.Save(record); err != nil {
 			if attempt < maxTitleRetries-1 {
@@ -146,6 +150,8 @@ func updateCardTitleHandler(e *core.RequestEvent) error {
 		// See createCardHandler's own comment: slug is the actual
 		// uniqueness boundary the DB index enforces.
 		record.Set("slug", slug.FromTitle(string(title)))
+		// See createCardHandler's own comment on titleLc.
+		record.Set("titleLc", slug.ToLowerKey(string(title)))
 		if err := e.App.Save(record); err != nil {
 			if attempt < maxTitleRetries-1 {
 				candidate = TitleCandidate(fmt.Sprintf("%s_%d", req.TitleCandidate, attempt+2))

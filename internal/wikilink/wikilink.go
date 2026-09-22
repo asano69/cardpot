@@ -75,6 +75,10 @@ func Sync(app core.App, cardID, text string) error {
 			record.Set("target_pot", pot)
 			record.Set("target_slug", targetSlug)
 			record.Set("target_title", targets[targetSlug])
+			// See internal/slug.ToLowerKey's own comment -- a
+			// case-insensitive search key, mirroring "cards"'s own
+			// titleLc field.
+			record.Set("target_titleLc", slug.ToLowerKey(targets[targetSlug]))
 			if err := tx.Save(record); err != nil {
 				return err
 			}
