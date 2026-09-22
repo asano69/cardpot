@@ -937,7 +937,7 @@ func init() {
 						"maxSelect": 0,
 						"minSelect": 0,
 						"name": "pot",
-						"presentable": false,
+						"presentable": true,
 						"required": false,
 						"system": false,
 						"type": "relation"
@@ -951,7 +951,7 @@ func init() {
 						"min": 0,
 						"name": "title",
 						"pattern": "^[^\\[\\]]*$",
-						"presentable": false,
+						"presentable": true,
 						"primaryKey": false,
 						"required": true,
 						"system": false,
@@ -1054,17 +1054,6 @@ func init() {
 						"required": false,
 						"system": false,
 						"type": "number"
-					},
-					{
-						"help": "",
-						"hidden": false,
-						"id": "json3367362480",
-						"maxSize": 100000,
-						"name": "description2",
-						"presentable": false,
-						"required": false,
-						"system": false,
-						"type": "json"
 					}
 				],
 				"id": "pbc_2527524235",
