@@ -38,11 +38,12 @@ const IMAGE_EXTENSION_RE =
 
 function inferUrl(value: string): UrlKind | undefined {
   if (!value.includes("://") || !URL.canParse(value)) return undefined;
+  const scheme = new URL(value).protocol; // "http:" | "https:" | "javascript:" ...
+  if (scheme !== "http:" && scheme !== "https:") return undefined;
   return GYAZO_RE.test(value) || IMAGE_EXTENSION_RE.test(value)
     ? "image"
     : "link";
 }
-
 // Classifies the already-paired content of a single bracket. Keep this pure:
 // it is the ambiguity boundary and is independently testable without Lezer.
 export function decideBracketNodeType(content: string): BracketDecision {
