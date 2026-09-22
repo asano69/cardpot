@@ -959,6 +959,21 @@ func init() {
 					},
 					{
 						"autogeneratePattern": "",
+						"help": "",
+						"hidden": false,
+						"id": "text293159488",
+						"max": 240,
+						"min": 1,
+						"name": "titleLc",
+						"pattern": "^[^\\[\\] A-Z]*$",
+						"presentable": false,
+						"primaryKey": false,
+						"required": true,
+						"system": false,
+						"type": "text"
+					},
+					{
+						"autogeneratePattern": "",
 						"help": "Because title → slug is deterministic, enforcing uniqueness on slug implicitly enforces uniqueness on title. As a result, the (pot, title) uniqueness constraint is redundant.",
 						"hidden": false,
 						"id": "text2560465762",
@@ -969,21 +984,6 @@ func init() {
 						"presentable": false,
 						"primaryKey": false,
 						"required": true,
-						"system": false,
-						"type": "text"
-					},
-					{
-						"autogeneratePattern": "",
-						"help": "",
-						"hidden": false,
-						"id": "text293159488",
-						"max": 0,
-						"min": 0,
-						"name": "titleLc",
-						"pattern": "",
-						"presentable": false,
-						"primaryKey": false,
-						"required": false,
 						"system": false,
 						"type": "text"
 					},
@@ -1074,7 +1074,8 @@ func init() {
 				"id": "pbc_2527524235",
 				"indexes": [
 					"CREATE UNIQUE INDEX ` + "`" + `idx_r30t04lu5q` + "`" + ` ON ` + "`" + `cards` + "`" + ` (\n  ` + "`" + `pot` + "`" + `,\n  ` + "`" + `slug` + "`" + `\n)",
-					"CREATE UNIQUE INDEX ` + "`" + `idx_cards_pot_normtitle` + "`" + ` ON ` + "`" + `cards` + "`" + ` (\n  ` + "`" + `pot` + "`" + `,\n  (CASE WHEN REPLACE(` + "`" + `title` + "`" + `, ' ', '_') = 'new' THEN 'new_' ELSE REPLACE(` + "`" + `title` + "`" + `, ' ', '_') END)\n)"
+					"CREATE UNIQUE INDEX ` + "`" + `idx_cards_pot_normtitle` + "`" + ` ON ` + "`" + `cards` + "`" + ` (\n  ` + "`" + `pot` + "`" + `,\n  (CASE WHEN REPLACE(` + "`" + `title` + "`" + `, ' ', '_') = 'new' THEN 'new_' ELSE REPLACE(` + "`" + `title` + "`" + `, ' ', '_') END)\n)",
+					"CREATE UNIQUE INDEX ` + "`" + `idx_x1tpfrw3fh` + "`" + ` ON ` + "`" + `cards` + "`" + ` (\n  ` + "`" + `pot` + "`" + `,\n  ` + "`" + `titleLc` + "`" + `\n)"
 				],
 				"listRule": null,
 				"name": "cards",
@@ -1114,6 +1115,21 @@ func init() {
 						"presentable": true,
 						"primaryKey": false,
 						"required": true,
+						"system": false,
+						"type": "text"
+					},
+					{
+						"autogeneratePattern": "",
+						"help": "",
+						"hidden": false,
+						"id": "text675907466",
+						"max": 0,
+						"min": 0,
+						"name": "nameLc",
+						"pattern": "",
+						"presentable": false,
+						"primaryKey": false,
+						"required": false,
 						"system": false,
 						"type": "text"
 					},
@@ -1347,6 +1363,21 @@ func init() {
 					},
 					{
 						"autogeneratePattern": "",
+						"help": "",
+						"hidden": false,
+						"id": "text3658611499",
+						"max": 240,
+						"min": 1,
+						"name": "target_titleLc",
+						"pattern": "^[^\\[\\] A-Z]*$",
+						"presentable": false,
+						"primaryKey": false,
+						"required": true,
+						"system": false,
+						"type": "text"
+					},
+					{
+						"autogeneratePattern": "",
 						"help": " title → slug is deterministic",
 						"hidden": false,
 						"id": "text1434815955",
@@ -1357,21 +1388,6 @@ func init() {
 						"presentable": false,
 						"primaryKey": false,
 						"required": true,
-						"system": false,
-						"type": "text"
-					},
-					{
-						"autogeneratePattern": "",
-						"help": "",
-						"hidden": false,
-						"id": "text3658611499",
-						"max": 0,
-						"min": 0,
-						"name": "target_titleLc",
-						"pattern": "",
-						"presentable": false,
-						"primaryKey": false,
-						"required": false,
 						"system": false,
 						"type": "text"
 					},
@@ -1400,7 +1416,8 @@ func init() {
 				"indexes": [
 					"CREATE INDEX ` + "`" + `idx_xpwo6k1rx9` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (` + "`" + `source` + "`" + `)",
 					"CREATE INDEX ` + "`" + `idx_iy23prqvly` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (\n  ` + "`" + `target_slug` + "`" + `,\n  ` + "`" + `target_pot` + "`" + `\n)",
-					"CREATE INDEX ` + "`" + `idx_vqvthaafz5` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (\n  ` + "`" + `target_title` + "`" + `,\n  ` + "`" + `target_pot` + "`" + `\n)"
+					"CREATE INDEX ` + "`" + `idx_vqvthaafz5` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (\n  ` + "`" + `target_title` + "`" + `,\n  ` + "`" + `target_pot` + "`" + `\n)",
+					"CREATE UNIQUE INDEX ` + "`" + `idx_4alpksbb3u` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (\n  ` + "`" + `target_pot` + "`" + `,\n  ` + "`" + `target_titleLc` + "`" + `\n)"
 				],
 				"listRule": null,
 				"name": "card_links",
