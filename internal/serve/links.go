@@ -11,6 +11,7 @@ import (
 	"errors"
 	"net/http"
 	"sort"
+	"strings"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
@@ -55,24 +56,43 @@ func links1HopHandler(e *core.RequestEvent) error {
 	return e.JSON(http.StatusOK, map[string]any{"links1hop": result})
 }
 
-// findCardBySlug scans every card in pot for the one whose title slugifies
-// (see internal/slug.FromTitle) to targetSlug. There is currently no stored
-// slug field to look up directly, so this mirrors the frontend's own
-// reverse lookup (CardForm.tsx's findCardByPotAndSlug). Returns (nil, nil)
-// when no card matches.
+// findCardBySlug looks up the card in pot whose title slugifies (see
+// internal/slug.FromTitle) to targetSlug, using the "cards" collection's
+// existing (pot, titleLc) unique index (idx_x1tpfrw3fh) instead of a full
+// linear scan.
+//
+// titleLc is derived from title via internal/slug.ToLowerKey: lowercase,
+// spaces replaced with underscores. Since a card's title can never contain
+// "[" or "]" (see the "cards" collection's title field pattern), FromTitle's
+// no-bracket branch performs that same space-to-underscore substitution, so
+// strings.ToLower(targetSlug) is exactly the titleLc of any title that would
+// slugify to targetSlug -- letting the lookup go straight through the
+// unique index instead of scanning every card in the pot. Titles can also
+// never be a reserved word (see internal/slug.IsReserved, enforced by
+// validate.go's OnRecordValidate hook), so FromTitle's reserved-suffix
+// branch never applies to a stored title and can be ignored here.
+//
+// The FromTitle comparison below is kept as a final check on the single
+// matched candidate (not a loop over every card) since titleLc is case-
+// insensitive but targetSlug is not: it guards against a different-case
+// title that happens to share the same titleLc. Returns (nil, nil) when no
+// card matches.
 func findCardBySlug(app core.App, potID, targetSlug string) (*core.Record, error) {
-	candidates, err := app.FindRecordsByFilter(
-		"cards", "pot = {:pot}", "", 0, 0, dbx.Params{"pot": potID},
+	candidateTitleLc := strings.ToLower(targetSlug)
+	candidate, err := app.FindFirstRecordByFilter(
+		"cards", "pot = {:pot} && titleLc = {:titleLc}",
+		dbx.Params{"pot": potID, "titleLc": candidateTitleLc},
 	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
-	for _, candidate := range candidates {
-		if slug.FromTitle(candidate.GetString("title")) == targetSlug {
-			return candidate, nil
-		}
+	if slug.FromTitle(candidate.GetString("title")) != targetSlug {
+		return nil, nil
 	}
-	return nil, nil
+	return candidate, nil
 }
 
 // links1Hop merges cardID's outgoing wiki links (to cards that actually
