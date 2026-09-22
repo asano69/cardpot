@@ -105,6 +105,36 @@ func TestResolveTitle_ExcludeIDLetsARecordKeepItsOwnTitle(t *testing.T) {
 	}
 }
 
+func TestResolveTitle_ReservedWordGetsUnderscoreSuffix(t *testing.T) {
+	// Regression test: a first candidate that is a reserved route segment
+	// (case-insensitively) used to fall through to the OnRecordValidate
+	// hook and get bumped to "..._2" instead of "..._".
+	app := newSlugTestApp(t)
+
+	got, err := resolveTitle(app, "pot1", "New", "")
+	if err != nil {
+		t.Fatalf("resolveTitle: %v", err)
+	}
+	if got != "New_" {
+		t.Errorf(`resolveTitle("New") = %q, want %q`, got, "New_")
+	}
+}
+
+func TestResolveTitle_ReservedWordCollisionBumpsFurther(t *testing.T) {
+	// A second reserved-looking candidate that collides with the first
+	// one's disambiguated titleLc ("new_") must bump past it.
+	app := newSlugTestApp(t)
+	createCard(t, app, "pot1", "New_")
+
+	got, err := resolveTitle(app, "pot1", "NEW", "")
+	if err != nil {
+		t.Fatalf("resolveTitle: %v", err)
+	}
+	if got != "NEW__2" {
+		t.Errorf(`resolveTitle("NEW") = %q, want %q`, got, "NEW__2")
+	}
+}
+
 func TestResolveTitle_StripsBracketLinkSyntax(t *testing.T) {
 	// Regression test: a header typed with Scrapbox-style bracket-link
 	// markup must resolve to its plain-word form, not the literal

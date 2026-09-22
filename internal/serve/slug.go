@@ -86,6 +86,16 @@ func resolveTitle(app core.App, pot string, candidate TitleCandidate, excludeID 
 	if base == "" {
 		base = defaultTitle
 	}
+	// A base that case-insensitively matches a reserved route segment (see
+	// internal/slug.IsReserved) is disambiguated here, before the
+	// uniqueness loop below runs. Without this, such a title would only be
+	// caught later by the "cards" collection's OnRecordValidate hook (see
+	// validate.go), and that rejection made the retry loop in
+	// createCardHandler/updateCardTitleHandler bump the title into
+	// "..._2" instead of the properly disambiguated "..._".
+	if slug.IsReserved(base) {
+		base += "_"
+	}
 	value, err := resolveUniqueTitleInPot(app, pot, base, excludeID)
 	return CardTitle(value), err
 }
