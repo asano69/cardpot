@@ -52,6 +52,14 @@ func registerRoutes(e *core.ServeEvent) error {
 	admin.POST("/cards", createCardHandler)
 	admin.POST("/cards/{id}/title", updateCardTitleHandler)
 
+	// Public-data-shaped but still gated behind superuser auth (see
+	// pb.ts: every collection here is superuser-only), since it
+	// returns the same card fields the "cards"/"card_links"
+	// collections themselves do.
+	pages := e.Router.Group("/api/pages")
+	pages.Bind(apis.RequireSuperuserAuth())
+	pages.GET("/{pot}/{slug}/links1hop", links1HopHandler)
+
 	// Serves the whole Vite build output (index.html, hashed JS/CSS
 	// under assets/, and public/ files like favicon.svg copied to the
 	// root) from a single route. indexFallback=true makes any unmatched
