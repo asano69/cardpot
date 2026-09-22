@@ -25,6 +25,7 @@ func Run(app *pocketbase.PocketBase, cfg *config.Config) error {
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 
 	app.OnServe().BindFunc(registerRoutes)
+	registerValidationHooks(app)
 
 	slog.Info("listening", "addr", addr)
 	return apis.Serve(app, apis.ServeConfig{

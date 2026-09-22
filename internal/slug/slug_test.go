@@ -71,3 +71,29 @@ func TestFromTitle_LeavesFullWidthSpaceUntouched(t *testing.T) {
 		t.Errorf("FromTitle(%q) = %q, want %q", "A\u3000B", got, want)
 	}
 }
+
+func TestIsReserved(t *testing.T) {
+	cases := []struct {
+		title string
+		want  bool
+	}{
+		{"new", true},
+		{"New", true},
+		{"NEW", true},
+		{"nEw", true},
+		{"neW", true},
+		{"NeW", true},
+		{"nEW", true},
+		{"NEw", true},
+		{"News", false},
+		{"new_spaper", false},
+		{"newspaper", false},
+		{" new", false},
+		{"new ", false},
+	}
+	for _, c := range cases {
+		if got := IsReserved(c.title); got != c.want {
+			t.Errorf("IsReserved(%q) = %v, want %v", c.title, got, c.want)
+		}
+	}
+}
