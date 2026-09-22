@@ -1111,7 +1111,7 @@ func init() {
 						"min": 1,
 						"name": "name",
 						"pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$",
-						"presentable": true,
+						"presentable": false,
 						"primaryKey": false,
 						"required": true,
 						"system": false,
@@ -1126,9 +1126,9 @@ func init() {
 						"min": 1,
 						"name": "title",
 						"pattern": "",
-						"presentable": false,
+						"presentable": true,
 						"primaryKey": false,
-						"required": false,
+						"required": true,
 						"system": false,
 						"type": "text"
 					},
@@ -1136,12 +1136,12 @@ func init() {
 						"help": "",
 						"hidden": false,
 						"id": "number3619293394",
-						"max": null,
-						"min": null,
+						"max": 9007199254740991,
+						"min": 0,
 						"name": "position",
 						"onlyInt": false,
 						"presentable": false,
-						"required": false,
+						"required": true,
 						"system": false,
 						"type": "number"
 					},
@@ -1197,7 +1197,8 @@ func init() {
 				],
 				"id": "pbc_575754128",
 				"indexes": [
-					"CREATE UNIQUE INDEX ` + "`" + `idx_1zt5k21ybq` + "`" + `\nON ` + "`" + `pots` + "`" + ` (` + "`" + `name` + "`" + ` COLLATE NOCASE);"
+					"CREATE UNIQUE INDEX ` + "`" + `idx_1zt5k21ybq` + "`" + `\nON ` + "`" + `pots` + "`" + ` (` + "`" + `name` + "`" + ` COLLATE NOCASE);",
+					"CREATE UNIQUE INDEX ` + "`" + `idx_8nhmy9s1sd` + "`" + ` ON ` + "`" + `pots` + "`" + ` (` + "`" + `position` + "`" + `)"
 				],
 				"listRule": null,
 				"name": "pots",
