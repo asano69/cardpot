@@ -1313,6 +1313,21 @@ func init() {
 					},
 					{
 						"autogeneratePattern": "",
+						"help": "",
+						"hidden": false,
+						"id": "text3517796858",
+						"max": 0,
+						"min": 0,
+						"name": "target_pot",
+						"pattern": "",
+						"presentable": false,
+						"primaryKey": false,
+						"required": false,
+						"system": false,
+						"type": "text"
+					},
+					{
+						"autogeneratePattern": "",
 						"help": "target_title is intended solely as a placeholder to retain information while the target remains unresolved.",
 						"hidden": false,
 						"id": "text2543706983",
@@ -1365,8 +1380,8 @@ func init() {
 				"id": "pbc_449060851",
 				"indexes": [
 					"CREATE INDEX ` + "`" + `idx_xpwo6k1rx9` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (` + "`" + `source` + "`" + `)",
-					"CREATE INDEX ` + "`" + `idx_iy23prqvly` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (` + "`" + `target_slug` + "`" + `)",
-					"CREATE INDEX ` + "`" + `idx_vqvthaafz5` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (` + "`" + `target_title` + "`" + `)"
+					"CREATE INDEX ` + "`" + `idx_iy23prqvly` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (\n  ` + "`" + `target_slug` + "`" + `,\n  ` + "`" + `target_pot` + "`" + `\n)",
+					"CREATE INDEX ` + "`" + `idx_vqvthaafz5` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (\n  ` + "`" + `target_title` + "`" + `,\n  ` + "`" + `target_pot` + "`" + `\n)"
 				],
 				"listRule": null,
 				"name": "card_links",
