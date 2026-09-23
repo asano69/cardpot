@@ -104,7 +104,7 @@ func Import(app core.App, potName string, r io.Reader) (ImportResult, error) {
 	// screen.
 	for i := len(file.Pages) - 1; i >= 0; i-- {
 		page := file.Pages[i]
-		created, err := importPage(app, persistence, pot.Id, page)
+		created, err := importImportedPage(app, persistence, pot.Id, page)
 		if err != nil {
 			return result, fmt.Errorf("import page %q: %w", page.Title, err)
 		}
@@ -121,7 +121,7 @@ func Import(app core.App, potName string, r io.Reader) (ImportResult, error) {
 // It reports whether the card was newly created. A failure after the card
 // record was created leaves an empty card behind; re-running the import
 // fills it in.
-func importPage(app core.App, p *ydocPersistence, pot string, page importPage) (created bool, err error) {
+func importImportedPage(app core.App, p *ydocPersistence, pot string, page importPage) (created bool, err error) {
 	card, err := findCardByTitle(app, pot, page.Title)
 	if err != nil {
 		return false, err
