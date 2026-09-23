@@ -63,7 +63,10 @@ export default function Sidebar(props: SidebarProps) {
             min-h-0 + overflow-y-auto is what lets a long pot list
             scroll on its own instead of pushing the footer below off
             the sidebar. */}
-        <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {/* Same pt-10 as MainLayout's <main>: TopBar is now fixed and
+            floats over this column too, so its own top item needs the
+            same offset to stay clear of the header. */}
+        <div class="flex min-h-0 flex-1 flex-col overflow-y-auto pt-10">
           <nav class="p-2 text-md">
             <For each={NAV_ITEMS}>
               {(item) => (

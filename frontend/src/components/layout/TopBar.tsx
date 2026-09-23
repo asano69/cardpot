@@ -24,7 +24,11 @@ export interface TopBarProps {
 export default function TopBar(props: TopBarProps) {
   return (
     <header
-      class={`sticky top-0 z-40 flex items-center border-b border-border bg-nav ${props.class}`}
+      // fixed (not sticky): TopBar must float above the scrollable
+      // content rather than sit in normal flex flow, or there is
+      // nothing visually behind it for backdrop-blur to blur (see
+      // MainLayout's matching pt-10 on <main>/Sidebar's nav).
+      class={`fixed inset-x-0 top-0 z-40 flex items-center border-b border-border bg-nav/70 backdrop-blur-[10px] ${props.class}`}
     >
       <div class="grid w-full grid-cols-[1fr_auto_1fr] items-center px-2 md:px-8">
         <div class="flex items-center gap-3 justify-self-start">

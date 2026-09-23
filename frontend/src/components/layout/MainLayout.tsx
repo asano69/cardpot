@@ -19,7 +19,7 @@ export default function MainLayout(props: ParentProps) {
     // h-screen + overflow-hidden bounds this to the viewport height, so
     // Sidebar and <main> below can each scroll independently instead of
     // the whole page scrolling as one.
-    <div class="app flex h-screen flex-col overflow-hidden bg-bg">
+    <div class="app relative flex h-screen flex-col overflow-hidden bg-bg">
       {/* TopBar with logo and sidebar toggle. Height/spacing is
           controlled here (not inside TopBar) via the `class` prop, so
           this is the one place to tweak the bar's size. */}
@@ -48,7 +48,12 @@ export default function MainLayout(props: ParentProps) {
             flex-1, while pages with normal document flow (Home, the
             notes list) are unaffected: they just grow past this height
             and main's own overflow-y-auto still scrolls them. */}
-        <main class="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {/* pt-10 matches TopBar's fixed h-10: TopBar no longer takes
+            up flex space (it floats via `fixed`), so this reserves
+            the same visual gap while letting main's own scrolled
+            content actually pass underneath the translucent header,
+            which is what makes its backdrop-blur visible. */}
+        <main class="flex min-h-0 flex-1 flex-col overflow-y-auto pt-10">
           {/* Horizontal padding shrinks to almost nothing on narrow
               (phone-width) screens, since every pixel of width matters
               there, and grows back once there's room to spare.
