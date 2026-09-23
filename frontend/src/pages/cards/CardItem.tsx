@@ -88,6 +88,11 @@ export default function CardItem(props: CardItemProps) {
             />
           </Show>
         </div>
+        {/* Whole-card hover tint (see styles/components.css's
+            .card-grid-item .hover). Its position in the DOM doesn't
+            affect stacking -- that's controlled by CSS z-index -- this
+            just keeps it grouped with .pin, the other overlay layer. */}
+        <div class="hover" aria-hidden="true" />
       </A>
     </li>
   );

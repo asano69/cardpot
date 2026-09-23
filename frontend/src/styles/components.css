@@ -51,6 +51,7 @@
   }
 
   .card-grid-item a {
+    position: relative;
     display: block;
     height: 100%;
     width: 100%;
@@ -70,10 +71,38 @@
     box-shadow: 0 2px 0 rgba(0, 0, 0, 0.23);
   }
 
+  /* Whole-card hover tint. An absolutely positioned element always
+   * paints above ordinary, non-positioned siblings regardless of its
+   * z-index, so without .content also having its own explicit stacking
+   * position (see below), this overlay would cover the title/
+   * description text entirely instead of just tinting behind it.
+   * A translucent color is required too: a solid/opaque color here
+   * would look like a flat gray fill once opacity transitions to 1,
+   * rather than a subtle tint. pointer-events: none keeps it out of
+   * the way of clicks and dnd-kit's drag handling. */
+  .card-grid-item a .hover {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    opacity: 0;
+    background-color: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.06));
+    transition: opacity 0.1s;
+    pointer-events: none;
+  }
+
+  .card-grid-item a:hover .hover {
+    opacity: 1;
+  }
+
   /* calc(100% - 5px) matches Cosense's own .content sizing; the 5px
    * gap is what keeps .description's column layout below from
    * touching the card's bottom edge. */
   .card-grid-item .content {
+    /* Stacked above .hover (see its own comment): position:relative
+     * alone doesn't move this box, it only makes its z-index take
+     * effect, which is what keeps the tint from covering the text. */
+    position: relative;
+    z-index: 1;
     height: calc(100% - 5px);
     display: flex;
     flex-direction: column;
