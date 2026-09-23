@@ -1,6 +1,6 @@
 module github.com/asano69/cardpot
 
-go 1.25.9
+go 1.27
 
 require (
 	github.com/pocketbase/dbx v1.12.0
@@ -29,7 +29,6 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/yuin/goldmark/v2 v2.1.5 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/image v0.43.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
