@@ -40,6 +40,7 @@ func main() {
 
 	root.AddCommand(
 		serveCmd(app),
+		importCmd(app),
 		pbcmd.NewSuperuserCommand(app),
 	)
 

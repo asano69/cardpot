@@ -79,6 +79,15 @@ func resolveUniqueTitleInPot(app core.App, pot, base, excludeID string) (string,
 // presence of brackets triggers normalization, so plain whitespace
 // variants are never altered.
 func resolveTitle(app core.App, pot string, candidate TitleCandidate, excludeID string) (CardTitle, error) {
+	value, err := resolveUniqueTitleInPot(app, pot, titleBase(candidate), excludeID)
+	return CardTitle(value), err
+}
+
+// titleBase normalizes candidate into the title resolveTitle starts from,
+// before any uniqueness suffix is applied. It is also what a caller must
+// use to find the card a candidate would resolve to when no other card
+// competes for it (see import.go).
+func titleBase(candidate TitleCandidate) string {
 	base := string(candidate)
 	if strings.ContainsAny(base, "[]") {
 		base = slug.StripBracketLinks(base)
@@ -88,7 +97,7 @@ func resolveTitle(app core.App, pot string, candidate TitleCandidate, excludeID 
 	}
 	// A base that case-insensitively matches a reserved route segment (see
 	// internal/slug.IsReserved) is disambiguated here, before the
-	// uniqueness loop below runs. Without this, such a title would only be
+	// uniqueness loop runs. Without this, such a title would only be
 	// caught later by the "cards" collection's OnRecordValidate hook (see
 	// validate.go), and that rejection made the retry loop in
 	// createCardHandler/updateCardTitleHandler bump the title into
@@ -96,8 +105,7 @@ func resolveTitle(app core.App, pot string, candidate TitleCandidate, excludeID 
 	if slug.IsReserved(base) {
 		base += "_"
 	}
-	value, err := resolveUniqueTitleInPot(app, pot, base, excludeID)
-	return CardTitle(value), err
+	return base
 }
 
 // titleSuffixRe matches the trailing numeric dedup suffix a title gets
