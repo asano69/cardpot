@@ -145,7 +145,7 @@
     border-radius: 0 2px 0 4px;
     background: linear-gradient(
       45deg,
-      var(--color-border) 50%,
+      var(--color-pined) 50%,
       var(--color-bg) 50%
     );
     z-index: 2;

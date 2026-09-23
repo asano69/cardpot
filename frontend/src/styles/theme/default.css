@@ -53,9 +53,10 @@
   --color-line-title: #000000;
   --color-line-text: #4a4a4a;
 
-  --color-panel: #f8f8f8;
+  --color-panel: #ffffff;
   --color-surface: #fcfcfc;
-  --color-card: #f8f8f8;
+  --color-card: #ffffff;
+  --color-pined: #aaa;
   --color-field: #fefefe;
   --color-border: #d0d7de;
   --color-hover-bg: #f0f0f0;
@@ -77,6 +78,7 @@
   --color-panel: #252525;
   --color-surface: #1e1e1e;
   --color-card: #2a2a2a;
+  --color-pined: #545860;
   --color-field: #333333;
   --color-border: #46494f;
   --color-hover-bg: #3a3a3a;
