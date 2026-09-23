@@ -43,6 +43,7 @@ from flask import Flask
 - PocketBase v0.39+
 - reearth/ygo v1.49.5
 - blevesearch/bleve
+- centrifugal/centrifuge v0.39+
 
 ### frontend
 - Solid.js v1.9
