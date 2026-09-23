@@ -47,7 +47,7 @@
 /* Default preset, light mode -- the fallback used by any
  * [data-theme][data-mode] combination that has no override block. */
 :root {
-  --color-bg: #e8e9eb;
+  --color-bg: #dcdde0;
   --color-text: #4a4a4a;
 
   --color-line-title: #000000;
@@ -56,13 +56,13 @@
   --color-panel: #f8f8f8;
   --color-surface: #fcfcfc;
   --color-card: #f8f8f8;
-  --color-field: #f9fafb;
+  --color-field: #fefefe;
   --color-border: #d0d7de;
   --color-hover-bg: #f0f0f0;
   --color-hover-border: #777777;
   --color-active-bg: #e4e4e4;
   --color-active-border: #666666;
-  --color-nav: #dcdde0;
+  --color-nav: #ccccd1;
   --color-card-title-bg: #f2f2f3;
 }
 
