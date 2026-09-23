@@ -43,14 +43,14 @@ export default function TopBar(props: TopBarProps) {
           </Show>
           {/* Version hidden on mobile: there isn't room for it next to
               the hamburger toggle and title. */}
-          <Logo linkable showVersion={!props.isMobile} />
+          <Logo linkable />
           {/* Current pot's name, when the active page registered one
               (see CardList/CardForm's useTopBarPotLink call). Links
               back to that pot's card list. */}
           <Show when={topBarPotLink()}>
             <A
               href={`/${topBarPotLink()!.slug}`}
-              class="truncate font-sans text-sm font-bold hover:bg-hover-bg"
+              class="truncate font-sans text-md font-bold hover:bg-hover-bg p-2"
             >
               {topBarPotLink()!.name}
             </A>
