@@ -35,8 +35,6 @@ export interface PotWindow {
   ids: string[];
   // Server-reported number of cards in the pot (all pages).
   total: number;
-  // Last page loaded (0 = none yet).
-  page: number;
   // Whether the first page request has settled, successfully or not.
   loaded: boolean;
   loading: boolean;
@@ -85,41 +83,54 @@ export function mergeCards(
 // is loaded yet) and appends it to that pot's window. A no-op while a
 // request is in flight or once every card is loaded. A failure is only
 // logged and leaves the window as it was.
+//
+// The page requested is the one containing the window's end, not "the
+// last page + 1": after a card inside the window is deleted, the
+// server's list shifts up by one, and asking for the following page
+// would skip the card that slid into the gap. The overlap this causes
+// is harmless because ids already in the window are ignored.
 export async function loadNextCardsPage(potId: string): Promise<void> {
   if (!windows[potId]) {
-    setWindows(potId, {
-      ids: [],
-      total: 0,
-      page: 0,
-      loaded: false,
-      loading: false,
-    });
+    setWindows(potId, { ids: [], total: 0, loaded: false, loading: false });
   }
   const win = windows[potId];
-  if (win.loading || (win.page > 0 && win.page * PAGE_SIZE >= win.total)) {
-    return;
-  }
+  if (win.loading || (win.loaded && win.ids.length >= win.total)) return;
 
   setWindows(potId, "loading", true);
+  let result: Awaited<ReturnType<typeof fetchCardsPage>> | undefined;
   try {
-    const result = await fetchCardsPage(potId, win.page + 1, PAGE_SIZE);
-    mergeCards(result.items, { skipFlip: true });
+    const page = Math.floor(win.ids.length / PAGE_SIZE) + 1;
+    result = await fetchCardsPage(potId, page, PAGE_SIZE);
+  } catch (err) {
+    console.error("[cards] failed to load cards page:", err);
+  }
+
+  // The user may have left the pot while the request was in flight.
+  if (!windows[potId]) return;
+
+  if (result) {
+    const items = result.items;
+    mergeCards(items, { skipFlip: true });
     setWindows(
       potId,
       produce((w) => {
         const seen = new Set(w.ids);
-        for (const card of result.items) {
-          if (!seen.has(card.id)) w.ids.push(card.id);
+        let added = 0;
+        for (const card of items) {
+          if (!seen.has(card.id)) {
+            w.ids.push(card.id);
+            added++;
+          }
         }
-        w.total = result.totalItems;
-        w.page += 1;
+        // A page that adds nothing new means the server's list no
+        // longer lines up with the window (e.g. cards were reordered
+        // elsewhere). Treat the window as complete so scrolling cannot
+        // request the same page forever; a reload fixes it.
+        w.total = added === 0 ? w.ids.length : result.totalItems;
       }),
     );
-  } catch (err) {
-    console.error("[cards] failed to load cards page:", err);
-  } finally {
-    setWindows(potId, { loaded: true, loading: false });
   }
+  setWindows(potId, { loaded: true, loading: false });
 }
 
 // Fetches one card by its URL slug straight from the server and puts
@@ -132,6 +143,25 @@ export async function openCardBySlug(
   const record = await fetchCardBySlug(potId, slug);
   if (record) mergeCards([record], { skipFlip: true });
   return record;
+}
+
+// Forgets a pot's window and every card of that pot the store holds
+// (window cards and any card opened by URL), so the store only holds
+// what the user is looking at. Called when the user leaves the pot
+// (see PotLayout).
+export function releasePot(potId: string) {
+  setWindows(
+    produce((all) => {
+      delete all[potId];
+    }),
+  );
+  setCardsById(
+    produce((store) => {
+      for (const id of Object.keys(store)) {
+        if (store[id].pot === potId) delete store[id];
+      }
+    }),
+  );
 }
 
 // Removes a card from the store and, when its pot has a loaded window,

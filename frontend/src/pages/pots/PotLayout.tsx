@@ -1,8 +1,14 @@
-import { createResource, type ParentProps } from "solid-js";
+import {
+  createEffect,
+  createResource,
+  onCleanup,
+  type ParentProps,
+} from "solid-js";
 import { useParams } from "@solidjs/router";
 
 import { fetchPotByName } from "@/lib/api/pots";
 import { useTopBarPotLink } from "@/lib/topBarSlot";
+import { releasePot } from "@/lib/stores/cardsStore";
 import PotContext from "./PotContext";
 
 // Wraps every route scoped to a single pot (CardList, CardForm) so the
@@ -28,6 +34,14 @@ export default function PotLayout(props: ParentProps) {
   useTopBarPotLink(() =>
     pot() ? { name: pot()!.title, slug: params.slug } : undefined,
   );
+
+  // Drops the pot's loaded cards once the user leaves it (another pot,
+  // or the pot list). Moving between CardList and CardForm keeps this
+  // layout mounted, so the window survives that.
+  createEffect(() => {
+    const id = pot()?.id;
+    if (id) onCleanup(() => releasePot(id));
+  });
 
   return (
     <PotContext.Provider value={pot}>{props.children}</PotContext.Provider>

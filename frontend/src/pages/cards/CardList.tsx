@@ -86,16 +86,32 @@ export default function CardList() {
   ));
 
   // Loads the next page whenever the sentinel at the end of the grid
-  // scrolls into view. Set up from the sentinel's own ref callback
-  // because the sentinel only exists once the first page has loaded.
+  // is in view. An observer only reports changes, so a page that still
+  // leaves the sentinel in view (a tall screen, or a request that
+  // finished while the sentinel was already visible) would stall the
+  // scroll; the effect below therefore re-observes the sentinel
+  // whenever the number of loaded cards changes, to get a fresh report.
+  const observer = new IntersectionObserver((entries) => {
+    const potId = pot()?.id;
+    if (entries[0].isIntersecting && potId) void loadNextCardsPage(potId);
+  });
+  onCleanup(() => observer.disconnect());
+
+  // The sentinel only exists once the first page has loaded, so it is
+  // registered from its own ref callback.
+  let sentinel: HTMLLIElement | undefined;
   const observeSentinel = (el: HTMLLIElement) => {
-    const observer = new IntersectionObserver((entries) => {
-      const potId = pot()?.id;
-      if (entries[0].isIntersecting && potId) void loadNextCardsPage(potId);
-    });
+    sentinel = el;
     observer.observe(el);
-    onCleanup(() => observer.disconnect());
   };
+
+  createEffect(() => {
+    void potWindow(pot()?.id)?.ids.length;
+    if (sentinel) {
+      observer.unobserve(sentinel);
+      observer.observe(sentinel);
+    }
+  });
 
   // Persists a drag-to-reorder drop: only the moved card's own
   // position changes (see lib/position.ts), computed from whichever
@@ -129,7 +145,16 @@ export default function CardList() {
     // the dragged card second or later instead of first.
     const group = ordered.filter((card) => card.pin === moved.pin);
     const groupStart = moved.pin ? 0 : ordered.length - group.length;
-    const groupEnd = groupStart + group.length - 1;
+    // While more cards remain unloaded, the card that would sit below
+    // the window's last card is unknown, so a drop cannot go past that
+    // last card: there is no neighbor position to place it against.
+    const win = potWindow(pot()?.id);
+    const moreUnloaded = win !== undefined && win.ids.length < win.total;
+    const isWindowTail = groupStart + group.length === ordered.length;
+    const groupEnd = Math.max(
+      groupStart,
+      groupStart + group.length - 1 - (moreUnloaded && isWindowTail ? 1 : 0),
+    );
     const clampedIndex = Math.min(Math.max(newIndex, groupStart), groupEnd);
     if (initialIndex === clampedIndex) return;
 

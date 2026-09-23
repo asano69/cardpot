@@ -55,5 +55,3 @@ from flask import Flask
 - googlechrome/workbox
 
 
-## Work in progress
-- 10万枚規模のカードに対応できるように、起動時のカードコレクションフルフェッチをやめる。
