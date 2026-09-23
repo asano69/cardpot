@@ -33,7 +33,7 @@ func newTestApp(t *testing.T) core.App {
 	links.Fields.Add(
 		&core.TextField{Name: "source"},
 		&core.TextField{Name: "target_title"},
-		&core.TextField{Name: "target_slug"},
+		&core.TextField{Name: "target_titleLc"},
 		&core.TextField{Name: "target_pot"},
 	)
 	if err := app.Save(links); err != nil {
@@ -81,20 +81,20 @@ func TestSync_StoresLinksWithoutCheckingTargets(t *testing.T) {
 
 	got := map[string]string{}
 	for _, record := range linksFrom(t, app, a.Id) {
-		got[record.GetString("target_slug")] = record.GetString("target_title")
+		got[record.GetString("target_titleLc")] = record.GetString("target_title")
 		if record.GetString("target_pot") != "pot1" {
 			t.Errorf("target_pot = %q, want %q", record.GetString("target_pot"), "pot1")
 		}
 	}
-	want := map[string]string{"B": "B", "a_b": "a b"}
-	if len(got) != len(want) || got["B"] != "B" || got["a_b"] != "a b" {
+	want := map[string]string{"b": "B", "a_b": "a b"}
+	if len(got) != len(want) || got["b"] != "B" || got["a_b"] != "a b" {
 		t.Errorf("links = %v, want %v", got, want)
 	}
 }
 
-func TestSync_IdentityIsTheSlug(t *testing.T) {
-	// "a b" and "a_b" derive the same slug, so they are one link; the first
-	// spelling in the text is the one kept.
+func TestSync_IdentityIsTheTitleLc(t *testing.T) {
+	// "a b" and "a_b" derive the same titleLc, so they are one link; the
+	// first spelling in the text is the one kept.
 	app := newTestApp(t)
 	a := createCard(t, app)
 
@@ -104,9 +104,9 @@ func TestSync_IdentityIsTheSlug(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("got %d links, want 1", len(got))
 	}
-	if got[0].GetString("target_slug") != "a_b" || got[0].GetString("target_title") != "a_b" {
-		t.Errorf("link = slug %q title %q, want %q / %q",
-			got[0].GetString("target_slug"), got[0].GetString("target_title"), "a_b", "a_b")
+	if got[0].GetString("target_titleLc") != "a_b" || got[0].GetString("target_title") != "a_b" {
+		t.Errorf("link = titleLc %q title %q, want %q / %q",
+			got[0].GetString("target_titleLc"), got[0].GetString("target_title"), "a_b", "a_b")
 	}
 }
 
@@ -123,9 +123,9 @@ func TestSync_KeepsSelfLinks(t *testing.T) {
 	}
 }
 
-func TestSync_SkipsLinksWithEmptySlug(t *testing.T) {
-	// A link made only of brackets and spaces derives an empty slug, which
-	// the schema cannot store.
+func TestSync_SkipsLinksWithEmptyTitleLc(t *testing.T) {
+	// A link made only of brackets and spaces derives no usable titleLc,
+	// which the schema cannot store.
 	app := newTestApp(t)
 	a := createCard(t, app)
 
@@ -155,8 +155,8 @@ func TestSync_AddsAndRemovesLinks(t *testing.T) {
 	mustSync(t, app, a.Id, "A\n[C]")
 
 	got := linksFrom(t, app, a.Id)
-	if len(got) != 1 || got[0].GetString("target_slug") != "C" {
-		t.Fatalf("links after edit = %d (want 1 to %q)", len(got), "C")
+	if len(got) != 1 || got[0].GetString("target_titleLc") != "c" {
+		t.Fatalf("links after edit = %d (want 1 to %q)", len(got), "c")
 	}
 
 	mustSync(t, app, a.Id, "A\nno links")

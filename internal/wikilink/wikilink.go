@@ -2,17 +2,20 @@
 // [wiki links] found in each card's text, so 1-hop and 2-hop link views
 // can be answered from the database instead of re-parsing every card.
 //
-// A link row stores its target only as text (target_title and target_slug,
-// mirroring the "cards" fields of the same names). The target card may not
-// exist yet, may be renamed, or may be created later, so a link never needs
-// to know whether its target exists. Its identity is the target_slug -- the
-// same key the frontend uses to resolve a title to a card -- and a target is
-// matched to a card only at query time, by (pot, slug).
+// A link row stores its target only as text (target_title and
+// target_titleLc, mirroring the "cards" fields of the same names). The
+// target card may not exist yet, may be renamed, or may be created later,
+// so a link never needs to know whether its target exists. Its identity is
+// target_titleLc -- the same case-insensitive key "cards" itself uses to
+// enforce title uniqueness (see internal/serve/slug.go's
+// resolveUniqueTitleInPot) -- and a target is matched to a card only at
+// query time, by (pot, titleLc).
 package wikilink
 
 import (
 	"database/sql"
 	"errors"
+	"strings"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
@@ -27,8 +30,8 @@ import (
 // A card that no longer exists is ignored.
 //
 // Every link is stored, including links to the card itself: whether that is
-// a self link depends on the card's current slug, which can change without
-// Sync running again, so it is left to whoever queries the links.
+// a self link depends on the card's current titleLc, which can change
+// without Sync running again, so it is left to whoever queries the links.
 func Sync(app core.App, cardID, text string) error {
 	source, err := app.FindRecordById("cards", cardID)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -39,7 +42,7 @@ func Sync(app core.App, cardID, text string) error {
 	}
 	pot := source.GetString("pot")
 
-	targets := targetTitles(parser.Parse(text).WikiLinkTitles())
+	targets := targetTitlesByTitleLc(parser.Parse(text).WikiLinkTitles())
 
 	existing, err := app.FindRecordsByFilter(
 		"card_links", "source = {:source}", "", 0, 0,
@@ -64,21 +67,17 @@ func Sync(app core.App, cardID, text string) error {
 				return err
 			}
 		}
-		for _, targetSlug := range missing {
+		for _, targetTitleLc := range missing {
 			record := core.NewRecord(collection)
 			record.Set("source", cardID)
 			// A wiki link's target is resolved within the same pot as its
 			// source card (see slug.go's resolveTitle), so this is stored
-			// alongside target_slug/target_title to make the reverse lookup
-			// (which cards link to a given card) possible without having to
+			// alongside target_titleLc to make the reverse lookup (which
+			// cards link to a given card) possible without having to
 			// re-derive the pot from the source card each time.
 			record.Set("target_pot", pot)
-			record.Set("target_slug", targetSlug)
-			record.Set("target_title", targets[targetSlug])
-			// See internal/slug.ToLowerKey's own comment -- a
-			// case-insensitive search key, mirroring "cards"'s own
-			// titleLc field.
-			record.Set("target_titleLc", slug.ToLowerKey(targets[targetSlug]))
+			record.Set("target_titleLc", targetTitleLc)
+			record.Set("target_title", targets[targetTitleLc])
 			if err := tx.Save(record); err != nil {
 				return err
 			}
@@ -87,43 +86,49 @@ func Sync(app core.App, cardID, text string) error {
 	})
 }
 
-// targetTitles maps each linked slug to the raw title under which it was
-// first linked. Links are the same when their slugs are (see
-// slug.FromTitle), matching how the frontend resolves a title to a card.
-// Titles that derive an empty slug (e.g. a link made only of brackets and
-// spaces) cannot be stored and are dropped.
-func targetTitles(titles []string) map[string]string {
-	titleBySlug := make(map[string]string, len(titles))
+// targetTitlesByTitleLc maps each linked title's titleLc identity (see
+// internal/slug.ToLowerKey) to the raw title under which it was first
+// linked. This is the same normalization resolveTitle applies to a card's
+// own title before saving (see internal/serve/slug.go), so a wiki link's
+// identity always matches how its target card would itself be identified.
+// Titles that normalize to no usable text at all (e.g. a link made only of
+// brackets and spaces) cannot be stored and are dropped.
+func targetTitlesByTitleLc(titles []string) map[string]string {
+	titleByTitleLc := make(map[string]string, len(titles))
 	for _, title := range titles {
-		s := slug.FromTitle(title)
-		if s == "" {
+		base := title
+		if strings.ContainsAny(base, "[]") {
+			base = slug.StripBracketLinks(base)
+		}
+		if base == "" {
 			continue
 		}
-		if _, seen := titleBySlug[s]; !seen {
-			titleBySlug[s] = title
+		key := slug.ToLowerKey(base)
+		if _, seen := titleByTitleLc[key]; !seen {
+			titleByTitleLc[key] = title
 		}
 	}
-	return titleBySlug
+	return titleByTitleLc
 }
 
-// diff compares the stored rows with the wanted targets (keyed by slug).
-// stale rows (a link that is gone, or a duplicate row) must be deleted;
-// missing slugs need a new row. The stored target_title of a kept row is left
-// as is: the row's identity is its slug, so a different spelling of the same
-// slug is not a change.
+// diff compares the stored rows with the wanted targets (keyed by
+// titleLc). stale rows (a link that is gone, or a duplicate row) must be
+// deleted; missing keys need a new row. The stored target_title of a kept
+// row is left as is: the row's identity is its titleLc, so a different
+// spelling of the same titleLc is not a change.
 func diff(existing []*core.Record, targets map[string]string) (stale []*core.Record, missing []string) {
 	kept := make(map[string]bool, len(existing))
 	for _, record := range existing {
-		targetSlug := record.GetString("target_slug")
-		if _, wanted := targets[targetSlug]; wanted && !kept[targetSlug] {
-			kept[targetSlug] = true
+		targetTitleLc := record.GetString("target_titleLc")
+		if _, wanted := targets[targetTitleLc]; wanted && !kept[targetTitleLc] {
+			kept[targetTitleLc] = true
 			continue
 		}
 		stale = append(stale, record)
 	}
-	for targetSlug := range targets {
-		if !kept[targetSlug] {
-			missing = append(missing, targetSlug)
+	for targetTitleLc := range targets {
+		if !kept[targetTitleLc] {
+			missing = append(missing, targetTitleLc)
 		}
 	}
 	return stale, missing
