@@ -1,11 +1,4 @@
-import {
-  createMemo,
-  createSignal,
-  For,
-  onCleanup,
-  onMount,
-  Show,
-} from "solid-js";
+import { createEffect, createMemo, For, onCleanup, Show, untrack } from "solid-js";
 import { useParams } from "@solidjs/router";
 import { DragDropProvider } from "@dnd-kit/solid";
 import { isSortable } from "@dnd-kit/solid/sortable";
@@ -13,7 +6,12 @@ import { PointerSensor, KeyboardSensor } from "@dnd-kit/dom";
 
 import Loading from "@/components/Loading";
 import CardItem from "./CardItem";
-import { cardsById, cardsLoaded, moveCard } from "@/lib/stores/cardsStore";
+import {
+  cardsById,
+  loadNextCardsPage,
+  moveCard,
+  potWindow,
+} from "@/lib/stores/cardsStore";
 import { computePosition } from "@/lib/position";
 import { useTitle } from "@/lib/useTitle";
 import { useFooterSlot } from "@/lib/footerSlot";
@@ -51,20 +49,26 @@ export default function CardList() {
   // now registered once by the parent PotLayout route, not here -- see
   // lib/router.tsx and pages/pots/PotLayout.tsx.
 
-  // The whole "cards" collection is now fetched once for the app's
-  // entire lifetime (see AppShell.tsx and lib/stores/cardsStore.ts's
-  // loadAllCards), not paginated per pot per CardList mount -- this
-  // just waits for that one fetch to have landed.
+  // Only a window of this pot's cards is held in the store (see
+  // lib/stores/cardsStore.ts): the first page loads here on first
+  // visit, later pages load as the sentinel below scrolls into view.
+  createEffect(() => {
+    const potId = pot()?.id;
+    if (potId && !untrack(() => potWindow(potId))) {
+      void loadNextCardsPage(potId);
+    }
+  });
 
   // Sorted descending by the fractional-indexing "position" column
   // (see lib/position.ts), with id as a tie-breaker for equal
   // positions -- new cards get the highest position (see CardForm),
-  // so this puts the newest card first. Derived from the shared store,
-  // so this list reacts to realtime create/update/delete events too,
-  // not just the initial fetch.
+  // so this puts the newest card first. Only the loaded window is
+  // sorted, and the store keeps it live through realtime
+  // create/update/delete events.
   const cards = createMemo(() =>
-    Object.values(cardsById)
-      .filter((card) => card.pot === pot()?.id)
+    (potWindow(pot()?.id)?.ids ?? [])
+      .map((id) => cardsById[id])
+      .filter((card) => card !== undefined)
       // Pinned cards always sort before unpinned ones; within each
       // group the existing position/id ordering is unchanged.
       .sort((a, b) => {
@@ -73,38 +77,25 @@ export default function CardList() {
       }),
   );
 
-  // Footer's status-bar slot: this pot's total card count. Reads from
-  // `cards()` (not `visibleCards()`), so it reflects the whole pot
-  // rather than only what's currently paged into the DOM below.
+  // Footer's status-bar slot: this pot's total card count as reported
+  // by the server, not just what has been loaded so far.
   useFooterSlot(() => (
     <div class="page-list-status">
-      <span class="item">{cards().length} pages</span>
+      <span class="item">{potWindow(pot()?.id)?.total ?? 0} pages</span>
     </div>
   ));
 
-  // How many of `cards()` are actually mounted into the DOM.
-  // with thousands of cards would otherwise mount that many CardItems
-  // (each with its own useSortable registration) at once, which was
-  // enough to freeze the tab entirely -- see loadMoreOnScroll below.
-  const PAGE_SIZE = 100;
-  const [visibleCount, setVisibleCount] = createSignal(PAGE_SIZE);
-  const visibleCards = createMemo(() => cards().slice(0, visibleCount()));
-
-  // Reveals another PAGE_SIZE cards whenever the sentinel at the end
-  // of the grid scrolls into view. This intentionally does nothing
-  // about dnd-kit's own per-card registration cost once thousands of
-  // cards have scrolled past and accumulated in the DOM -- that's a
-  // separate problem, left for later.
-  let sentinelRef: HTMLLIElement | undefined;
-  onMount(() => {
+  // Loads the next page whenever the sentinel at the end of the grid
+  // scrolls into view. Set up from the sentinel's own ref callback
+  // because the sentinel only exists once the first page has loaded.
+  const observeSentinel = (el: HTMLLIElement) => {
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        setVisibleCount((count) => count + PAGE_SIZE);
-      }
+      const potId = pot()?.id;
+      if (entries[0].isIntersecting && potId) void loadNextCardsPage(potId);
     });
-    if (sentinelRef) observer.observe(sentinelRef);
+    observer.observe(el);
     onCleanup(() => observer.disconnect());
-  });
+  };
 
   // Persists a drag-to-reorder drop: only the moved card's own
   // position changes (see lib/position.ts), computed from whichever
@@ -164,18 +155,22 @@ export default function CardList() {
   };
 
   return (
-    <Show when={cardsLoaded()} fallback={<Loading />}>
+    <Show when={potWindow(pot()?.id)?.loaded} fallback={<Loading />}>
       <DragDropProvider sensors={sensors} onDragEnd={handleDragEnd}>
         <ul class="card-grid">
-          <For each={visibleCards()}>
+          <For each={cards()}>
             {(card, index) => (
               <CardItem card={card} index={index()} potSlug={params.slug} />
             )}
           </For>
-          {/* Invisible row-spanning marker: growing visibleCount when
+          {/* Invisible row-spanning marker: loading the next page when
               this scrolls into view is what drives the infinite
               scroll above. */}
-          <li ref={sentinelRef} aria-hidden="true" class="col-span-full h-px" />
+          <li
+            ref={observeSentinel}
+            aria-hidden="true"
+            class="col-span-full h-px"
+          />
         </ul>
       </DragDropProvider>
     </Show>

@@ -1,3 +1,4 @@
+import { ClientResponseError } from "pocketbase";
 import pb from "./pb";
 import type { CardRecord, TitleCandidate } from "../models/card";
 import { titleToSlug } from "../models/slugify";
@@ -43,18 +44,7 @@ export async function updateCardTitle(
   });
 }
 
-// Fetches every "cards" record, newest first.
-//
-// TODO(pagination): full-collection fetch. Kept only until
-// cardsStore.ts stops calling it (see fetchCardsPage below for its
-// replacement) -- a pot can hold up to ~100k cards, too many to load
-// eagerly on every app open.
-export async function fetchAllCards(): Promise<CardRecord[]> {
-  return await pb
-    .collection("cards")
-    .getFullList<CardRecord>({ sort: "-created" });
-}
-
+// Sort order
 // Sort order for every windowed card listing: pinned cards first,
 // then descending position, with id as a tiebreak for equal
 // positions. Mirrors CardList.tsx's own client-side sort from the
@@ -70,6 +60,11 @@ export interface CardsPage {
 // Fetches one page of a pot's cards via PocketBase's built-in list
 // pagination -- no custom backend route needed, since filter + sort +
 // page/perPage + totalItems are all standard `getList` features.
+//
+// requestKey: null opts out of the SDK's auto-cancellation, which
+// aborts an in-flight request whenever another one with the same
+// method and path starts -- here that would let a page load and a
+// slug lookup (or two quick page loads) cancel each other.
 export async function fetchCardsPage(
   potId: string,
   page: number,
@@ -80,6 +75,7 @@ export async function fetchCardsPage(
     .getList<CardRecord>(page, perPage, {
       filter: pb.filter("pot = {:pot}", { pot: potId }),
       sort: CARDS_SORT,
+      requestKey: null,
     });
   return { items: result.items, totalItems: result.totalItems };
 }
@@ -95,7 +91,8 @@ export async function fetchCardsPage(
 // returns is re-verified against titleToSlug(title) -- the real slug
 // comparison -- before being trusted. Returns undefined when no card
 // matches, whether because titleLc found nothing or because the
-// verification failed.
+// verification failed. Any other failure (network, auth, ...) is
+// rethrown, so a caller never mistakes it for "no such card".
 export async function fetchCardBySlug(
   potId: string,
   slug: string,
@@ -110,9 +107,13 @@ export async function fetchCardBySlug(
           pot: potId,
           titleLc: candidateTitleLc,
         }),
+        { requestKey: null },
       );
-  } catch {
-    return undefined;
+  } catch (err) {
+    if (err instanceof ClientResponseError && err.status === 404) {
+      return undefined;
+    }
+    throw err;
   }
   return titleToSlug(record.title) === slug ? record : undefined;
 }

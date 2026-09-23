@@ -1,4 +1,4 @@
-import { createSignal, createEffect, Show, untrack } from "solid-js";
+import { createSignal, createEffect, Show } from "solid-js";
 import { useParams, useNavigate } from "@solidjs/router";
 import { Alert } from "@kobalte/core/alert";
 import type * as Y from "yjs";
@@ -10,8 +10,7 @@ import ActionsMenu from "@/components/menus/ActionsMenu";
 import { Trash2, Pin, PinOff, Wrench } from "@/lib/icons";
 import {
   cardsById,
-  cardsLoaded,
-  findCardByPotAndSlug,
+  openCardBySlug,
   removeCard,
   setCardPinned,
 } from "@/lib/stores/cardsStore";
@@ -55,12 +54,16 @@ export default function CardForm() {
   // (keyed Show below) -- never stale across a card switch.
   const [contentSnapshot, setContentSnapshot] = createSignal<() => string>();
   let urlSegment = params.cardSlug ?? "";
+  // Identifies the latest slug lookup, so a slow response for a card the
+  // user has already navigated away from is dropped.
+  let openRequest = 0;
 
   // The comparison is still necessary because router params react to our own
   // replace navigation. It is intentionally limited to URL echoes; editor
   // identity itself is now derived solely from cardId/draft via keyed Show.
   createEffect(() => {
     if (!params.cardSlug) {
+      openRequest++;
       setCardId(undefined);
       setDraftYdoc(undefined);
       setDraft({});
@@ -68,7 +71,7 @@ export default function CardForm() {
       return;
     }
     const potId = pot()?.id;
-    if (!potId || !cardsLoaded()) return;
+    if (!potId) return;
 
     // Compare decoded forms: urlSegment holds the raw (unencoded) slug,
     // but params.cardSlug reflects the URL's actual path, which the
@@ -79,23 +82,26 @@ export default function CardForm() {
     // through on every keystroke instead of short-circuiting.
     const slug = segmentToSlug(params.cardSlug);
     if (slug === urlSegment && cardId()) return;
-    // Reading cardsById via findCardByPotAndSlug must not make this effect
-    // re-run on every unrelated cardsById mutation. Without untrack, the
-    // mergeCards() call inside DraftCardEditor's create() -- which runs
-    // before onCreated/handleCreated hands off the draft's own Y.Doc --
-    // used to make this effect "discover" the just-created record on its
-    // own and resolve cardId here first, so ExistingCardEditor mounted
-    // with a brand-new empty Y.Doc instead of the draft's real one.
-    const record = untrack(() => findCardByPotAndSlug(potId, slug));
     setDraftYdoc(undefined);
     setFocusLineOnOpen(undefined);
-    if (record) {
-      setCardId(record.id);
-      setDraft(undefined);
-    } else {
-      setCardId(undefined);
-      setDraft({ initialTitle: slugToTitle(slug) });
-    }
+    // The card is looked up on the server, not in the store, so nothing
+    // here depends on which cards happen to be loaded. The loading
+    // fallback below shows until the lookup settles.
+    const request = ++openRequest;
+    openCardBySlug(potId, slug)
+      .then((record) => {
+        if (request !== openRequest) return;
+        if (record) {
+          setCardId(record.id);
+          setDraft(undefined);
+        } else {
+          setCardId(undefined);
+          setDraft({ initialTitle: slugToTitle(slug) });
+        }
+      })
+      .catch((err) => {
+        console.error("[card-form] failed to open card:", err);
+      });
   });
 
   // Updates only the browser's address bar, bypassing Solid Router's own
@@ -237,7 +243,7 @@ export default function CardForm() {
     );
   });
   return (
-    <Show when={cardsLoaded() && (cardId() || draft())} fallback={<Loading />}>
+    <Show when={cardId() || draft()} fallback={<Loading />}>
       <div class="page-column">
         <div class="col-page flex flex-col">
           <Show when={mergeTarget()}>

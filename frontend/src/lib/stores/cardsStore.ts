@@ -1,14 +1,13 @@
-import { createSignal } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import {
   deleteCard,
-  fetchAllCards,
+  fetchCardBySlug,
+  fetchCardsPage,
   subscribeToCards,
   updateCard,
   type CardEvent,
 } from "../api/cardApi";
 import type { CardRecord } from "../models/card";
-import { titleToSlug } from "../models/slugify";
 import { computePosition } from "../position";
 import { withCardsFlip, registerCardElement } from "../cardFlip";
 
@@ -17,56 +16,50 @@ import { withCardsFlip, registerCardElement } from "../cardFlip";
 // cards get animated, not something callers need to know about).
 export { registerCardElement };
 
-// Global cache of every "cards" record seen so far, keyed by id. Pages
-// that fetch cards (e.g. CardList) call mergeCards() to seed their
-// results in here; startCardsSubscription() -- called once from
-// AppShell -- then keeps the cache live via PocketBase's realtime API.
-// Any page deriving its view from cardsById therefore reflects other
-// users' edits, creates, and deletes without polling or its own
-// subscription.
+// How many cards one page request loads.
+const PAGE_SIZE = 100;
+
+// Cache of the cards the UI currently needs: every card of a loaded
+// pot window (see below) plus any card opened by URL. A pot can hold
+// ~100k cards, so this is deliberately NOT the whole collection.
+// startCardsSubscription() keeps these entries live via PocketBase's
+// realtime API; events for cards not held here are ignored.
 const [cardsById, setCardsById] = createStore<Record<string, CardRecord>>({});
 
 export { cardsById };
 
-// Resolves a card by its parent pot id and URL slug, scanning the
-// already-loaded cardsById store instead of asking the server (see
-// CardForm.tsx). A plain linear scan is cheap even for a few thousand
-// cards, and it avoids the network round-trip the old server-side
-// lookup (fetchCardBySlug) required on every card open. Cards no
-// longer store their own slug (see lib/models/card.ts) -- it's
-// derived from title on demand here, the same way titleToSegment
-// derives a card's own edit link (see CardItem.tsx).
-export function findCardByPotAndSlug(
-  potId: string,
-  slug: string,
-): CardRecord | undefined {
-  return Object.values(cardsById).find(
-    (card) => card.pot === potId && titleToSlug(card.title) === slug,
-  );
+// The part of one pot's card list loaded so far. `ids` are in load
+// order only -- callers sort what they display (see CardList), since a
+// realtime or local change can reorder cards inside the window.
+export interface PotWindow {
+  ids: string[];
+  // Server-reported number of cards in the pot (all pages).
+  total: number;
+  // Last page loaded (0 = none yet).
+  page: number;
+  // Whether the first page request has settled, successfully or not.
+  loaded: boolean;
+  loading: boolean;
 }
 
-// Whether the initial full-collection fetch (see loadAllCards below)
-// has completed. CardList gates its "Loading" spinner on this instead
-// of tracking its own per-mount fetch, since the whole "cards"
-// collection is loaded once for the app's lifetime now, not once per
-// CardList mount.
-const [cardsLoaded, setCardsLoaded] = createSignal(false);
+const [windows, setWindows] = createStore<Record<string, PotWindow>>({});
 
-export { cardsLoaded };
+// Reactive when called inside a tracking scope.
+export function potWindow(potId: string | undefined): PotWindow | undefined {
+  return potId ? windows[potId] : undefined;
+}
 
-// Merges a freshly fetched batch of cards into the store. Existing
-// entries for the same id are overwritten, so a stale cached copy
-// never wins over a fresh fetch. By default this is wrapped in
-// withCardsFlip so a reorder (e.g. another user's drag) animates every
-// affected card into its new grid slot instead of snapping there
-// instantly.
+// Merges a batch of cards into the store. Existing entries for the same
+// id are overwritten, so a stale cached copy never wins over a fresh
+// fetch. By default this is wrapped in withCardsFlip so a reorder (e.g.
+// another user's drag) animates every affected card into its new grid
+// slot instead of snapping there instantly.
 //
 // `skipFlip` opts out of that animation. dnd-kit already animates the
 // dragged card into place during the gesture itself, so replaying our
 // own FLIP animation on top of that (when the local dragger's own
 // optimistic update lands) makes the card jump/stutter instead of
-// looking smooth -- see CardList's handleDragEnd, the only caller
-// that passes this.
+// looking smooth -- see moveCard below.
 export function mergeCards(
   records: CardRecord[],
   options?: { skipFlip?: boolean },
@@ -88,32 +81,94 @@ export function mergeCards(
   }
 }
 
-// Fetches every "cards" record once and merges it into the shared
-// store. Called once from AppShell (see AppShell.tsx) instead of once
-// per CardList mount: the "cards" collection carries no document body
-// (that lives in the Yjs room -- see internal/serve/ydoc.go), so even
-// a few thousand records is a small payload, small enough that
-// loading it all upfront beats paginating it per pot per visit.
-//
-// Runs independently of startCardsSubscription below -- any realtime
-// event that arrives while this fetch is still in flight is simply
-// overwritten by this fetch's own mergeCards call once it resolves,
-// since both write through the same last-write-wins store.
-export async function loadAllCards(): Promise<void> {
+// Loads the next page of a pot's card list (the first page when nothing
+// is loaded yet) and appends it to that pot's window. A no-op while a
+// request is in flight or once every card is loaded. A failure is only
+// logged and leaves the window as it was.
+export async function loadNextCardsPage(potId: string): Promise<void> {
+  if (!windows[potId]) {
+    setWindows(potId, {
+      ids: [],
+      total: 0,
+      page: 0,
+      loaded: false,
+      loading: false,
+    });
+  }
+  const win = windows[potId];
+  if (win.loading || (win.page > 0 && win.page * PAGE_SIZE >= win.total)) {
+    return;
+  }
+
+  setWindows(potId, "loading", true);
   try {
-    const records = await fetchAllCards();
-    mergeCards(records, { skipFlip: true });
+    const result = await fetchCardsPage(potId, win.page + 1, PAGE_SIZE);
+    mergeCards(result.items, { skipFlip: true });
+    setWindows(
+      potId,
+      produce((w) => {
+        const seen = new Set(w.ids);
+        for (const card of result.items) {
+          if (!seen.has(card.id)) w.ids.push(card.id);
+        }
+        w.total = result.totalItems;
+        w.page += 1;
+      }),
+    );
   } catch (err) {
-    console.error("[cards] failed to load all cards:", err);
+    console.error("[cards] failed to load cards page:", err);
   } finally {
-    setCardsLoaded(true);
+    setWindows(potId, { loaded: true, loading: false });
   }
 }
 
-function deleteFromStore(id: string) {
+// Fetches one card by its URL slug straight from the server and puts
+// it into the store, so realtime updates keep the open card live.
+// Resolves to undefined when the pot has no such card.
+export async function openCardBySlug(
+  potId: string,
+  slug: string,
+): Promise<CardRecord | undefined> {
+  const record = await fetchCardBySlug(potId, slug);
+  if (record) mergeCards([record], { skipFlip: true });
+  return record;
+}
+
+// Removes a card from the store and, when its pot has a loaded window,
+// from that window too. The count only drops if the card was in the
+// window, so a repeated delete cannot double-count.
+function dropCard(id: string, potId: string | undefined) {
+  if (potId && windows[potId]) {
+    setWindows(
+      potId,
+      produce((w) => {
+        const index = w.ids.indexOf(id);
+        if (index >= 0) {
+          w.ids.splice(index, 1);
+          w.total -= 1;
+        }
+      }),
+    );
+  }
   setCardsById(
     produce((store) => {
       delete store[id];
+    }),
+  );
+}
+
+// A created card only matters here if its pot's window is loaded;
+// otherwise the next page load will bring it in from the server.
+function addCreatedCard(record: CardRecord) {
+  if (!windows[record.pot]?.loaded) return;
+  setCardsById(record.id, record);
+  setWindows(
+    record.pot,
+    produce((w) => {
+      if (!w.ids.includes(record.id)) {
+        w.ids.push(record.id);
+        w.total += 1;
+      }
     }),
   );
 }
@@ -124,10 +179,12 @@ function deleteFromStore(id: string) {
 function handleCardEvent(e: CardEvent) {
   withCardsFlip(() => {
     if (e.action === "delete") {
-      deleteFromStore(e.record.id);
-    } else {
-      // Covers both "create" and "update": either way the latest
-      // record replaces whatever this id currently holds.
+      dropCard(e.record.id, e.record.pot);
+    } else if (e.action === "create") {
+      addCreatedCard(e.record);
+    } else if (cardsById[e.record.id]) {
+      // An update for a card we don't hold is ignored, so the store
+      // never grows beyond what the UI actually loaded.
       setCardsById(e.record.id, e.record);
     }
   });
@@ -202,7 +259,8 @@ export function moveCard(card: CardRecord, position: number): void {
 // Position for a card that is being pinned: half of the lowest
 // existing pinned position in its pot, so it sorts first among the
 // pinned cards (CardList sorts by descending position) without
-// renumbering any of them.
+// renumbering any of them. Pinned cards sort first on the server too,
+// so they all sit in the loaded window's first pages.
 function nextPinnedPosition(excludeId: string): number {
   const potId = cardsById[excludeId]?.pot;
   const positions = Object.values(cardsById)
@@ -230,6 +288,7 @@ export async function setCardPinned(
 // Deletes a card and drops it from the store right away, instead of
 // waiting for the realtime "delete" echo.
 export async function removeCard(id: string): Promise<void> {
+  const potId = cardsById[id]?.pot;
   await deleteCard(id);
-  withCardsFlip(() => deleteFromStore(id));
+  withCardsFlip(() => dropCard(id, potId));
 }

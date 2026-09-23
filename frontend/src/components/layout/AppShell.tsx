@@ -1,6 +1,6 @@
 import { onCleanup, onMount, type ParentProps } from "solid-js";
 import MainLayout from "./MainLayout";
-import { startCardsSubscription, loadAllCards } from "@/lib/stores/cardsStore";
+import { startCardsSubscription } from "@/lib/stores/cardsStore";
 import { loadAllPots } from "@/lib/stores/potsStore";
 
 // Wraps every route so Header and Sidebar render once regardless of page.
@@ -14,14 +14,10 @@ import { loadAllPots } from "@/lib/stores/potsStore";
 // instead of every page that reads cards managing its own subscription
 // (see lib/stores/cardsStore.ts).
 export default function AppShell(props: ParentProps) {
-  // Loads the whole "cards" collection once, for the app's entire
-  // lifetime (see loadAllCards's own comment). Fired without waiting
-  // for it to resolve -- startCardsSubscription below can start
-  // receiving realtime events in the meantime; both write through the
-  // same last-write-wins store, so whichever lands last wins.
-  // The pot list is loaded the same way (see lib/stores/potsStore.ts).
+  // Cards are no longer loaded here: each pot's card list pages in on
+  // demand (see lib/stores/cardsStore.ts). Only the pot list is
+  // fetched up front (see lib/stores/potsStore.ts).
   onMount(() => {
-    loadAllCards();
     loadAllPots();
   });
   onCleanup(startCardsSubscription());
