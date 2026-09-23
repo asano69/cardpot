@@ -1,15 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
-import type { CardEvent } from "../api/cardApi";
+import { describe, expect, it, vi, type Mock } from "vitest";
+import pb from "../api/pb";
 import type { CardRecord } from "../models/card";
-
-const api = vi.hoisted(() => ({
-  fetchCardsPage: vi.fn(),
-  fetchCardBySlug: vi.fn(),
-  subscribeToCards: vi.fn(),
-  deleteCard: vi.fn(),
-  updateCard: vi.fn(),
-}));
-vi.mock("../api/cardApi", () => api);
 
 import {
   cardsById,
@@ -18,6 +9,14 @@ import {
   releasePot,
   startCardsSubscription,
 } from "./cardsStore";
+
+// The store reaches the server only through PocketBase's "cards"
+// service (see api/cardApi.ts), which pb.collection() caches as one
+// instance. Spying on that instance replaces the network without
+// mocking any module.
+const cardsService = pb.collection("cards");
+const getList = vi.spyOn(cardsService, "getList") as unknown as Mock;
+const subscribe = vi.spyOn(cardsService, "subscribe") as unknown as Mock;
 
 // Each test uses its own pot id: the store is module-level state.
 
@@ -43,16 +42,19 @@ function cards(pot: string, from: number, to: number): CardRecord[] {
 }
 
 function nextPage(items: CardRecord[], totalItems: number) {
-  api.fetchCardsPage.mockResolvedValueOnce({ items, totalItems });
+  getList.mockResolvedValueOnce({ items, totalItems });
 }
 
 // Starts the realtime subscription and returns a function that
 // delivers an event to it.
 function realtime(): (action: string, record: CardRecord) => void {
-  let handler: (event: CardEvent) => void = () => {};
-  api.subscribeToCards.mockImplementationOnce(async (h) => {
-    handler = h;
-    return () => {};
+  let handler: (event: {
+    action: string;
+    record: CardRecord;
+  }) => void = () => {};
+  subscribe.mockImplementationOnce(async (_topic, onEvent) => {
+    handler = onEvent;
+    return async () => {};
   });
   startCardsSubscription();
   return (action, record) => handler({ action, record });
@@ -71,7 +73,7 @@ describe("loadNextCardsPage", () => {
     nextPage([...cards("a", 0, 5), ...cards("a", 6, 101)], 149);
     await loadNextCardsPage("a");
 
-    expect(api.fetchCardsPage).toHaveBeenLastCalledWith("a", 1, 100);
+    expect(getList).toHaveBeenLastCalledWith(1, 100, expect.anything());
     expect(potWindow("a")?.ids).toHaveLength(100);
     expect(cardsById["a-100"]).toBeDefined();
   });
@@ -83,9 +85,9 @@ describe("loadNextCardsPage", () => {
     await loadNextCardsPage("b");
     expect(potWindow("b")?.total).toBe(100);
 
-    api.fetchCardsPage.mockClear();
+    getList.mockClear();
     await loadNextCardsPage("b");
-    expect(api.fetchCardsPage).not.toHaveBeenCalled();
+    expect(getList).not.toHaveBeenCalled();
   });
 });
 
@@ -136,7 +138,7 @@ describe("releasePot", () => {
 
   it("is not undone by a page that arrives after the release", async () => {
     let resolve!: (value: unknown) => void;
-    api.fetchCardsPage.mockReturnValueOnce(
+    getList.mockReturnValueOnce(
       new Promise((r) => {
         resolve = r;
       }),
