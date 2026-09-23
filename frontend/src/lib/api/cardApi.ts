@@ -1,5 +1,6 @@
 import pb from "./pb";
 import type { CardRecord, TitleCandidate } from "../models/card";
+import { titleToSlug } from "../models/slugify";
 
 // Response shape shared by createCard/updateCardTitle: the saved card,
 // plus a merge-alert target computed server-side (see findMergeTarget
@@ -43,10 +44,77 @@ export async function updateCardTitle(
 }
 
 // Fetches every "cards" record, newest first.
+//
+// TODO(pagination): full-collection fetch. Kept only until
+// cardsStore.ts stops calling it (see fetchCardsPage below for its
+// replacement) -- a pot can hold up to ~100k cards, too many to load
+// eagerly on every app open.
 export async function fetchAllCards(): Promise<CardRecord[]> {
   return await pb
     .collection("cards")
     .getFullList<CardRecord>({ sort: "-created" });
+}
+
+// Sort order for every windowed card listing: pinned cards first,
+// then descending position, with id as a tiebreak for equal
+// positions. Mirrors CardList.tsx's own client-side sort from the
+// full-fetch era, so paging through this produces the same order the
+// grid used to show.
+const CARDS_SORT = "-pin,-position,id";
+
+export interface CardsPage {
+  items: CardRecord[];
+  totalItems: number;
+}
+
+// Fetches one page of a pot's cards via PocketBase's built-in list
+// pagination -- no custom backend route needed, since filter + sort +
+// page/perPage + totalItems are all standard `getList` features.
+export async function fetchCardsPage(
+  potId: string,
+  page: number,
+  perPage: number,
+): Promise<CardsPage> {
+  const result = await pb
+    .collection("cards")
+    .getList<CardRecord>(page, perPage, {
+      filter: pb.filter("pot = {:pot}", { pot: potId }),
+      sort: CARDS_SORT,
+    });
+  return { items: result.items, totalItems: result.totalItems };
+}
+
+// Resolves a single card by its URL slug, without fetching the rest
+// of the pot -- replaces the old approach of scanning every already-
+// loaded card with titleToSlug (see cardsStore.ts's
+// findCardByPotAndSlug).
+//
+// titleLc (see internal/slug.ToLowerKey) is a fast, indexed candidate
+// lookup: lowercase, spaces mapped to underscores. It is not
+// injective ("a b" and "a_b" share a titleLc), so the single match it
+// returns is re-verified against titleToSlug(title) -- the real slug
+// comparison -- before being trusted. Returns undefined when no card
+// matches, whether because titleLc found nothing or because the
+// verification failed.
+export async function fetchCardBySlug(
+  potId: string,
+  slug: string,
+): Promise<CardRecord | undefined> {
+  const candidateTitleLc = slug.toLowerCase();
+  let record: CardRecord;
+  try {
+    record = await pb
+      .collection("cards")
+      .getFirstListItem<CardRecord>(
+        pb.filter("pot = {:pot} && titleLc = {:titleLc}", {
+          pot: potId,
+          titleLc: candidateTitleLc,
+        }),
+      );
+  } catch {
+    return undefined;
+  }
+  return titleToSlug(record.title) === slug ? record : undefined;
 }
 
 // Updates a card's own fields directly. The title is deliberately not
