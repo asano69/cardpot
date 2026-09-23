@@ -43,7 +43,7 @@ function SidebarPotRow(props: SidebarPotRowProps) {
       <A
         href={`/${props.pot.name}`}
         activeClass="bg-active-bg"
-        class="block truncate rounded-md border border-border bg-card px-2 py-1.5 text-sm text-text shadow-card transition-colors hover:bg-hover-bg"
+        class="block truncate  border border-border bg-card p-3 m-0.5 text-md  shadow-card transition-colors hover:bg-hover-bg"
       >
         {props.pot.title}
       </A>
@@ -51,7 +51,7 @@ function SidebarPotRow(props: SidebarPotRowProps) {
   );
 }
 
-// Sidebar-only list of pots: read-only besides drag-to-reorder --
+// Sidebar-only list of pots: read-only besides drag-to-reorder :--
 // adding/renaming/deleting a pot still happens on the pots page. Kept
 // as its own component (not folded into Sidebar.tsx) since it owns its
 // own drag-to-reorder wiring, mirroring PotList.tsx's pattern. Both
