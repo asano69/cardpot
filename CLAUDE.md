@@ -55,4 +55,4 @@ from flask import Flask
 
 
 ## Work in progress
-- カードフォームのノートエディタをProseMirrorからCodeMirror6に変更する。
+- 10万枚規模のカードに対応できるように、起動時のカードコレクションフルフェッチをやめる。

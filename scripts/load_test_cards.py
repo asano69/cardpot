@@ -2,7 +2,7 @@
 """
 load_test_cards.py
 ---
-python scripts/load_test_cards.py --count 3000 --base-url http://localhost:3000
+python scripts/load_test_cards.py --count 100000 --base-url http://localhost:3000
 ---
 
 Load-testing helper: ensures a "sample" pot exists, then creates a
@@ -13,7 +13,7 @@ and a sensible position -- exactly like a card created through the UI.
 Requires the server to be running (e.g. `make server`).
 
 Usage:
-    python scripts/load_test_cards.py [--count 3000] [--base-url http://localhost:3000]
+    python scripts/load_test_cards.py [--count 100000] [--base-url http://localhost:3000]
 
 Environment variables (fall back to cardpot.env's own defaults):
     CARDPOT_ADMIN_EMAIL     (default: admin@mail.internal)
@@ -30,7 +30,7 @@ import urllib.request
 
 DEFAULT_BASE_URL = "http://localhost:3000"
 DEFAULT_POT_NAME = "sample"
-DEFAULT_CARD_COUNT = 3000
+DEFAULT_CARD_COUNT = 100000
 
 
 def api_request(base_url, method, path, token=None, body=None, params=None):
