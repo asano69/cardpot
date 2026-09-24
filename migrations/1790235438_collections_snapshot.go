@@ -1023,18 +1023,6 @@ func init() {
 						"type": "bool"
 					},
 					{
-						"help": "",
-						"hidden": false,
-						"id": "date3946532403",
-						"max": "",
-						"min": "",
-						"name": "deleted",
-						"presentable": false,
-						"required": false,
-						"system": false,
-						"type": "date"
-					},
-					{
 						"hidden": false,
 						"id": "autodate2990389176",
 						"name": "created",
@@ -1057,15 +1045,14 @@ func init() {
 					{
 						"help": "",
 						"hidden": false,
-						"id": "number300981383",
-						"max": 9007199254740991,
-						"min": null,
-						"name": "views",
-						"onlyInt": false,
+						"id": "date3946532403",
+						"max": "",
+						"min": "",
+						"name": "deleted",
 						"presentable": false,
 						"required": false,
 						"system": false,
-						"type": "number"
+						"type": "date"
 					}
 				],
 				"id": "pbc_2527524235",
