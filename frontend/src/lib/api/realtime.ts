@@ -3,8 +3,8 @@ import pb from "./pb";
 import type { CardEvent } from "./cardApi";
 
 // One shared connection for the whole app, created on first use. Callers
-// only ever see subscribeToPotCards below, so nothing else depends on the
-// centrifuge SDK.
+// Callers only ever see subscribeToCards below, so nothing else depends on
+// the centrifuge SDK.
 let client: Centrifuge | undefined;
 
 function getClient(): Centrifuge {
@@ -37,7 +37,7 @@ function getClient(): Centrifuge {
   return created;
 }
 
-// Subscribes to every card event of one pot and returns an unsubscribe
+// Subscribes to every card event of every pot and returns an unsubscribe
 // function.
 //
 // `onResync` fires when events may have been missed and could not be
@@ -45,13 +45,12 @@ function getClient(): Centrifuge {
 // must then reload what it shows from the server. A plain short disconnect
 // does not trigger it: the server replays the missed events through
 // `onEvent` instead.
-export function subscribeToPotCards(
-  potId: string,
+export function subscribeToCards(
   onEvent: (event: CardEvent) => void,
   onResync: () => void,
 ): () => void {
   const connection = getClient();
-  const subscription = connection.newSubscription(`cards:${potId}`);
+  const subscription = connection.newSubscription("cards");
   let subscribedBefore = false;
 
   subscription.on("publication", (ctx) => onEvent(ctx.data as CardEvent));

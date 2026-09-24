@@ -2,7 +2,6 @@ package realtime
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/centrifugal/centrifuge"
@@ -10,8 +9,10 @@ import (
 )
 
 const (
-	// cardsChannelPrefix namespaces every per-pot card channel.
-	cardsChannelPrefix = "cards:"
+	// CardsChannel carries every card event of every pot. The app is small
+	// enough that each client simply receives all of them, and the frontend
+	// store ignores cards it does not hold.
+	CardsChannel = "cards"
 
 	// historySize and historyTTL bound how much a channel remembers for
 	// recovery after a short disconnect. Tune these from real usage.
@@ -19,17 +20,14 @@ const (
 	historyTTL  = 10 * time.Minute
 )
 
-// Hub owns the centrifuge node and publishes card changes to per-pot channels.
+// Hub owns the centrifuge node and publishes card changes to the cards channel.
 type Hub struct {
 	node    *centrifuge.Node
 	publish func(channel string, data []byte) error // replaceable in tests
 }
 
-// CardsChannel returns the channel that carries every card event of a pot.
-func CardsChannel(potID string) string { return cardsChannelPrefix + potID }
-
 // New creates and starts the hub. Only superusers may connect (see
-// authenticate), and they may only subscribe to card channels; clients can
+// authenticate), and they may only subscribe to the cards channel; clients can
 // never publish, because no OnPublish handler is set.
 func New(app core.App) (*Hub, error) {
 	node, err := centrifuge.New(centrifuge.Config{})
@@ -47,7 +45,7 @@ func New(app core.App) (*Hub, error) {
 
 	node.OnConnect(func(client *centrifuge.Client) {
 		client.OnSubscribe(func(e centrifuge.SubscribeEvent, cb centrifuge.SubscribeCallback) {
-			if !strings.HasPrefix(e.Channel, cardsChannelPrefix) {
+			if e.Channel != CardsChannel {
 				cb(centrifuge.SubscribeReply{}, centrifuge.ErrorPermissionDenied)
 				return
 			}

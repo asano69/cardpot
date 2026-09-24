@@ -1,6 +1,6 @@
-import { describe, expect, it, vi, type Mock } from "vitest";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import pb from "../api/pb";
-import { subscribeToPotCards } from "../api/realtime";
+import { subscribeToCards } from "../api/realtime";
 import type { CardEvent } from "../api/cardApi";
 import type { CardRecord } from "../models/card";
 
@@ -10,14 +10,14 @@ import {
   potWindow,
   releasePot,
   resyncPot,
-  watchPot,
+  watchCards,
 } from "./cardsStore";
 
 // The realtime module is replaced wholesale: it wraps the centrifuge SDK,
 // which needs a live server. Tests capture the handlers watchPot passes in
 // and call them directly (see watch below).
 vi.mock("../api/realtime", () => ({
-  subscribeToPotCards: vi.fn(() => () => {}),
+  subscribeToCards: vi.fn(() => () => {}),
 }));
 
 // The store reaches the server's card list only through PocketBase's
@@ -54,24 +54,28 @@ function nextPage(items: CardRecord[], totalItems: number) {
   getList.mockResolvedValueOnce({ items, totalItems });
 }
 
-// Watches `potId` and returns functions that deliver a realtime event, or a
+// Starts watching and returns functions that deliver a realtime event, or a
 // "gap detected" signal, to the store the way the realtime module would.
-function watch(potId: string) {
+function watch() {
   let onEvent: (event: CardEvent) => void = () => {};
   let onResync: () => void = () => {};
-  vi.mocked(subscribeToPotCards).mockImplementationOnce(
-    (_potId, event, resync) => {
-      onEvent = event;
-      onResync = resync;
-      return () => {};
-    },
-  );
-  watchPot(potId);
+  vi.mocked(subscribeToCards).mockImplementationOnce((event, resync) => {
+    onEvent = event;
+    onResync = resync;
+    return () => {};
+  });
+  watchCards();
   return {
     emit: (action: string, record: CardRecord) => onEvent({ action, record }),
     resync: () => onResync(),
   };
 }
+
+// A gap resyncs every loaded window, so pots left loaded by earlier tests
+// would consume the pages a test queues for its own pot.
+beforeEach(() => {
+  for (const potId of "abcdefghijklmnopq") releasePot(potId);
+});
 
 describe("loadNextCardsPage", () => {
   it("asks the server only for cards that are not deleted", async () => {
@@ -81,7 +85,7 @@ describe("loadNextCardsPage", () => {
   });
 
   it("requests the page holding the window's end, so a deletion skips no card", async () => {
-    const { emit } = watch("a");
+    const { emit } = watch();
     nextPage(cards("a", 0, 100), 150);
     await loadNextCardsPage("a");
 
@@ -112,7 +116,7 @@ describe("loadNextCardsPage", () => {
 
 describe("realtime events", () => {
   it("ignores events for cards the store does not hold", () => {
-    const { emit } = watch("c");
+    const { emit } = watch();
     emit("create", card("c-1", "c"));
     emit("update", card("c-2", "c"));
     expect(cardsById["c-1"]).toBeUndefined();
@@ -120,7 +124,7 @@ describe("realtime events", () => {
   });
 
   it("counts a created and a deleted card once", async () => {
-    const { emit } = watch("d");
+    const { emit } = watch();
     nextPage(cards("d", 0, 2), 2);
     await loadNextCardsPage("d");
 
@@ -135,7 +139,7 @@ describe("realtime events", () => {
   });
 
   it("applies an update to a held card", async () => {
-    const { emit } = watch("e");
+    const { emit } = watch();
     nextPage(cards("e", 0, 1), 1);
     await loadNextCardsPage("e");
 
@@ -144,7 +148,7 @@ describe("realtime events", () => {
   });
 
   it("drops a card once an update event marks it deleted", async () => {
-    const { emit } = watch("m");
+    const { emit } = watch();
     nextPage(cards("m", 0, 2), 2);
     await loadNextCardsPage("m");
 
@@ -158,7 +162,7 @@ describe("realtime events", () => {
   });
 
   it("ignores a created card that is already deleted", async () => {
-    const { emit } = watch("o");
+    const { emit } = watch();
     nextPage(cards("o", 0, 1), 1);
     await loadNextCardsPage("o");
 
@@ -250,8 +254,25 @@ describe("resyncPot", () => {
     expect(cardsById["k-0"]).toBeDefined();
   });
 
+  it("resyncs every loaded pot when the channel reports a gap", async () => {
+    const { resync } = watch();
+    nextPage(cards("p", 0, 1), 1);
+    await loadNextCardsPage("p");
+    nextPage(cards("q", 0, 1), 1);
+    await loadNextCardsPage("q");
+
+    nextPage(cards("p", 1, 2), 1);
+    nextPage(cards("q", 1, 2), 1);
+    resync();
+
+    await vi.waitFor(() => {
+      expect(potWindow("p")?.ids).toEqual(["p-1"]);
+      expect(potWindow("q")?.ids).toEqual(["q-1"]);
+    });
+  });
+
   it("runs when the realtime channel reports a gap", async () => {
-    const { resync } = watch("l");
+    const { resync } = watch();
     nextPage(cards("l", 0, 2), 2);
     await loadNextCardsPage("l");
 

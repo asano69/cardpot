@@ -6,7 +6,7 @@ import {
   updateCard,
   type CardEvent,
 } from "../api/cardApi";
-import { subscribeToPotCards } from "../api/realtime";
+import { subscribeToCards } from "../api/realtime";
 import type { CardRecord } from "../models/card";
 import { computePosition } from "../position";
 import { withCardsFlip, registerCardElement } from "../cardFlip";
@@ -22,7 +22,7 @@ const PAGE_SIZE = 100;
 // Cache of the cards the UI currently needs: every card of a loaded
 // pot window (see below) plus any card opened by URL. A pot can hold
 // ~100k cards, so this is deliberately NOT the whole collection.
-// watchPot() keeps these entries live via the pot's realtime channel;
+// watchCards() keeps these entries live via the shared cards channel;
 // events for cards not held here are ignored.
 const [cardsById, setCardsById] = createStore<Record<string, CardRecord>>({});
 
@@ -224,7 +224,7 @@ function handleCardEvent(e: CardEvent) {
 
 // Reloads the part of a pot's card list the window currently covers, for
 // when realtime events may have been missed and could not be replayed (see
-// subscribeToPotCards). Cards that no longer exist are dropped. Pages are
+// subscribeToCards). Cards that no longer exist are dropped. Pages are
 // fetched one after another, so a large window takes several requests --
 // acceptable for a rare recovery.
 //
@@ -270,12 +270,13 @@ export async function resyncPot(potId: string): Promise<void> {
   );
 }
 
-// Keeps a pot's loaded cards live through its realtime channel and returns
-// a function that stops watching. Called by PotLayout for as long as the
-// user stays in the pot.
-export function watchPot(potId: string): () => void {
-  return subscribeToPotCards(potId, handleCardEvent, () => {
-    void resyncPot(potId);
+// Keeps every loaded pot window live through the shared cards channel and
+// returns a function that stops watching. Called once by AppShell for as
+// long as the app is open. A gap in the channel's history resyncs every
+// window that is currently loaded.
+export function watchCards(): () => void {
+  return subscribeToCards(handleCardEvent, () => {
+    for (const potId of Object.keys(windows)) void resyncPot(potId);
   });
 }
 

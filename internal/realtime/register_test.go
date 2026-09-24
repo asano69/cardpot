@@ -76,7 +76,7 @@ func decode(t *testing.T, p published) (action, id string) {
 	return event.Action, event.Record.ID
 }
 
-func TestCardHooks_PublishCreateUpdateDeleteToPotChannel(t *testing.T) {
+func TestCardHooks_PublishCreateUpdateDeleteToCardsChannel(t *testing.T) {
 	app := newTestApp(t)
 	_, got := newTestHub(app, nil)
 
@@ -94,8 +94,8 @@ func TestCardHooks_PublishCreateUpdateDeleteToPotChannel(t *testing.T) {
 		t.Fatalf("got %d publications, want %d", len(*got), len(want))
 	}
 	for i, p := range *got {
-		if p.channel != "cards:pot1" {
-			t.Errorf("publication %d channel = %q, want %q", i, p.channel, "cards:pot1")
+		if p.channel != CardsChannel {
+			t.Errorf("publication %d channel = %q, want %q", i, p.channel, CardsChannel)
 		}
 		action, id := decode(t, p)
 		if action != want[i] || id != card.Id {
