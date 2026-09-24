@@ -5,10 +5,8 @@
 // through Centrifuge (see startCentrifugeStream) and are fed into the
 // same `pull.stream$`, so RxDB treats both sources uniformly.
 import { Subject } from "rxjs";
-import {
-  replicateRxCollection,
-  type RxReplicationPullStreamItem,
-} from "rxdb/plugins/replication";
+import type { RxReplicationPullStreamItem } from "rxdb";
+import { replicateRxCollection } from "rxdb/plugins/replication";
 import pb from "@/lib/api/pb";
 import { subscribeToCards } from "@/lib/api/realtime";
 import type { CardCheckpoint } from "./checkpoint";

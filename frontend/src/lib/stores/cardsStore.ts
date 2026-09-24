@@ -196,6 +196,19 @@ export function findCardByPotAndSlug(
   );
 }
 
+// Puts freshly created cards into the store right away, without
+// waiting for the realtime echo to reach the local RxDB replica.
+// CardForm reads a just-created card's title from here (see its
+// handleCreated) to update the address bar. The next reactive query
+// emission then reconciles this against the authoritative local copy.
+export function mergeCards(records: CardRecord[]): void {
+  setCardsById(
+    produce((store) => {
+      for (const record of records) store[record.id] = record;
+    }),
+  );
+}
+
 // Applies a partial update to a held card directly, animating any
 // resulting grid reorder (see withCardsFlip). Used by moveCard/
 // setCardPinned/removeCard below for immediate feedback; the next
