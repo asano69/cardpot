@@ -50,6 +50,9 @@ export interface CardRecord {
   pot: string;
   position: number;
   pin: boolean;
+  // Soft-delete timestamp; an empty string while the card is live. The
+  // frontend never lists or opens a card that has one.
+  deleted: string;
   created: string;
   updated: string;
 }

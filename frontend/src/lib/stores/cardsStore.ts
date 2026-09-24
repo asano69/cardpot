@@ -208,7 +208,9 @@ function addCreatedCard(record: CardRecord) {
 // place instead of every card instantly snapping to its new grid slot.
 function handleCardEvent(e: CardEvent) {
   withCardsFlip(() => {
-    if (e.action === "delete") {
+    // A soft-deleted card leaves the store like a removed one, whichever
+    // action reports it (deleting sends an "update" carrying `deleted`).
+    if (e.action === "delete" || e.record.deleted) {
       dropCard(e.record.id, e.record.pot);
     } else if (e.action === "create") {
       addCreatedCard(e.record);
@@ -345,8 +347,8 @@ export async function setCardPinned(
   mergeCards([await updateCard(id, changes)]);
 }
 
-// Deletes a card and drops it from the store right away, instead of
-// waiting for the realtime "delete" echo.
+// Soft-deletes a card and drops it from the store right away, instead of
+// waiting for the realtime echo of the update.
 export async function removeCard(id: string): Promise<void> {
   const potId = cardsById[id]?.pot;
   await deleteCard(id);

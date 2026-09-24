@@ -105,6 +105,19 @@ func TestResolveTitle_ExcludeIDLetsARecordKeepItsOwnTitle(t *testing.T) {
 	}
 }
 
+func TestResolveTitle_DeletedCardDoesNotOccupyItsTitle(t *testing.T) {
+	app := newSlugTestApp(t)
+	softDelete(t, app, createCard(t, app, "pot1", "X"))
+
+	got, err := resolveTitle(app, "pot1", "X", "")
+	if err != nil {
+		t.Fatalf("resolveTitle: %v", err)
+	}
+	if got != "X" {
+		t.Errorf(`resolveTitle("X") = %q, want %q (deleted card frees its title)`, got, "X")
+	}
+}
+
 func TestResolveTitle_ReservedWordGetsUnderscoreSuffix(t *testing.T) {
 	// Regression test: a first candidate that is a reserved route segment
 	// (case-insensitively) used to fall through to the OnRecordValidate

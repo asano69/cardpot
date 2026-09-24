@@ -73,7 +73,8 @@ export async function fetchCardsPage(
   const result = await pb
     .collection("cards")
     .getList<CardRecord>(page, perPage, {
-      filter: pb.filter("pot = {:pot}", { pot: potId }),
+      // Soft-deleted cards (a "deleted" date is set) are never listed.
+      filter: pb.filter('pot = {:pot} && deleted = ""', { pot: potId }),
       sort: CARDS_SORT,
       requestKey: null,
     });
@@ -103,7 +104,7 @@ export async function fetchCardBySlug(
     record = await pb
       .collection("cards")
       .getFirstListItem<CardRecord>(
-        pb.filter("pot = {:pot} && titleLc = {:titleLc}", {
+        pb.filter('pot = {:pot} && titleLc = {:titleLc} && deleted = ""', {
           pot: potId,
           titleLc: candidateTitleLc,
         }),
@@ -122,13 +123,16 @@ export async function fetchCardBySlug(
 // in this list: it only ever changes via updateCardTitle above.
 export async function updateCard(
   id: string,
-  changes: Partial<Pick<CardRecord, "pin" | "position">>,
+  changes: Partial<Pick<CardRecord, "pin" | "position" | "deleted">>,
 ): Promise<CardRecord> {
   return await pb.collection("cards").update<CardRecord>(id, changes);
 }
 
+// Soft-deletes a card by stamping its "deleted" date; the record itself
+// stays in the database. The realtime "update" event this produces is
+// what makes other clients drop the card (see cardsStore.ts).
 export async function deleteCard(id: string): Promise<void> {
-  await pb.collection("cards").delete(id);
+  await updateCard(id, { deleted: new Date().toISOString() });
 }
 
 // One realtime change to a "cards" record, as published by the server

@@ -31,6 +31,7 @@ func newLinksTestApp(t *testing.T) core.App {
 		&core.TextField{Name: "title"},
 		&core.TextField{Name: "titleLc"},
 		&core.TextField{Name: "description"},
+		&core.DateField{Name: "deleted"},
 	)
 	if err := app.Save(cards); err != nil {
 		t.Fatalf("create cards collection: %v", err)
@@ -112,6 +113,37 @@ func TestFindCardBySlug(t *testing.T) {
 
 	if got, err := findCardBySlug(app, pot.Id, "missing"); err != nil || got != nil {
 		t.Errorf("findCardBySlug(missing) = (%v, %v), want (nil, nil)", got, err)
+	}
+}
+
+func TestFindCardBySlug_IgnoresDeletedCard(t *testing.T) {
+	app := newLinksTestApp(t)
+	pot := createPot(t, app, "pot1")
+	softDelete(t, app, createLinksTestCard(t, app, pot.Id, "Hello", ""))
+
+	if got, err := findCardBySlug(app, pot.Id, "Hello"); err != nil || got != nil {
+		t.Errorf("findCardBySlug = (%v, %v), want (nil, nil)", got, err)
+	}
+}
+
+func TestLinks1Hop_ExcludesDeletedCards(t *testing.T) {
+	app := newLinksTestApp(t)
+	pot := createPot(t, app, "pot1")
+
+	center := createLinksTestCard(t, app, pot.Id, "Center", "")
+	outTarget := createLinksTestCard(t, app, pot.Id, "OutTarget", "")
+	inSource := createLinksTestCard(t, app, pot.Id, "InSource", "")
+	createLink(t, app, center.Id, pot.Id, "OutTarget")
+	createLink(t, app, inSource.Id, pot.Id, "Center")
+	softDelete(t, app, outTarget)
+	softDelete(t, app, inSource)
+
+	got, err := links1Hop(app, pot.Id, center.GetString("titleLc"), center.Id)
+	if err != nil {
+		t.Fatalf("links1Hop: %v", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("got %d linked cards, want 0 (both are deleted): %v", len(got), got)
 	}
 }
 

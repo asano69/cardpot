@@ -6,7 +6,7 @@
     "dev": "bunx vite",
     "build": "bunx --bun vite build",
     "watch": "bunx --bun vite build --watch",
-    "test": "bunx --bun vitest run",
+    "test": "bunx vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint ."
   },

@@ -80,8 +80,10 @@ func newSlugTestApp(t *testing.T) core.App {
 		// slug.go) -- a real column is needed here to query against,
 		// mirroring the production schema.
 		&core.TextField{Name: "titleLc"},
+		// Soft-delete marker (see notDeleted in cards.go).
+		&core.DateField{Name: "deleted"},
 	)
-	if err := app.Save(cards); err != nil {
+	if err := app.Save(cards)
 		t.Fatalf("create cards collection: %v", err)
 	}
 
@@ -117,6 +119,15 @@ func createCard(t *testing.T, app core.App, pot, title string) *core.Record {
 	return record
 }
 
+// softDelete marks record as deleted the way the frontend does.
+func softDelete(t *testing.T, app core.App, record *core.Record) {
+	t.Helper()
+	record.Set("deleted", "2026-01-01 00:00:00.000Z")
+	if err := app.Save(record); err != nil {
+		t.Fatalf("soft-delete card: %v", err)
+	}
+}
+
 // setFirstLine inserts this card's ln-0 card_lines row, i.e. its
 // header (see lines.go: the header is always line 0).
 func setFirstLine(t *testing.T, app core.App, cardID, content string) {
@@ -149,6 +160,26 @@ func TestFindMergeTarget_AllConditionsMet(t *testing.T) {
 	}
 	if got != "p" {
 		t.Errorf("mergeTarget = %q, want %q", got, "p")
+	}
+}
+
+func TestFindMergeTarget_DeletedOriginal_NoAlert(t *testing.T) {
+	// A soft-deleted card must never be reported to the user.
+	app := newSlugTestApp(t)
+
+	original := createCard(t, app, "pot1", "p")
+	setFirstLine(t, app, original.Id, "Hello")
+	softDelete(t, app, original)
+
+	dup := createCard(t, app, "pot1", "p_2")
+	setFirstLine(t, app, dup.Id, "Hello")
+
+	got, err := findMergeTarget(app, "pot1", "p_2", "Hello", dup.Id)
+	if err != nil {
+		t.Fatalf("findMergeTarget: %v", err)
+	}
+	if got != "" {
+		t.Errorf("mergeTarget = %q, want empty (original is deleted)", got)
 	}
 }
 

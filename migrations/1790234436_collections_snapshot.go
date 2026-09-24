@@ -1070,8 +1070,8 @@ func init() {
 				],
 				"id": "pbc_2527524235",
 				"indexes": [
-					"CREATE UNIQUE INDEX ` + "`" + `idx_cards_pot_normtitle` + "`" + ` ON ` + "`" + `cards` + "`" + ` (\n  ` + "`" + `pot` + "`" + `,\n  (CASE WHEN REPLACE(` + "`" + `title` + "`" + `, ' ', '_') = 'new' THEN 'new_' ELSE REPLACE(` + "`" + `title` + "`" + `, ' ', '_') END)\n)",
-					"CREATE UNIQUE INDEX ` + "`" + `idx_x1tpfrw3fh` + "`" + ` ON ` + "`" + `cards` + "`" + ` (\n  ` + "`" + `pot` + "`" + `,\n  ` + "`" + `titleLc` + "`" + `\n)"
+					"CREATE UNIQUE INDEX ` + "`" + `idx_cards_pot_normtitle` + "`" + ` ON ` + "`" + `cards` + "`" + ` (\n  ` + "`" + `pot` + "`" + `,\n  (CASE WHEN REPLACE(` + "`" + `title` + "`" + `, ' ', '_') = 'new' THEN 'new_' ELSE REPLACE(` + "`" + `title` + "`" + `, ' ', '_') END)\n) WHERE ` + "`" + `deleted` + "`" + ` = ''",
+					"CREATE UNIQUE INDEX ` + "`" + `idx_x1tpfrw3fh` + "`" + ` ON ` + "`" + `cards` + "`" + ` (` + "`" + `pot` + "`" + `, ` + "`" + `titleLc` + "`" + `) WHERE ` + "`" + `deleted` + "`" + ` = ''"
 				],
 				"listRule": null,
 				"name": "cards",

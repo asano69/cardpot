@@ -77,6 +77,7 @@ interface PotWindow {
 | イベント | 動作 |
 | --- | --- |
 | `delete` | `dropCard`: ウィンドウにあれば `ids` から除き `total` を減らす。`cardsById` からも削除 |
+| `update`（`deleted` あり） | ソフトデリート。`delete` と同じく `dropCard` で除く（`create` で `deleted` 付きが来た場合も同様） |
 | `create` | `addCreatedCard`: **そのポットのウィンドウが `loaded` のときだけ**追加（`total` +1、重複は無視） |
 | `update` | `cardsById` に**既にある**カードだけ反映。無ければ無視 |
 

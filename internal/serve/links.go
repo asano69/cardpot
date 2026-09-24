@@ -80,7 +80,7 @@ func links1HopHandler(e *core.RequestEvent) error {
 func findCardBySlug(app core.App, potID, targetSlug string) (*core.Record, error) {
 	candidateTitleLc := strings.ToLower(targetSlug)
 	candidate, err := app.FindFirstRecordByFilter(
-		"cards", "pot = {:pot} && titleLc = {:titleLc}",
+		"cards", "pot = {:pot} && titleLc = {:titleLc} && "+notDeleted,
 		dbx.Params{"pot": potID, "titleLc": candidateTitleLc},
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -118,7 +118,7 @@ func links1Hop(app core.App, potID, titleLc, cardID string) ([]linkedCard, error
 	merged := make(map[string]*core.Record)
 	for _, link := range outgoing {
 		target, err := app.FindFirstRecordByFilter(
-			"cards", "pot = {:pot} && titleLc = {:titleLc}",
+			"cards", "pot = {:pot} && titleLc = {:titleLc} && "+notDeleted,
 			dbx.Params{"pot": potID, "titleLc": link.GetString("target_titleLc")},
 		)
 		if errors.Is(err, sql.ErrNoRows) {
@@ -131,8 +131,8 @@ func links1Hop(app core.App, potID, titleLc, cardID string) ([]linkedCard, error
 	}
 	for _, link := range incoming {
 		source, err := app.FindRecordById("cards", link.GetString("source"))
-		if err != nil {
-			continue // source deleted concurrently -- skip rather than fail the whole request
+		if err != nil || isDeleted(source) {
+			continue // source removed concurrently or soft-deleted -- skip rather than fail the whole request
 		}
 		merged[source.Id] = source
 	}

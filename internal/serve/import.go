@@ -160,11 +160,11 @@ func pageText(page importPage) string {
 
 // findCardByTitle returns the card in pot that title resolves to, or nil.
 // Matching goes through titleLc, so it is case-insensitive like every
-// other title lookup.
+// other title lookup. Soft-deleted cards are ignored.
 func findCardByTitle(app core.App, pot, title string) (*core.Record, error) {
 	titleLc := slug.ToLowerKey(titleBase(TitleCandidate(title)))
 	card, err := app.FindFirstRecordByFilter(
-		"cards", "pot = {:pot} && titleLc = {:titleLc}",
+		"cards", "pot = {:pot} && titleLc = {:titleLc} && "+notDeleted,
 		dbx.Params{"pot": pot, "titleLc": titleLc},
 	)
 	if errors.Is(err, sql.ErrNoRows) {

@@ -45,14 +45,16 @@ const defaultTitle = "Untitled"
 // excludeID lets a record keep resolving against its own current
 // title without colliding with itself (pass "" for a brand-new
 // record). Collisions are disambiguated with a numeric suffix ("_2",
-// "_3", ...) appended to the title.
+// "_3", ...) appended to the title. Soft-deleted cards are ignored: they
+// no longer occupy a title (so the unique indexes on "cards" must only
+// cover live cards, i.e. WHERE deleted = '').
 func resolveUniqueTitleInPot(app core.App, pot, base, excludeID string) (string, error) {
 	value := base
 	for suffix := 2; ; suffix++ {
 		candidateTitleLc := slug.ToLowerKey(value)
 		_, err := app.FindFirstRecordByFilter(
 			"cards",
-			"pot = {:pot} && id != {:id} && titleLc = {:titleLc}",
+			"pot = {:pot} && id != {:id} && titleLc = {:titleLc} && "+notDeleted,
 			dbx.Params{"pot": pot, "titleLc": candidateTitleLc, "id": excludeID},
 		)
 		if errors.Is(err, sql.ErrNoRows) {
@@ -139,7 +141,7 @@ func findMergeTarget(app core.App, pot string, title CardTitle, rawHeader TitleC
 
 	other, err := app.FindFirstRecordByFilter(
 		"cards",
-		"pot = {:pot} && title = {:title} && id != {:id}",
+		"pot = {:pot} && title = {:title} && id != {:id} && "+notDeleted,
 		dbx.Params{"pot": pot, "title": string(stripped), "id": excludeID},
 	)
 	if errors.Is(err, sql.ErrNoRows) {

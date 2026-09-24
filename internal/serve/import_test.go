@@ -171,6 +171,32 @@ func TestImport_LaterDuplicateInFileWins(t *testing.T) {
 	}
 }
 
+func TestImport_IgnoresDeletedCardWithSameTitle(t *testing.T) {
+	app := newImportTestApp(t)
+	pot := createPot(t, app, "pot1")
+
+	runImport(t, app, "pot1", `{"pages":[{"title":"a","lines":["a","old"]}]}`)
+	softDelete(t, app, cardInPot(t, app, pot.Id, "a"))
+
+	result := runImport(t, app, "pot1", `{"pages":[{"title":"a","lines":["a","new"]}]}`)
+	if result != (ImportResult{Created: 1}) {
+		t.Errorf("result = %+v, want 1 created", result)
+	}
+
+	live, err := app.FindRecordsByFilter(
+		"cards", "pot = {:pot} && "+notDeleted, "", 0, 0, dbx.Params{"pot": pot.Id},
+	)
+	if err != nil {
+		t.Fatalf("list live cards: %v", err)
+	}
+	if len(live) != 1 {
+		t.Fatalf("got %d live cards, want 1", len(live))
+	}
+	if got := cardText(t, app, live[0].Id); got != "a\nnew" {
+		t.Errorf("text = %q, want %q", got, "a\nnew")
+	}
+}
+
 func TestImport_UnknownPot(t *testing.T) {
 	app := newImportTestApp(t)
 

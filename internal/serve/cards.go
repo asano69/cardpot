@@ -32,6 +32,16 @@ const positionStep = 1000
 // check and the actual save (see slug.go).
 const maxTitleRetries = 3
 
+// notDeleted is the filter clause that hides soft-deleted cards. A card
+// is deleted by setting its "deleted" date, never by removing the record,
+// so every lookup that must not see deleted cards adds this clause.
+const notDeleted = `deleted = ""`
+
+// isDeleted reports whether record has been soft-deleted.
+func isDeleted(record *core.Record) bool {
+	return !record.GetDateTime("deleted").IsZero()
+}
+
 type createCardRequest struct {
 	Pot            string         `json:"pot"`
 	TitleCandidate TitleCandidate `json:"titleCandidate"`

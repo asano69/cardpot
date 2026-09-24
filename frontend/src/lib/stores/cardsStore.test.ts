@@ -37,6 +37,7 @@ function card(id: string, pot: string, position = 1): CardRecord {
     description: "",
     image: "",
     pin: false,
+    deleted: "",
     created: "",
     updated: "",
   } as CardRecord;
@@ -73,6 +74,12 @@ function watch(potId: string) {
 }
 
 describe("loadNextCardsPage", () => {
+  it("asks the server only for cards that are not deleted", async () => {
+    nextPage(cards("n", 0, 1), 1);
+    await loadNextCardsPage("n");
+    expect(getList.mock.lastCall?.[2].filter).toContain('deleted = ""');
+  });
+
   it("requests the page holding the window's end, so a deletion skips no card", async () => {
     const { emit } = watch("a");
     nextPage(cards("a", 0, 100), 150);
@@ -134,6 +141,33 @@ describe("realtime events", () => {
 
     emit("update", card("e-0", "e", 5));
     expect(cardsById["e-0"].position).toBe(5);
+  });
+
+  it("drops a card once an update event marks it deleted", async () => {
+    const { emit } = watch("m");
+    nextPage(cards("m", 0, 2), 2);
+    await loadNextCardsPage("m");
+
+    emit("update", {
+      ...card("m-0", "m"),
+      deleted: "2026-09-24 00:00:00.000Z",
+    });
+    expect(cardsById["m-0"]).toBeUndefined();
+    expect(potWindow("m")?.ids).toEqual(["m-1"]);
+    expect(potWindow("m")?.total).toBe(1);
+  });
+
+  it("ignores a created card that is already deleted", async () => {
+    const { emit } = watch("o");
+    nextPage(cards("o", 0, 1), 1);
+    await loadNextCardsPage("o");
+
+    emit("create", {
+      ...card("o-new", "o"),
+      deleted: "2026-09-24 00:00:00.000Z",
+    });
+    expect(cardsById["o-new"]).toBeUndefined();
+    expect(potWindow("o")?.total).toBe(1);
   });
 });
 
