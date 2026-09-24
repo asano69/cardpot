@@ -131,17 +131,10 @@ export async function deleteCard(id: string): Promise<void> {
   await pb.collection("cards").delete(id);
 }
 
-// One realtime change to a "cards" record. `action` is "create",
-// "update" or "delete".
+// One realtime change to a "cards" record, as published by the server
+// (see internal/realtime) and delivered by lib/api/realtime.ts. `action`
+// is "create", "update" or "delete".
 export interface CardEvent {
   action: string;
   record: CardRecord;
-}
-
-// Subscribes to every "cards" change. Resolves to an unsubscribe
-// function once the subscription is established.
-export async function subscribeToCards(
-  onEvent: (event: CardEvent) => void,
-): Promise<() => void> {
-  return await pb.collection("cards").subscribe<CardRecord>("*", onEvent);
 }

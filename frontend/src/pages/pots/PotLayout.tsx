@@ -8,7 +8,7 @@ import { useParams } from "@solidjs/router";
 
 import { fetchPotByName } from "@/lib/api/pots";
 import { useTopBarPotLink } from "@/lib/topBarSlot";
-import { releasePot } from "@/lib/stores/cardsStore";
+import { releasePot, watchPot } from "@/lib/stores/cardsStore";
 import PotContext from "./PotContext";
 
 // Wraps every route scoped to a single pot (CardList, CardForm) so the
@@ -35,12 +35,19 @@ export default function PotLayout(props: ParentProps) {
     pot() ? { name: pot()!.title, slug: params.slug } : undefined,
   );
 
-  // Drops the pot's loaded cards once the user leaves it (another pot,
-  // or the pot list). Moving between CardList and CardForm keeps this
-  // layout mounted, so the window survives that.
+  // Watches the pot's realtime channel and drops its loaded cards once the
+  // user leaves it (another pot, or the pot list). Moving between CardList
+  // and CardForm keeps this layout mounted, so both survive that. This
+  // effect runs before the children's, so the subscription is requested
+  // before their first page load.
   createEffect(() => {
     const id = pot()?.id;
-    if (id) onCleanup(() => releasePot(id));
+    if (!id) return;
+    const stopWatching = watchPot(id);
+    onCleanup(() => {
+      stopWatching();
+      releasePot(id);
+    });
   });
 
   return (

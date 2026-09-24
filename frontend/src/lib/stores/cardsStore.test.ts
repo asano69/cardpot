@@ -1,5 +1,7 @@
 import { describe, expect, it, vi, type Mock } from "vitest";
 import pb from "../api/pb";
+import { subscribeToPotCards } from "../api/realtime";
+import type { CardEvent } from "../api/cardApi";
 import type { CardRecord } from "../models/card";
 
 import {
@@ -7,16 +9,22 @@ import {
   loadNextCardsPage,
   potWindow,
   releasePot,
-  startCardsSubscription,
+  resyncPot,
+  watchPot,
 } from "./cardsStore";
 
-// The store reaches the server only through PocketBase's "cards"
-// service (see api/cardApi.ts), which pb.collection() caches as one
-// instance. Spying on that instance replaces the network without
-// mocking any module.
-const cardsService = pb.collection("cards");
-const getList = vi.spyOn(cardsService, "getList") as unknown as Mock;
-const subscribe = vi.spyOn(cardsService, "subscribe") as unknown as Mock;
+// The realtime module is replaced wholesale: it wraps the centrifuge SDK,
+// which needs a live server. Tests capture the handlers watchPot passes in
+// and call them directly (see watch below).
+vi.mock("../api/realtime", () => ({
+  subscribeToPotCards: vi.fn(() => () => {}),
+}));
+
+// The store reaches the server's card list only through PocketBase's
+// "cards" service (see api/cardApi.ts), which pb.collection() caches as one
+// instance. Spying on that instance replaces the network without mocking
+// any module.
+const getList = vi.spyOn(pb.collection("cards"), "getList") as unknown as Mock;
 
 // Each test uses its own pot id: the store is module-level state.
 
@@ -45,24 +53,28 @@ function nextPage(items: CardRecord[], totalItems: number) {
   getList.mockResolvedValueOnce({ items, totalItems });
 }
 
-// Starts the realtime subscription and returns a function that
-// delivers an event to it.
-function realtime(): (action: string, record: CardRecord) => void {
-  let handler: (event: {
-    action: string;
-    record: CardRecord;
-  }) => void = () => {};
-  subscribe.mockImplementationOnce(async (_topic, onEvent) => {
-    handler = onEvent;
-    return async () => {};
-  });
-  startCardsSubscription();
-  return (action, record) => handler({ action, record });
+// Watches `potId` and returns functions that deliver a realtime event, or a
+// "gap detected" signal, to the store the way the realtime module would.
+function watch(potId: string) {
+  let onEvent: (event: CardEvent) => void = () => {};
+  let onResync: () => void = () => {};
+  vi.mocked(subscribeToPotCards).mockImplementationOnce(
+    (_potId, event, resync) => {
+      onEvent = event;
+      onResync = resync;
+      return () => {};
+    },
+  );
+  watchPot(potId);
+  return {
+    emit: (action: string, record: CardRecord) => onEvent({ action, record }),
+    resync: () => onResync(),
+  };
 }
 
 describe("loadNextCardsPage", () => {
   it("requests the page holding the window's end, so a deletion skips no card", async () => {
-    const emit = realtime();
+    const { emit } = watch("a");
     nextPage(cards("a", 0, 100), 150);
     await loadNextCardsPage("a");
 
@@ -93,7 +105,7 @@ describe("loadNextCardsPage", () => {
 
 describe("realtime events", () => {
   it("ignores events for cards the store does not hold", () => {
-    const emit = realtime();
+    const { emit } = watch("c");
     emit("create", card("c-1", "c"));
     emit("update", card("c-2", "c"));
     expect(cardsById["c-1"]).toBeUndefined();
@@ -101,7 +113,7 @@ describe("realtime events", () => {
   });
 
   it("counts a created and a deleted card once", async () => {
-    const emit = realtime();
+    const { emit } = watch("d");
     nextPage(cards("d", 0, 2), 2);
     await loadNextCardsPage("d");
 
@@ -116,7 +128,7 @@ describe("realtime events", () => {
   });
 
   it("applies an update to a held card", async () => {
-    const emit = realtime();
+    const { emit } = watch("e");
     nextPage(cards("e", 0, 1), 1);
     await loadNextCardsPage("e");
 
@@ -150,5 +162,68 @@ describe("releasePot", () => {
 
     expect(potWindow("g")).toBeUndefined();
     expect(cardsById["g-0"]).toBeUndefined();
+  });
+});
+
+describe("resyncPot", () => {
+  it("replaces the window with fresh data and drops vanished cards", async () => {
+    nextPage(cards("h", 0, 3), 3);
+    await loadNextCardsPage("h");
+
+    // h-0 was deleted and h-3 created while events were missed.
+    nextPage(cards("h", 1, 4), 3);
+    await resyncPot("h");
+
+    expect(potWindow("h")?.ids).toEqual(["h-1", "h-2", "h-3"]);
+    expect(potWindow("h")?.total).toBe(3);
+    expect(cardsById["h-0"]).toBeUndefined();
+    expect(cardsById["h-3"]).toBeDefined();
+  });
+
+  it("reloads every page the window covers", async () => {
+    nextPage(cards("i", 0, 100), 250);
+    await loadNextCardsPage("i");
+    nextPage(cards("i", 100, 200), 250);
+    await loadNextCardsPage("i");
+
+    getList.mockClear();
+    nextPage(cards("i", 0, 100), 251);
+    nextPage(cards("i", 100, 200), 251);
+    await resyncPot("i");
+
+    expect(getList).toHaveBeenCalledTimes(2);
+    expect(getList).toHaveBeenNthCalledWith(1, 1, 100, expect.anything());
+    expect(getList).toHaveBeenNthCalledWith(2, 2, 100, expect.anything());
+    expect(potWindow("i")?.total).toBe(251);
+  });
+
+  it("does nothing while nothing is loaded", async () => {
+    getList.mockClear();
+    await resyncPot("j");
+    expect(getList).not.toHaveBeenCalled();
+  });
+
+  it("leaves the window untouched when a request fails", async () => {
+    nextPage(cards("k", 0, 2), 2);
+    await loadNextCardsPage("k");
+
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    getList.mockRejectedValueOnce(new Error("offline"));
+    await resyncPot("k");
+    logged.mockRestore();
+
+    expect(potWindow("k")?.ids).toEqual(["k-0", "k-1"]);
+    expect(cardsById["k-0"]).toBeDefined();
+  });
+
+  it("runs when the realtime channel reports a gap", async () => {
+    const { resync } = watch("l");
+    nextPage(cards("l", 0, 2), 2);
+    await loadNextCardsPage("l");
+
+    nextPage(cards("l", 1, 3), 2);
+    resync();
+
+    await vi.waitFor(() => expect(potWindow("l")?.ids).toEqual(["l-1", "l-2"]));
   });
 });

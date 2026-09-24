@@ -3,10 +3,10 @@ import {
   deleteCard,
   fetchCardBySlug,
   fetchCardsPage,
-  subscribeToCards,
   updateCard,
   type CardEvent,
 } from "../api/cardApi";
+import { subscribeToPotCards } from "../api/realtime";
 import type { CardRecord } from "../models/card";
 import { computePosition } from "../position";
 import { withCardsFlip, registerCardElement } from "../cardFlip";
@@ -22,8 +22,8 @@ const PAGE_SIZE = 100;
 // Cache of the cards the UI currently needs: every card of a loaded
 // pot window (see below) plus any card opened by URL. A pot can hold
 // ~100k cards, so this is deliberately NOT the whole collection.
-// startCardsSubscription() keeps these entries live via PocketBase's
-// realtime API; events for cards not held here are ignored.
+// watchPot() keeps these entries live via the pot's realtime channel;
+// events for cards not held here are ignored.
 const [cardsById, setCardsById] = createStore<Record<string, CardRecord>>({});
 
 export { cardsById };
@@ -220,37 +220,67 @@ function handleCardEvent(e: CardEvent) {
   });
 }
 
-// Starts the shared "cards" realtime subscription and returns an
-// unsubscribe function. Meant to be called once, from an onCleanup at
-// the app's root (see AppShell.tsx) -- not from individual pages,
-// since every page reads from the same store regardless of who started
-// the subscription.
-export function startCardsSubscription(): () => void {
-  let unsubscribe: (() => void) | undefined;
-  let cancelled = false;
+// Reloads the part of a pot's card list the window currently covers, for
+// when realtime events may have been missed and could not be replayed (see
+// subscribeToPotCards). Cards that no longer exist are dropped. Pages are
+// fetched one after another, so a large window takes several requests --
+// acceptable for a rare recovery.
+//
+// A page load still in flight while this runs may append a page fetched
+// before the resync; ids already in the window are ignored, so at worst
+// that page is slightly stale.
+export async function resyncPot(potId: string): Promise<void> {
+  const win = windows[potId];
+  // Nothing loaded yet: the first page load fetches fresh data anyway.
+  if (!win?.loaded) return;
 
-  subscribeToCards(handleCardEvent).then((unsub) => {
-    // subscribe() is async, so the caller could have already
-    // unsubscribed (e.g. fast HMR reload) by the time it resolves --
-    // in that case, tear the subscription straight back down instead
-    // of leaking it.
-    if (cancelled) {
-      unsub();
-    } else {
-      unsubscribe = unsub;
+  const pages = Math.max(1, Math.ceil(win.ids.length / PAGE_SIZE));
+  const items: CardRecord[] = [];
+  let total = 0;
+  try {
+    for (let page = 1; page <= pages; page++) {
+      const result = await fetchCardsPage(potId, page, PAGE_SIZE);
+      items.push(...result.items);
+      total = result.totalItems;
     }
-  });
+  } catch (err) {
+    console.error("[cards] failed to resync pot:", err);
+    return;
+  }
 
-  return () => {
-    cancelled = true;
-    unsubscribe?.();
-  };
+  // The user may have left the pot while the requests were in flight.
+  if (!windows[potId]) return;
+
+  const fresh = new Set(items.map((card) => card.id));
+  const vanished = windows[potId].ids.filter((id) => !fresh.has(id));
+  mergeCards(items, { skipFlip: true });
+  setWindows(
+    potId,
+    produce((w) => {
+      w.ids = [...fresh];
+      w.total = total;
+    }),
+  );
+  setCardsById(
+    produce((store) => {
+      for (const id of vanished) delete store[id];
+    }),
+  );
+}
+
+// Keeps a pot's loaded cards live through its realtime channel and returns
+// a function that stops watching. Called by PotLayout for as long as the
+// user stays in the pot.
+export function watchPot(potId: string): () => void {
+  return subscribeToPotCards(potId, handleCardEvent, () => {
+    void resyncPot(potId);
+  });
 }
 
 // How long to wait, after the local optimistic reorder is applied,
 // before sending the new position to PocketBase. This client is also
 // subscribed to its own realtime "cards" updates (see
-// startCardsSubscription above), and that handler always runs the FLIP
+// watchPot above), and that handler always runs the FLIP
 // animation, which sets the same element's `transform` that dnd-kit's
 // own drop animation is still settling right after a drag ends.
 // Delaying only the network request (not the local store update in
