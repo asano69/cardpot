@@ -1,4 +1,4 @@
-import { Centrifuge, UnauthorizedError } from "centrifuge";
+import { Centrifuge, State, UnauthorizedError } from "centrifuge";
 import pb from "./pb";
 import type { CardEvent } from "./cardApi";
 
@@ -35,6 +35,35 @@ function getClient(): Centrifuge {
   created.connect();
   client = created;
   return created;
+}
+
+// The app's own view of the connection, so callers never see the SDK's State.
+export type ConnectionState = "online" | "connecting" | "offline";
+
+function toConnectionState(state: State): ConnectionState {
+  if (state === State.Connected) return "online";
+  if (state === State.Connecting) return "connecting";
+  return "offline";
+}
+
+// Reports the current connection state immediately, then on every change.
+// Returns a function that stops watching.
+export function watchConnectionState(
+  onChange: (state: ConnectionState) => void,
+): () => void {
+  const connection = getClient();
+  const handler = (ctx: { newState: State }) =>
+    onChange(toConnectionState(ctx.newState));
+  connection.on("state", handler);
+  // connect() may already have changed the state before the listener existed.
+  onChange(toConnectionState(connection.state));
+  return () => connection.removeListener("state", handler);
+}
+
+// Restarts a connection that stopped for good (terminal disconnect code).
+// A no-op while connecting or connected.
+export function reconnect(): void {
+  getClient().connect();
 }
 
 // Subscribes to every card event of every pot and returns an unsubscribe

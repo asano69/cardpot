@@ -2,6 +2,7 @@ import { onCleanup, onMount, type ParentProps } from "solid-js";
 import MainLayout from "./MainLayout";
 import { loadAllPots } from "@/lib/stores/potsStore";
 import { watchCards } from "@/lib/stores/cardsStore";
+import { watchConnection } from "@/lib/stores/connectionStore";
 
 // Wraps every route so Header and Sidebar render once regardless of page.
 // Passed as Router's `root` prop (see lib/router.tsx) instead of wrapping
@@ -18,6 +19,7 @@ export default function AppShell(props: ParentProps) {
   onMount(() => {
     loadAllPots();
     onCleanup(watchCards());
+    onCleanup(watchConnection());
   });
 
   return <MainLayout>{props.children}</MainLayout>;
