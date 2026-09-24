@@ -106,6 +106,12 @@ export function startCardsReplication(
     collection,
     replicationIdentifier: `cards-${potId}`,
     live: true,
+    // Every tab replicates on its own. With RxDB's default (only the
+    // leading tab replicates), awaitInitialReplication() never settles
+    // in a non-leading tab, so opening a card there hung on
+    // ensurePotLoaded. Pulling twice is harmless: this replication is
+    // pull-only and identical documents are ignored.
+    waitForLeadership: false,
     pull: {
       batchSize: PULL_BATCH_SIZE,
       async handler(checkpoint) {

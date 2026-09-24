@@ -110,7 +110,7 @@ func pullCardsHandler(e *core.RequestEvent) error {
 cd frontend && bun add rxdb rxjs
 ```
 
-`rxdb` の `RxDBLeaderElectionPlugin` は不要（複数タブ間の一貫性は今回のスコープ外、後回しでよい）。
+`rxdb` の `RxDBLeaderElectionPlugin` は明示的に追加しない。ただし `replicateRxCollection` は既定で `waitForLeadership: true`（リーダータブだけがレプリケーションする）なので、非リーダータブでは `awaitInitialReplication()` が完了せずカードを開けなくなる。`cardsReplication.ts` では `waitForLeadership: false` にして各タブが自分で pull する。
 
 ### 3.2 スキーマ定義
 
