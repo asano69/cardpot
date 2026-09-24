@@ -81,6 +81,19 @@
 
 ### 次の予定
 
-- 第5回: cardsStore 用の新しいテストスイート（RxDB モック）を用意する。
 - 第6回: 楽観的更新の pending オーバーレイ（段階 C）。
 - 10万件実データでの実測（§5.1）: 上記の注意点に記載の通り、必要になった時点で改めて実施する。
+
+## 第5回: cardsStore のテストスイート
+
+### やったこと
+- 第4回の修正漏れを直した。`DraftCardEditor` が使う `mergeCards` を `cardsStore.ts` に復活させ、`RxReplicationPullStreamItem` の import 元を `rxdb` 本体に直した（`bun run typecheck` / `bun run test` は通過）。
+- 新規: `frontend/src/lib/stores/cardsStore.test.ts`
+  - `../rxdb/database`・`../rxdb/cardsReplication`・`../api/cardApi` を `vi.mock` で差し替え。RxDB のクエリは `BehaviorSubject` で代用しているので、IndexedDB も DOM も使わない。
+  - `cardsStore` はモジュール単位の状態を持つので、テストごとに別の pot id を使い、`afterEach` で `releasePot` する（`vi.resetModules()` は Solid が二重に読み込まれるため使わない）。
+  - 対象: `ensurePotLoaded`（ミラー、冪等、後続の変更の追従、pot 間の独立）、`releasePot`（購読停止、セットアップ完了前の呼び出し）、`findCardByPotAndSlug`、`mergeCards`、`moveCard`（失敗時のロールバック）、`setCardPinned`、`removeCard`。
+
+### 未確認・注意点
+- 偽の `find().$` は同期的に最初の値を流す。本物の RxDB の最初の emission は非同期なので、「セットアップ完了前の `releasePot`」テストは、ストアの中身ではなく `stopReplication` の呼び出しと購読解除だけを確認している。
+- `windows[pot].loaded` は最初のクエリ emission で true になり、`initialReplication` の完了は待たない。ローカルが空の pot を初めて開くと、`CardList` が一瞬空のグリッドを見せる可能性がある。実機で確認し、気になる場合は `loaded` を `initialReplication` の完了後に立てる形に直す。
+- 段階 C（pending オーバーレイ）は未着手。実装するときは、このテストに「オーバーレイ中は emission に上書きされない」ケースを足す。
