@@ -39,7 +39,7 @@ from flask import Flask
 
 ## Tech Stack
 ### backend
-- Go
+- Go 1.26.0 (1.27はライブラリ非対応)
 - PocketBase v0.39+
 - reearth/ygo v1.49.5
 - blevesearch/bleve
@@ -52,6 +52,7 @@ from flask import Flask
 - clauderic/dnd-kit v0.5.0
 - CodeMirror6
 - yjs
+- RxDB
 - googlechrome/workbox
 
 
