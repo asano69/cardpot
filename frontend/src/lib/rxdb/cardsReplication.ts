@@ -1,15 +1,16 @@
 //
 // Pull-only replication for one pot's "cards" collection (see
-// docs/rxdb-offline-sync-plan.md §3.3). `live` is false for now: the
-// Centrifuge realtime feed is not wired into this replication's pull
-// stream yet (that happens in a later round), so a live replication
-// here would just sit idle without ever being told to re-pull.
+// docs/rxdb-offline-sync-plan.md §3.3). The initial and gap-recovery
+// pulls go through the HTTP pull handler below; live updates arrive
+// through Centrifuge (see startCentrifugeStream) and are fed into the
+// same `pull.stream$`, so RxDB treats both sources uniformly.
 import { Subject } from "rxjs";
 import {
   replicateRxCollection,
   type RxReplicationPullStreamItem,
 } from "rxdb/plugins/replication";
 import pb from "@/lib/api/pb";
+import { subscribeToCards } from "@/lib/api/realtime";
 import type { CardCheckpoint } from "./checkpoint";
 import type { CardRxDoc } from "./cardsSchema";
 import type { CardsCollection } from "./database";
@@ -56,15 +57,41 @@ function toRxDoc(record: PulledCardRecord): CardRxDoc & { _deleted: boolean } {
   };
 }
 
-// Starts pull-only replication for potId's cards into collection.
-// Returns a function that cancels the replication.
+// Feeds potId's card events from the shared Centrifuge channel into
+// pullStream$, converted to the shape RxDB's pull stream expects.
+// Events for another pot are ignored, since one CardsCollection is
+// shared across every pot (see database.ts) but each replication
+// instance is scoped to a single pot. A recovery gap (see
+// subscribeToCards's own onResync contract) is forwarded as "RESYNC",
+// which tells RxDB to re-run the pull handler from its last known
+// checkpoint -- this is what replaces cardsStore.ts's hand-written
+// resyncPot once the store itself moves onto RxDB (see plan §4,段階
+// B). Returns the underlying unsubscribe function.
+function startCentrifugeStream(
+  pullStream$: Subject<RxReplicationPullStreamItem<CardRxDoc, CardCheckpoint>>,
+  potId: string,
+): () => void {
+  return subscribeToCards(
+    (event) => {
+      if (event.record.pot !== potId) return;
+      pullStream$.next({
+        documents: [toRxDoc(event.record)],
+        checkpoint: { updatedAt: event.record.updated, id: event.record.id },
+      });
+    },
+    () => pullStream$.next("RESYNC"),
+  );
+}
+
+// Starts live replication for potId's cards into collection: an
+// initial pull via the HTTP handler, followed by live updates from
+// Centrifuge fed through the same pull.stream$ (see
+// startCentrifugeStream). Returns a function that cancels both the
+// replication and the underlying Centrifuge subscription.
 export function startCardsReplication(
   collection: CardsCollection,
   potId: string,
 ): () => void {
-  // Created but never fed yet -- see this file's top comment. Kept
-  // here (rather than added later) so the replication's `pull.stream$`
-  // wiring doesn't have to change shape once Centrifuge is connected.
   const pullStream$ = new Subject
     RxReplicationPullStreamItem<CardRxDoc, CardCheckpoint>
   >();
@@ -72,7 +99,7 @@ export function startCardsReplication(
   const replication = replicateRxCollection<CardRxDoc, CardCheckpoint>({
     collection,
     replicationIdentifier: `cards-${potId}`,
-    live: false,
+    live: true,
     pull: {
       batchSize: PULL_BATCH_SIZE,
       async handler(checkpoint) {
@@ -102,7 +129,10 @@ export function startCardsReplication(
     // directly (see docs/rxdb-offline-sync-plan.md §0's non-goals).
   });
 
+  const stopCentrifugeStream = startCentrifugeStream(pullStream$, potId);
+
   return () => {
     replication.cancel();
+    stopCentrifugeStream();
   };
 }
