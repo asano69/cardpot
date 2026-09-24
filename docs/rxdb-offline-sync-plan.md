@@ -46,10 +46,8 @@ type CardCheckpoint struct {
 }
 ```
 
-**着手前に必ず確認すること**: PocketBase の `autodate` フィールド (`cards.updated`) が実際に何桁の精度で
-文字列比較可能かを確認する (`internal/migrations` のスナップショットにある `autodate` フィールド定義を見て、
-実データを `sqlite3 pb_data/data.db "select updated from cards limit 5"` で目視する)。
-同一 `updated` の複数件が起こりうる前提でタイブレークに `id` を必ず使う（2.2 のクエリ参照）。
+**着手前に必ず確認すること**: PocketBase の `autodate` フィールド (`cards.updated`) は実際に3桁のミリ秒の精度で
+文字列比較可能。同一 `updated` の複数件が起こりうる前提でタイブレークに `id` を必ず使う（2.2 のクエリ参照）。
 
 ### 2.2 pull ハンドラ
 
@@ -356,7 +354,7 @@ const [pendingOverrides, setPendingOverrides] = createStore<Record<string, Parti
 - `internal/serve/handler.go` — ルート登録 (`admin.GET("/cards/pull", ...)` 相当を pages グループに追加)
 - `frontend/src/lib/stores/cardsStore.ts` — 読み取り経路を RxDB ベースに置き換え、`resyncPot` 削除
 - `frontend/src/components/layout/AppShell.tsx` — `watchCards()` の呼び出し元を `startCardsReplication` 系に差し替え
-- `frontend/package.json` — `rxdb`, `rxjs` 追加
+- `frntend/package.json` — `rxdb`, `rxjs` 追加
 
 **削除候補（段階 B/6 の後）**
 - `cardsStore.ts` 内のページング (`fetchCardsPage` の呼び出し部分、`PotWindow.loading` の一部)
