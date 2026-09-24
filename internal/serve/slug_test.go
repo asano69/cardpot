@@ -83,7 +83,7 @@ func newSlugTestApp(t *testing.T) core.App {
 		// Soft-delete marker (see notDeleted in cards.go).
 		&core.DateField{Name: "deleted"},
 	)
-	if err := app.Save(cards)
+	if err := app.Save(cards); err != nil {
 		t.Fatalf("create cards collection: %v", err)
 	}
 

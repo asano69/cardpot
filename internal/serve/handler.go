@@ -66,6 +66,9 @@ func registerRoutes(e *core.ServeEvent) error {
 	pages := e.Router.Group("/api/pages")
 	pages.Bind(apis.RequireSuperuserAuth())
 	pages.GET("/{pot}/{slug}/links1hop", links1HopHandler)
+	// Checkpoint-based pull for the frontend's RxDB replication (see
+	// replication.go). {potId} is a pot's id, unlike {pot} above.
+	pages.GET("/{potId}/cards/pull", pullCardsHandler)
 
 	// Serves the whole Vite build output (index.html, hashed JS/CSS
 	// under assets/, and public/ files like favicon.svg copied to the

@@ -51,7 +51,13 @@ type CardCheckpoint struct {
 
 ### 2.2 pull ハンドラ
 
-新ルート `GET /api/pages/{pot}/cards/pull` を `internal/serve/handler.go` の `admin` グループ (superuser 認証) に追加する。
+新ルート `GET /api/pages/{potId}/cards/pull` を `internal/serve/handler.go` の `pages` グループ (superuser 認証) に追加した（実装済み: `internal/serve/replication.go`）。`{potId}` は pot の PocketBase id（name ではない）。
+
+以下のコードは当初のスケッチ。実装が正で、差分は次の通り。
+- ルートは `admin` ではなく `pages` グループ。
+- `limit` はクエリで受け取る（既定 200、最大 1000）。サーバ側の定数とフロントの `batchSize` が食い違うと、RxDB が「まだ続きがある」のに終わりと誤認するため。
+- checkpoint（`updatedAt` / `id`）は両方指定するか両方省略。片方だけなら 400。
+- クエリ処理は `parsePullQuery` / `pullCards` に分け、ハンドラは薄くした。
 
 ```go
 // internal/serve/replication.go
@@ -333,7 +339,7 @@ const [pendingOverrides, setPendingOverrides] = createStore<Record<string, Parti
 
 ## 6. ロールアウト順序（サマリ）
 
-1. バックエンド: checkpoint 型 pull API (`/api/pages/{pot}/cards/pull`) を追加する（pullStream はまだ繋がない）。
+1. ✅ バックエンド: checkpoint 型 pull API (`/api/pages/{potId}/cards/pull`) を追加した（pullStream はまだ繋がない）。実データでの確認は未（§2.1 の確認事項）。
 2. フロント: RxDB を導入し、スキーマと pull-only replication を試作、5.1 の実測を行う。
 3. 問題なければ Centrifuge を `pullStream$` のトランスポートとして接続する（3.3）。
 4. `cardsStore.ts` の読み取り経路を RxDB の reactive query に差し替え、ページングコードを削除する（段階 B）。
@@ -351,10 +357,10 @@ const [pendingOverrides, setPendingOverrides] = createStore<Record<string, Parti
 - `frontend/src/lib/rxdb/checkpoint.ts`
 
 **変更**
-- `internal/serve/handler.go` — ルート登録 (`admin.GET("/cards/pull", ...)` 相当を pages グループに追加)
+- `internal/serve/handler.go` — `pages.GET("/{potId}/cards/pull", pullCardsHandler)` を追加（済）
 - `frontend/src/lib/stores/cardsStore.ts` — 読み取り経路を RxDB ベースに置き換え、`resyncPot` 削除
 - `frontend/src/components/layout/AppShell.tsx` — `watchCards()` の呼び出し元を `startCardsReplication` 系に差し替え
-- `frntend/package.json` — `rxdb`, `rxjs` 追加
+- `frontend/package.json` — `rxdb`, `rxjs` は追加済み（作業不要）
 
 **削除候補（段階 B/6 の後）**
 - `cardsStore.ts` 内のページング (`fetchCardsPage` の呼び出し部分、`PotWindow.loading` の一部)
