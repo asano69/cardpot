@@ -10,7 +10,8 @@ import ActionsMenu from "@/components/menus/ActionsMenu";
 import { Trash2, Pin, PinOff, Wrench } from "@/lib/icons";
 import {
   cardsById,
-  openCardBySlug,
+  ensurePotLoaded,
+  findCardByPotAndSlug,
   removeCard,
   setCardPinned,
 } from "@/lib/stores/cardsStore";
@@ -84,13 +85,16 @@ export default function CardForm() {
     if (slug === urlSegment && cardId()) return;
     setDraftYdoc(undefined);
     setFocusLineOnOpen(undefined);
-    // The card is looked up on the server, not in the store, so nothing
-    // here depends on which cards happen to be loaded. The loading
-    // fallback below shows until the lookup settles.
+    // The lookup is entirely local (see findCardByPotAndSlug), but it
+    // still depends on this pot's cards having been loaded at least
+    // once -- PotLayout starts that as soon as the pot resolves, so
+    // this just waits on the same promise. The loading fallback below
+    // shows until it settles.
     const request = ++openRequest;
-    openCardBySlug(potId, slug)
-      .then((record) => {
+    ensurePotLoaded(potId)
+      .then(() => {
         if (request !== openRequest) return;
+        const record = findCardByPotAndSlug(potId, slug);
         if (record) {
           setCardId(record.id);
           setDraft(undefined);

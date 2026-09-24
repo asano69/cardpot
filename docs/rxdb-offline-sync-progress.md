@@ -57,8 +57,30 @@
 - `subscribeToCards` は呼び出しごとに新しい Centrifuge subscription (`connection.newSubscription("cards")`) を作る実装（`realtime.ts`）。複数ポットのレプリケーションを同時に開くと、その数だけ独立した "cards" 購読が立つ。今のところ同時に開くポットは1つの想定（段階Bで `cardsStore.ts` に統合する際に、シングルトン化するかどうか再検討する）。
 - ブラウザの IndexedDB devtools で `startCardsReplication` を実行し、Centrifuge 経由のイベントが実際に IndexedDB へ反映されることを目視確認する作業はまだ行っていない。
 
+## 第4回: cardsStore.ts を RxDB ベースに置き換え（段階 B）
+
+### やったこと
+- `cardsStore.ts` を全面的に書き直し。`ensurePotLoaded(potId)` / `releasePot(potId)` を新しい公開APIの中心に据え、RxDB の reactive query (`collection.find({selector:{pot}}).subscribe(...)`) が `cardsById`/`windows` を直接更新する。
+  - `windows` (`PotWindow`) は「ページ」の概念を廃止。`ensurePotLoaded` が解決すれば、そのポットの全カードがローカルにある前提になった。
+  - `resyncPot`・`watchCards`・`fetchCardsPage` 経由のページングは削除。ギャップ検出時の再取得は RxDB の RESYNC（第3回で配線済み）に一本化。
+  - `moveCard` から `PERSIST_DELAY_MS` の遅延トリックを削除した。この遅延は「ローカル楽観更新とリアルタイムechoのFLIPアニメーション競合」を避けるためのものだったが、新設計では `cardsById` が RxDB の reactive query の単純なミラーになったため、その競合自体が発生しなくなった。
+  - `setCardPinned` / `removeCard` は元の挙動をほぼ踏襲（成功時にサーバのレスポンスを直接反映）。段階C（pending オーバーレイ）はまだ実装していない。
+- `openCardBySlug`（サーバ問い合わせ）を廃止し、`findCardByPotAndSlug`（`cardsById` をローカルで `titleToSlug` 走査するだけの純関数）に置き換えた。`cardApi.ts` の `fetchCardBySlug` / `fetchCardsPage` / `CardsPage` / `CARDS_SORT` は死んだコードとして削除。
+- `PotLayout.tsx` がポットのロード開始（`ensurePotLoaded`）を一元的に担うようにした。`CardList` 単体の effect ではなく親レイアウトに置いたのは、`CardForm` が単独でマウントされるケース（URL直打ちでカードを開く）でも同じロードが必要なため。
+- `CardList.tsx` から `IntersectionObserver` による無限スクロールと、それに紐づく `createEffect` を撤去した。全カードが常にローカルにある前提になったため、`handleDragEnd` の「未ロードの末尾」を考慮したクランプ処理（`moreUnloaded`/`isWindowTail`）も削除。
+- `AppShell.tsx` からアプリ全体で1本張っていた `watchCards()`（Centrifugeの "cards" チャンネル購読）の呼び出しを削除。今は各ポットの `ensurePotLoaded` が自分のレプリケーション用に独立した Centrifuge 購読を持つ。
+- `cardsStore.test.ts` を削除した（旧実装＝ページング・`resyncPot`・`watchCards` を前提にしたテストで、新実装とは根本的に噛み合わないため）。
+
+### 未確認・注意点（次回着手前に確認すること）
+- `bun run typecheck` / `bun run test` は未実行。特に:
+  - `replication.awaitInitialReplication()` が RxDB 17 の実際の型/挙動と一致するか。
+  - `RxDocument.toJSON()` の戻り値の型と `CardRxDoc` の互換性。
+- **cardsStore 用のテストが存在しない状態になっている。** 次回、RxDB を（fake-indexeddb 等で）モックした新しいテストスイートを用意する必要がある。優先度高。
+- 「ポットを開くと全カードがローカルに落ちてくる」設計は、10万件規模のポットでの初回同期コスト（§5.1）が未検証のまま本流に乗った状態。段階Bが安定した後、または大きいポットでの体感が悪い報告があった時点で、実測と対策（バッチ分割の見直し、あるいは本当に必要な場合はページングの部分復活）を検討する。
+- `PotLayout.tsx` の `ensurePotLoaded` 呼び出しは pot 切り替えのたびに `createEffect` から呼ばれるが、`ensurePotLoaded` 自体は同じ potId に対しては冪等（Map で二重起動を防止）。ポット間を素早く行き来した場合の `releasePot`→`ensurePotLoaded` の順序は Solid の `createEffect`/`onCleanup` の実行順（前のクリーンアップが先に走る）に依存している点は未検証。
+
 ### 次の予定
 
-- 第4回: `cardsStore.ts` の読み取りを RxDB の reactive query に置き換える（段階 B）。`resyncPot` とページングを削除する。この際、上記の「Centrifuge 購読がポット数だけ立つ」問題も解消する（例: replication のライフサイクルを `cardsStore.ts` 側で一元管理する）。
-- 第5回: 楽観的更新の pending オーバーレイ（段階 C）。
-- 10万件実データでの実測（§5.1）: 段階Bで実際に画面から使われるようになった時点、または問題の兆候が出た時点で改めて実施する。
+- 第5回: cardsStore 用の新しいテストスイート（RxDB モック）を用意する。
+- 第6回: 楽観的更新の pending オーバーレイ（段階 C）。
+- 10万件実データでの実測（§5.1）: 上記の注意点に記載の通り、必要になった時点で改めて実施する。

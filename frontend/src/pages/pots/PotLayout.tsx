@@ -8,7 +8,7 @@ import { useParams } from "@solidjs/router";
 
 import { fetchPotByName } from "@/lib/api/pots";
 import { useTopBarPotLink } from "@/lib/topBarSlot";
-import { releasePot } from "@/lib/stores/cardsStore";
+import { ensurePotLoaded, releasePot } from "@/lib/stores/cardsStore";
 import PotContext from "./PotContext";
 
 // Wraps every route scoped to a single pot (CardList, CardForm) so the
@@ -35,13 +35,17 @@ export default function PotLayout(props: ParentProps) {
     pot() ? { name: pot()!.title, slug: params.slug } : undefined,
   );
 
-  // Drops the pot's loaded cards once the user leaves it (another pot, or
-  // the pot list). Moving between CardList and CardForm keeps this layout
-  // mounted, so both survive that. Realtime is not handled here: AppShell
-  // watches the shared cards channel for the whole session.
+  // Starts mirroring the pot's cards locally (see
+  // lib/stores/cardsStore.ts's ensurePotLoaded) and drops them again
+  // once the user leaves it (another pot, or the pot list). Moving
+  // between CardList and CardForm keeps this layout mounted, so both
+  // survive that -- and both need this: CardForm can be the only thing
+  // mounted (a direct URL to a card), and its own slug lookup depends
+  // on the pot's cards already being loaded locally.
   createEffect(() => {
     const id = pot()?.id;
     if (!id) return;
+    void ensurePotLoaded(id);
     onCleanup(() => releasePot(id));
   });
 

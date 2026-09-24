@@ -83,19 +83,27 @@ function startCentrifugeStream(
   );
 }
 
+// What startCardsReplication hands back to its caller (see
+// cardsStore.ts's ensurePotLoaded): a way to stop everything, and a
+// promise the caller can await to know the pot's full backlog has
+// been pulled at least once -- before that, a local query only sees a
+// partial pot.
+export interface CardsReplicationHandle {
+  initialReplication: Promise<void>;
+  stopReplication: () => void;
+}
+
 // Starts live replication for potId's cards into collection: an
 // initial pull via the HTTP handler, followed by live updates from
 // Centrifuge fed through the same pull.stream$ (see
-// startCentrifugeStream). Returns a function that cancels both the
-// replication and the underlying Centrifuge subscription.
+// startCentrifugeStream).
 export function startCardsReplication(
   collection: CardsCollection,
   potId: string,
-): () => void {
-  const pullStream$ = new Subject
+): CardsReplicationHandle {
+  const pullStream$ = new Subject<
     RxReplicationPullStreamItem<CardRxDoc, CardCheckpoint>
   >();
-
   const replication = replicateRxCollection<CardRxDoc, CardCheckpoint>({
     collection,
     replicationIdentifier: `cards-${potId}`,
@@ -131,8 +139,11 @@ export function startCardsReplication(
 
   const stopCentrifugeStream = startCentrifugeStream(pullStream$, potId);
 
-  return () => {
-    replication.cancel();
-    stopCentrifugeStream();
+  return {
+    initialReplication: replication.awaitInitialReplication(),
+    stopReplication: () => {
+      replication.cancel();
+      stopCentrifugeStream();
+    },
   };
 }
