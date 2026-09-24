@@ -3,6 +3,7 @@ package serve
 import (
 	"net/http"
 
+	"github.com/asano69/cardpot/internal/realtime"
 	"github.com/asano69/cardpot/internal/static"
 	"github.com/asano69/cardpot/internal/version"
 
@@ -43,6 +44,12 @@ func registerRoutes(e *core.ServeEvent) error {
 	// which also doubles as the "cards" record id (see NoteEditor.tsx).
 	// TODO: gate behind RequireSuperuserAuth once the design is validated.
 	e.Router.GET("/yjs/{room}", apis.WrapStdHandler(yjsServer))
+
+	// Realtime card events (see internal/realtime). Authentication happens
+	// inside the hub (superuser token), not via this router's middleware.
+	if err := realtime.Register(e); err != nil {
+		return err
+	}
 
 	// Custom API routes that return or mutate user data go under this
 	// group so RequireSuperuserAuth only has to be declared once here,
