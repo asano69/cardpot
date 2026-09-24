@@ -1,6 +1,6 @@
 module github.com/asano69/cardpot
 
-go 1.27
+go 1.26.0
 
 require (
 	github.com/centrifugal/centrifuge v0.39.2

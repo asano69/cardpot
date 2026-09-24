@@ -1023,6 +1023,18 @@ func init() {
 						"type": "bool"
 					},
 					{
+						"help": "",
+						"hidden": false,
+						"id": "date3946532403",
+						"max": "",
+						"min": "",
+						"name": "deleted",
+						"presentable": false,
+						"required": false,
+						"system": false,
+						"type": "date"
+					},
+					{
 						"hidden": false,
 						"id": "autodate2990389176",
 						"name": "created",
