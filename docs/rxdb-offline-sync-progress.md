@@ -25,14 +25,20 @@
 ## 次の予定
 
 ### 第2回: フロントの RxDB 土台（段階 A の前半）
-- 新規: `frontend/src/lib/rxdb/{cardsSchema,checkpoint,database}.ts`
-- 新規: pull のみの `cardsReplication.ts`（Centrifuge の `stream$` はまだ繋がない）
-- `cardsStore.ts` と画面は触らない。
 
-実装前に直す点は次の通り。
-- 計画書 §3.3 のスニペットは `pb` を import していない。
-- fetch を直接呼ばず `pb.send` を使う。認証ヘッダと、401/403 で `authStore` を消す `afterSend`（`pb.ts`）をそのまま使える。
-- `rxdb` と `rxjs` は `package.json` に入っている。RxDB 17 の API（プラグインの import パスなど）は、実装時に公式ドキュメントで確認する。
+#### やったこと
+- 新規: `frontend/src/lib/rxdb/checkpoint.ts`（`CardCheckpoint` 型）
+- 新規: `frontend/src/lib/rxdb/cardsSchema.ts`（RxDB スキーマ、`CardRxDoc` 型）
+- 新規: `frontend/src/lib/rxdb/database.ts`（`getDb()`。cards は全ポット共通の単一コレクション）
+- 新規: `frontend/src/lib/rxdb/cardsReplication.ts`（`startCardsReplication(collection, potId)`）
+  - pull ハンドラは `pb.send()` を使用（`fetch` を直接呼ばない。認証ヘッダと 401/403 での `authStore` クリアが自動で効く）。
+  - `live: false`。`pull.stream$` 用の `Subject` は用意したが、まだ誰も `.next()` しない（Centrifuge 未接続）。第3回でこの Subject に Centrifuge のイベントを流し込む予定で、その時に `pull.stream$` の配線自体は変えずに済むようにしてある。
+- `cardsStore.ts` と画面コンポーネントは一切変更していない（計画通り）。
+
+#### 未確認・注意点
+- RxDB 17 系の実際の import パス（`rxdb/plugins/replication`、`rxdb/plugins/storage-dexie`、`rxdb/plugins/query-builder`）と `replicateRxCollection` / `RxReplicationPullStreamItem` の型シグネチャは、公式ドキュメント／型定義で未検証。`bun run typecheck` を最初に実行して確認すること。
+- `pb.send()` に渡す URL 末尾のクエリ文字列（`?limit=...&updatedAt=...`）が SDK 側でそのまま素通りするか未確認。素通りしない場合は `pb.send` の `query` オプション（あれば）に切り替える。
+- ブラウザの IndexedDB devtools で `getDb()` → `startCardsReplication()` を手動実行し、実際に `cards` テーブルにレコードが溜まることを目視確認するのが第3回着手前の前提。
 
 ### 第3回以降
 - 第3回: Centrifuge を `pullStream$` に接続し、§5.1 の実測（10万件の初回 sync の時間、UI のブロック、メモリ）を行う。ここで致命的なら移行を見送る。
