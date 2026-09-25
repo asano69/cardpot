@@ -64,18 +64,19 @@ UI (CardList / CardForm)
 
 ## 設計上の気になる点
 
-### 1. エラーの握りつぶし（`enqueue` の `.then(work, work)`）
+### 1. エラーの握りつぶし（`enqueue` の `.then(work, work)`）— 対応済み
+
+`.then(onFulfilled, onRejected)` に同じ `work` を渡していたため、直前の書き込みが失敗してもエラー理由を見ずに次の `work` を実行し続け、ログも出ない状態だった。`onRejected` を専用のハンドラに分離し、失敗を `console.error` で記録してからチェーンを継続するよう修正した:
 ```ts
 const enqueue = (work: () => Promise<void>) => {
-  writeChain = writeChain.then(work, work);
+  writeChain = writeChain.then(work, (err) => {
+    console.error(`[cards-replication] step failed for pot ${potId}:`, err);
+    return work();
+  });
   return writeChain;
 };
 ```
-`.then(onFulfilled, onRejected)` に同じ `work` を渡しているため、**直前の書き込みが失敗していても、エラー理由を見ずに次の `work` を実行し続けます**。ログも出ません。つまり:
-- 再接続直後の `pullPot` が一時的なネットワークエラーで失敗しても、何も記録されず、次にもう一度 `onResync` が来るまでリトライされない。
-- `initialReplication`（最初の `lead()` 内の `await enqueue(...)`）だけは `try/catch` で拾われますが、それ以降の `onEvent`/`onResync` 経由の `enqueue` 呼び出しはエラーが完全に不可視化されます。
-
-「オンライン復帰時にちゃんと差分が取れているか分からず、デバッグもできない」という状況を生みかねないので、ここは最低限 `console.error` を足すべきです（あるいは `.then(work, (err) => { console.error(...); return work(); })` のように明示的に分離する）。
+これにより `onEvent`/`onResync` 経由の失敗もコンソールに残るようになった。挙動そのもの（失敗しても次のイベントで回復を試みる）は変えていない。
 
 ### 2. `applyRecords` のコード重複
 `cardsReplication.ts` には module レベルの `applyRecords(records)` 関数があるのに、`pullPot` 内のバルク書き込みは（チェックポイント更新とのトランザクションを一体化するためか）ほぼ同じロジックを再度インライン実装しています。ロジックが2箇所に分散していて、片方だけ直しても気づきにくい典型的な保守性リスクです。`applyRecords` を「(records, checkpointUpdate?)」のように拡張して1本化するか、少なくともコメントで「意図的に重複させている理由」を書いておくべきです。

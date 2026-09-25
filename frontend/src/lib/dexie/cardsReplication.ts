@@ -95,8 +95,17 @@ export function startCardsReplication(potId: string): CardsReplicationHandle {
     rejectInitial = reject;
   });
 
+  // Chains replication work so Dexie writes never overlap. Previously
+  // this passed the same `work` as both onFulfilled and onRejected,
+  // which meant a failed step called `work()` again with no argument
+  // and its rejection reason was silently discarded. Now the failure
+  // is logged before continuing, so an online-recovery issue is at
+  // least visible instead of vanishing without a trace.
   const enqueue = (work: () => Promise<void>) => {
-    writeChain = writeChain.then(work, work);
+    writeChain = writeChain.then(work, (err) => {
+      console.error(`[cards-replication] step failed for pot ${potId}:`, err);
+      return work();
+    });
     return writeChain;
   };
 
