@@ -90,6 +90,17 @@ export interface CardsReplicationHandle {
   stopReplication: () => void;
 }
 
+// Broadcasts to every tab watching this pot whenever its cards may have
+// changed on the server. Only the lock-holding tab keeps a live Centrifuge
+// subscription (see holdLock below), so follower tabs have no way to learn
+// about a change on their own; a SignalDB Collection reacts only to writes
+// made through its own instance, not to another tab's IndexedDB writes.
+// Pulling itself is a plain authenticated HTTP request, so any tab can do
+// it once told to -- this channel is only the "please pull now" signal.
+function changeChannelName(potId: string): string {
+  return `cardpot:cards-changed:${potId}`;
+}
+
 export function startCardsReplication(potId: string): CardsReplicationHandle {
   const collection = createCardsCollection(potId);
   const syncManager = new SyncManager<{ potId: string }, CardRecord>({
@@ -118,9 +129,30 @@ export function startCardsReplication(potId: string): CardsReplicationHandle {
     rejectInitial = reject;
   });
 
+  const channel =
+    typeof BroadcastChannel === "undefined"
+      ? undefined
+      : new BroadcastChannel(changeChannelName(potId));
+
   const sync = async () => {
     await syncManager.sync("cards");
     commitCheckpoint(potId);
+  };
+
+  // Every tab -- leader or follower -- resyncs when told a change happened,
+  // regardless of which tab actually holds the lock.
+  const onChannelMessage = () => {
+    void sync().catch((error) =>
+      console.error(`[cards-replication] ${potId}:`, error),
+    );
+  };
+  channel?.addEventListener("message", onChannelMessage);
+
+  // Pulls, then tells every other tab (this one already has the fresh
+  // data via its own sync() call above).
+  const syncAndBroadcast = async () => {
+    await sync();
+    channel?.postMessage("changed");
   };
 
   const lead = async () => {
@@ -137,17 +169,17 @@ export function startCardsReplication(potId: string): CardsReplicationHandle {
     stopStream = subscribeToCards(
       (event) => {
         if (event.record.pot === potId)
-          void sync().catch((error) =>
+          void syncAndBroadcast().catch((error) =>
             console.error(`[cards-replication] ${potId}:`, error),
           );
       },
       () =>
-        void sync().catch((error) =>
+        void syncAndBroadcast().catch((error) =>
           console.error(`[cards-replication] ${potId}:`, error),
         ),
     );
     await syncManager.startSync("cards");
-    await sync();
+    await syncAndBroadcast();
     resolveInitial();
   };
   const holdLock = async () => {
@@ -182,6 +214,8 @@ export function startCardsReplication(potId: string): CardsReplicationHandle {
       stopped = true;
       releaseLeadership?.();
       stopStream?.();
+      channel?.removeEventListener("message", onChannelMessage);
+      channel?.close();
     },
   };
 }
