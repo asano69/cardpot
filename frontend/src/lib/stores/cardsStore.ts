@@ -1,4 +1,5 @@
-import { createStore, produce } from "solid-js/store";
+import { createSignal } from "solid-js";
+import { createStore } from "solid-js/store";
 import { startCardsReplication } from "../dexie/cardsReplication";
 import type { CardRecord } from "../models/card";
 import { titleToSlug } from "../models/slugify";
@@ -22,35 +23,44 @@ interface PotSubscription {
   stop: () => void;
   cards: ReturnType<typeof startCardsReplication>["collection"];
 }
-// A Solid store, not a plain Map: ensurePotLoaded registers a pot's
-// subscription from an effect that runs *after* a consumer's createMemo has
-// already evaluated once (e.g. CardList's `cards`). A plain Map has no
-// reactivity, so a memo that first read a not-yet-registered pot would never
-// re-run once the real subscription (and its data) showed up later. Solid's
-// store still tracks a read of a key that doesn't exist yet, so setting that
-// key afterwards correctly invalidates the memo.
-const [subscriptions, setSubscriptions] = createStore<
-  Record<string, PotSubscription>
->({});
+// A plain Map, NOT a Solid store: a SignalDB Collection already carries its
+// own Solid-reactive signals (via its own reactivity adapter), so nesting
+// that class instance inside a Solid store's deeply-wrapped Proxy doubles up
+// the reactivity and can feed back into itself (observed as a runaway
+// render loop). A Map has no reactivity of its own, so it's safe to hold
+// these live instances.
+const potSubscriptions = new Map<string, PotSubscription>();
+
+// ensurePotLoaded registers a pot's subscription from an effect that runs
+// *after* a consumer's createMemo has already evaluated once (e.g.
+// CardList's `cards`), so a memo reading potSubscriptions directly would
+// never re-run once the real subscription (and its data) showed up later.
+// This signal is bumped whenever a subscription is added or removed, purely
+// to give such a memo something reactive to depend on -- it carries no data
+// of its own, and the cards themselves stay reactive via SignalDB's own
+// adapter.
+const [subscriptionVersion, bumpSubscriptionVersion] = createSignal(0);
 
 // These reads intentionally go straight to SignalDB. `fetch`/`findOne` are
 // reactive when called from a Solid tracking scope, eliminating the Dexie
 // liveQuery-to-Solid-store mirror and its O(n) reconciliation pass.
 export function cardsForPot(potId: string | undefined): CardRecord[] {
+  subscriptionVersion(); // track: see its own comment above
   if (!potId) return [];
-  return subscriptions[potId]?.cards.find().fetch() ?? [];
+  return potSubscriptions.get(potId)?.cards.find().fetch() ?? [];
 }
 export function cardById(id: string | undefined): CardRecord | undefined {
+  subscriptionVersion(); // track: see its own comment above
   if (!id) return undefined;
-  for (const potId in subscriptions) {
-    const card = subscriptions[potId].cards.findOne({ id });
+  for (const { cards } of potSubscriptions.values()) {
+    const card = cards.findOne({ id });
     if (card) return card;
   }
   return undefined;
 }
 
 export function ensurePotLoaded(potId: string): Promise<void> {
-  const existing = subscriptions[potId];
+  const existing = potSubscriptions.get(potId);
   if (existing) return existing.ready;
 
   setWindows(potId, { total: 0, loaded: false });
@@ -60,7 +70,7 @@ export function ensurePotLoaded(potId: string): Promise<void> {
     if (!stopped)
       setWindows(potId, { total: cardsForPot(potId).length, loaded: true });
   });
-  setSubscriptions(potId, {
+  potSubscriptions.set(potId, {
     cards: replication.collection,
     ready,
     stop: () => {
@@ -68,18 +78,16 @@ export function ensurePotLoaded(potId: string): Promise<void> {
       replication.stopReplication();
     },
   });
+  bumpSubscriptionVersion((v) => v + 1);
   return ready;
 }
 
 export function releasePot(potId: string): void {
-  const sub = subscriptions[potId];
+  const sub = potSubscriptions.get(potId);
   if (!sub) return;
+  potSubscriptions.delete(potId);
   sub.stop();
-  setSubscriptions(
-    produce((store) => {
-      delete store[potId];
-    }),
-  );
+  bumpSubscriptionVersion((v) => v + 1);
   setWindows(potId, undefined!);
 }
 
@@ -94,21 +102,20 @@ export function findCardByPotAndSlug(
 // immediately readable while the normal realtime pull catches up.
 export function mergeCards(records: CardRecord[]): void {
   for (const record of records) {
-    const cards = subscriptions[record.pot]?.cards;
+    const cards = potSubscriptions.get(record.pot)?.cards;
     cards?.replaceOne({ id: record.id }, record, { upsert: true });
   }
 }
 
 function findOwningCollection(id: string) {
-  for (const potId in subscriptions) {
-    const cards = subscriptions[potId].cards;
-    if (cards.findOne({ id })) return cards;
+  for (const sub of potSubscriptions.values()) {
+    if (sub.cards.findOne({ id })) return sub.cards;
   }
   return undefined;
 }
 
 export function moveCard(card: CardRecord, position: number): void {
-  const cards = subscriptions[card.pot]?.cards;
+  const cards = potSubscriptions.get(card.pot)?.cards;
   if (!cards) return;
   withCardsFlip(() => cards.updateOne({ id: card.id }, { $set: { position } }));
 }
