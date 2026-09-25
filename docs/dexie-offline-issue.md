@@ -42,11 +42,12 @@ RxJSではなくDexieの`liveQuery`なので、単純にsubscribeコールバッ
 
 ```ts
 let settled = false;
-const subscription = liveQuery(() => db.cards.where("pot").equals(potId).toArray())
-  .subscribe((docs) => {
-    if (!settled && !initialReplicationDone) return; // 初回同期中は無視
-    // ...既存の処理
-  });
+const subscription = liveQuery(() =>
+  db.cards.where("pot").equals(potId).toArray(),
+).subscribe((docs) => {
+  if (!settled && !initialReplicationDone) return; // 初回同期中は無視
+  // ...既存の処理
+});
 ```
 
 ただし「初回同期完了までカードが1件も表示されない」体験になるので、代わりに「最後の書き込みから一定時間（例えば300ms）操作がなければ反映する」というdebounce的な間引きの方が自然です。単純にタイマーで間引くだけなら依存追加なしで書けます。
@@ -62,4 +63,12 @@ const subscription = liveQuery(() => db.cards.where("pot").equals(potId).toArray
 - 初回表示は先頭N件だけ表示し、残りはバックグラウンドでIndexedDBに溜め続ける（UIは`windows[potId].ids`の一部だけ使う）
 - Solid store（`cardsById`）への全件ミラーをやめ、表示に必要な分だけリアクティブクエリで取得する
 
+---
 
+## 解決状況（SignalDB 移行後）
+
+この記録で問題としていた Dexie `liveQuery` の全件再読み込みと、Solid store への O(n) 差分反映は
+SignalDB 移行により解消済みです。Cards UI は `Collection.find().fetch()` を直接リアクティブに読み、
+Dexie のローカルミラーと二重ステート管理は廃止しました。なお、checkpoint pull はサーバー API との
+互換性のため引き続き 200 件単位の逐次取得です。現在の設計は
+[`signaldb-offline-sync.md`](./signaldb-offline-sync.md) を参照してください。

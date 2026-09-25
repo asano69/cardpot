@@ -5,9 +5,14 @@ import type { CardRecord } from "../models/card";
 
 const mocked = vi.hoisted(() => ({
   start: undefined as undefined | ((potId: string) => unknown),
+  withCardsFlip: vi.fn((mutate: () => void) => mutate()),
 }));
-vi.mock("../dexie/cardsReplication", () => ({
+vi.mock("../signaldb/cardsReplication", () => ({
   startCardsReplication: (potId: string) => mocked.start!(potId),
+}));
+vi.mock("../cardFlip", () => ({
+  registerCardElement: vi.fn(),
+  withCardsFlip: mocked.withCardsFlip,
 }));
 
 import {
@@ -74,5 +79,6 @@ describe("cardsStore SignalDB facade", () => {
     expect(cardById("a")).toMatchObject({ position: 1000, pin: true });
     await removeCard("a");
     expect(cardById("a")).toBeUndefined();
+    expect(mocked.withCardsFlip).toHaveBeenCalledTimes(3);
   });
 });

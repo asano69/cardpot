@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
-import { startCardsReplication } from "../dexie/cardsReplication";
+import { startCardsReplication } from "../signaldb/cardsReplication";
 import type { CardRecord } from "../models/card";
 import { titleToSlug } from "../models/slugify";
 import { computePosition } from "../position";
