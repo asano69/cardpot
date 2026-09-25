@@ -11,6 +11,11 @@ import {
   createCardsCollection,
   type CardCheckpoint,
 } from "@/lib/signaldb/cardsCollection";
+import {
+  withCardsFlip,
+  withCardsFlipAsync,
+  registerCardElement,
+} from "../cardFlip";
 
 const PULL_BATCH_SIZE = 200;
 const lockName = (potId: string) => `cardpot:cards-replication:${potId}`;
@@ -26,8 +31,20 @@ interface PullResponse {
   records: PulledCardRecord[];
 }
 
+// A pulled record is either genuinely new to THIS tab's collection
+// (never synced before -- must be added), an update to one it already
+// holds (modified), or a deletion. Routing every non-deleted record
+// into `modified` -- as this file used to -- makes SyncManager try to
+// update a document that does not exist yet: a silent no-op, so a
+// card created on another tab never appears here, and a deletion of a
+// card this tab never even saw is likewise nothing to remove.
+// Classifying against the collection's own current state (reactive:
+// false -- this read must not register a tracking dependency) is what
+// makes create/delete actually propagate to a tab that did not
+// originate them.
 async function pullPot(
   potId: string,
+  collection: Collection<CardRecord>,
 ): Promise<{ changes: Changeset<CardRecord> }> {
   await cardCheckpoints.isReady();
   let checkpoint = cardCheckpoints.findOne({ id: potId });
@@ -50,8 +67,17 @@ async function pullPot(
     if (!records.length) break;
 
     for (const record of records) {
-      if (record.deleted) changes.removed.push(record);
-      else changes.modified.push(record);
+      const existing = collection.findOne(
+        { id: record.id },
+        { reactive: false },
+      );
+      if (record.deleted) {
+        if (existing) changes.removed.push(record);
+      } else if (existing) {
+        changes.modified.push(record);
+      } else {
+        changes.added.push(record);
+      }
     }
     const last = records.at(-1)!;
     checkpoint = { id: potId, updatedAt: last.updated, cardId: last.id };
@@ -112,7 +138,7 @@ export function startCardsReplication(potId: string): CardsReplicationHandle {
     // cards. A fresh sync snapshot lets the bootstrap below repair it.
     persistenceAdapter: (name) =>
       createIndexedDBAdapter(`cards-sync-v2-${potId}-${name}`),
-    pull: ({ potId: id }) => pullPot(id),
+    pull: ({ potId: id }) => pullPot(id, collection),
     push: (_options, { changes }) => pushChanges(changes),
     onError: (_options, error) =>
       console.error(`[cards-replication] ${potId}:`, error),
@@ -134,9 +160,27 @@ export function startCardsReplication(potId: string): CardsReplicationHandle {
       ? undefined
       : new BroadcastChannel(changeChannelName(potId));
 
-  const sync = async () => {
-    await syncManager.sync("cards");
-    commitCheckpoint(potId);
+  // Concurrent triggers (a realtime event, this tab's own change
+  // echoing back, a BroadcastChannel message from another tab, the
+  // resync-on-gap callback) must never run syncManager.sync()
+  // overlapping one another: two in-flight pulls can resolve out of
+  // order, letting an older response land after a newer one and
+  // revert the collection -- this is the flicker seen right after a
+  // drag-to-reorder. Chaining every call through `syncing` makes them
+  // strictly sequential instead, and wrapping the whole thing in
+  // withCardsFlipAsync is what actually lets a remote change animate
+  // (see cardFlip.ts).
+  let syncing: Promise<void> = Promise.resolve();
+  const sync = () => {
+    syncing = syncing
+      .catch(() => {}) // a previous failure must not wedge the queue
+      .then(() =>
+        withCardsFlipAsync(async () => {
+          await syncManager.sync("cards");
+          commitCheckpoint(potId);
+        }),
+      );
+    return syncing;
   };
 
   // Every tab -- leader or follower -- resyncs when told a change happened,

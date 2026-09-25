@@ -54,6 +54,22 @@ export function withCardsFlip(mutate: () => void): void {
   }
 }
 
+// Same technique as withCardsFlip, but for an asynchronous mutation
+// (applying a batch of remote changes pulled over the network).
+// Rects are captured before the async work starts and measured again
+// once it resolves, so any card that moved as a result of the pull
+// still animates into its new slot.
+export async function withCardsFlipAsync(
+  mutate: () => Promise<void>,
+): Promise<void> {
+  const before = captureRects();
+  await mutate();
+  for (const [id, el] of elements) {
+    const from = before.get(id);
+    if (from) animateReorder(el, from);
+  }
+}
+
 function animateReorder(el: HTMLElement, from: DOMRect): void {
   const to = el.getBoundingClientRect();
   const deltaX = from.left - to.left;

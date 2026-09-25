@@ -66,9 +66,18 @@ export function ensurePotLoaded(potId: string): Promise<void> {
   setWindows(potId, { total: 0, loaded: false });
   const replication = startCardsReplication(potId);
   let stopped = false;
-  const ready = replication.initialReplication.then(() => {
+  // Local IndexedDB hydration (near-instant, no network) is what the
+  // UI waits on now, not a full network sync -- that used to make
+  // CardList show its loading spinner on every open, even for a pot
+  // whose 1000 cards were already cached from a previous visit.
+  const ready = replication.collection.isReady().then(() => {
     if (!stopped)
       setWindows(potId, { total: cardsForPot(potId).length, loaded: true });
+  });
+  // The network sync keeps running in the background; once it lands,
+  // refresh the footer's total count to match the server.
+  replication.initialReplication.then(() => {
+    if (!stopped) setWindows(potId, "total", cardsForPot(potId).length);
   });
   potSubscriptions.set(potId, {
     cards: replication.collection,
@@ -114,6 +123,14 @@ function findOwningCollection(id: string) {
   return undefined;
 }
 
+// The local write below is picked up by SignalDB's own change
+// listener and pushed automatically (debounced ~100ms -- see
+// @signaldb/sync's addCollection), so nothing here needs to trigger a
+// sync explicitly. The remaining flicker risk -- a pull already in
+// flight when this write lands, resolving afterward with stale data
+// -- is handled on the pull side instead: sync() calls are serialized
+// and wrapped in withCardsFlipAsync (see cardsReplication.ts), so an
+// out-of-order pull still animates rather than silently reverting.
 export function moveCard(card: CardRecord, position: number): void {
   const cards = potSubscriptions.get(card.pot)?.cards;
   if (!cards) return;
