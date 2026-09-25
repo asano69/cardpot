@@ -1,100 +1,116 @@
+import type { Changeset, Collection } from "@signaldb/core";
+import createIndexedDBAdapter from "@signaldb/indexeddb";
+import solidReactivityAdapter from "@signaldb/solid";
+import { SyncManager } from "@signaldb/sync";
+import { deleteCard, updateCard } from "@/lib/api/cardApi";
 import pb from "@/lib/api/pb";
 import { subscribeToCards } from "@/lib/api/realtime";
-import { db, type CardCheckpointRecord, type CardDbRecord } from "./database";
+import type { CardRecord } from "@/lib/models/card";
+import {
+  cardCheckpoints,
+  createCardsCollection,
+  type CardCheckpoint,
+} from "@/lib/signaldb/cardsCollection";
 
-// Must not exceed internal/serve/replication.go's maxPullLimit.
 const PULL_BATCH_SIZE = 200;
 const lockName = (potId: string) => `cardpot:cards-replication:${potId}`;
+// A checkpoint must not advance until SyncManager has applied its matching
+// changes. Advancing it in `pull` can leave an empty replica permanently
+// caught up when a tab is closed between fetching and persisting.
+const pendingCheckpoints = new Map<string, CardCheckpoint>();
 
-interface PulledCardRecord extends CardDbRecord {
+interface PulledCardRecord extends CardRecord {
   deleted: string;
 }
-
 interface PullResponse {
   records: PulledCardRecord[];
 }
 
-function toCardRecord(record: PulledCardRecord): CardDbRecord {
-  const { deleted: _deleted, ...card } = record;
-  return card;
-}
-
-// Writes one batch of records to the local replica. When `checkpoint` is
-// given, it is saved in the same transaction, so a batch is never applied
-// without advancing its checkpoint (or the reverse).
-//
-// A record is skipped when the local copy is newer than it. Events can reach
-// this function out of order (e.g. a pull batch racing a realtime event), so
-// the server's "updated" timestamp decides which version wins. Both sides use
-// PocketBase's same fixed-format string, so a plain string comparison orders
-// them correctly. Equal timestamps are still applied, which keeps replaying
-// the same record harmless.
-async function applyRecords(
-  records: PulledCardRecord[],
-  checkpoint?: CardCheckpointRecord,
-): Promise<void> {
-  await db.transaction("rw", db.cards, db.cardCheckpoints, async () => {
-    const local = await db.cards.bulkGet(records.map((record) => record.id));
-    const fresh = records.filter(
-      (record, i) => !local[i] || local[i]!.updated <= record.updated,
-    );
-
-    const liveCards = fresh.filter((record) => !record.deleted).map(toCardRecord);
-    const deletedIds = fresh
-      .filter((record) => Boolean(record.deleted))
-      .map((record) => record.id);
-
-    if (liveCards.length) await db.cards.bulkPut(liveCards);
-    if (deletedIds.length) await db.cards.bulkDelete(deletedIds);
-    if (checkpoint) await db.cardCheckpoints.put(checkpoint);
-  });
-}
-
-async function pullPot(potId: string): Promise<void> {
-  let checkpoint = await db.cardCheckpoints.get(potId);
+async function pullPot(
+  potId: string,
+): Promise<{ changes: Changeset<CardRecord> }> {
+  await cardCheckpoints.isReady();
+  let checkpoint = cardCheckpoints.findOne({ id: potId });
+  const changes: Changeset<CardRecord> = {
+    added: [],
+    modified: [],
+    removed: [],
+  };
 
   for (;;) {
     const params = new URLSearchParams({ limit: String(PULL_BATCH_SIZE) });
     if (checkpoint) {
       params.set("updatedAt", checkpoint.updatedAt);
-      params.set("id", checkpoint.id);
+      params.set("id", checkpoint.cardId);
     }
-
     const { records } = await pb.send<PullResponse>(
       `/api/pages/${potId}/cards/pull?${params}`,
       { method: "GET" },
     );
-    if (!records.length) return;
+    if (!records.length) break;
 
+    for (const record of records) {
+      if (record.deleted) changes.removed.push(record);
+      else changes.modified.push(record);
+    }
     const last = records.at(-1)!;
-    const nextCheckpoint: CardCheckpointRecord = {
-      pot: potId,
-      updatedAt: last.updated,
-      id: last.id,
-    };
-    await applyRecords(records, nextCheckpoint);
-    checkpoint = nextCheckpoint;
-
-    if (records.length < PULL_BATCH_SIZE) return;
+    checkpoint = { id: potId, updatedAt: last.updated, cardId: last.id };
+    if (records.length < PULL_BATCH_SIZE) break;
   }
+  if (checkpoint) pendingCheckpoints.set(potId, checkpoint);
+  return { changes };
+}
+
+function commitCheckpoint(potId: string): void {
+  const checkpoint = pendingCheckpoints.get(potId);
+  if (!checkpoint) return;
+  cardCheckpoints.replaceOne({ id: potId }, checkpoint, { upsert: true });
+  pendingCheckpoints.delete(potId);
+}
+
+async function pushChanges(changes: Changeset<CardRecord>): Promise<void> {
+  await Promise.all([
+    ...changes.modified.map((card) =>
+      updateCard(card.id, {
+        pin: card.pin,
+        position: card.position,
+        deleted: card.deleted,
+      }),
+    ),
+    ...changes.removed.map((card) => deleteCard(card.id)),
+    // New cards are created through the dedicated API before being merged into
+    // this replica, so there is no generic create endpoint to call here.
+    ...changes.added.map(() => Promise.resolve()),
+  ]);
 }
 
 export interface CardsReplicationHandle {
-  // A follower resolves once it is set up to read the shared local database.
-  // Its leader continues to fill that database in the background.
+  collection: Collection<CardRecord>;
   initialReplication: Promise<void>;
   stopReplication: () => void;
 }
 
-// Runs Centrifuge and pull writes in exactly one tab per pot. Other tabs only
-// read `db.cards` through liveQuery; when the lock holder writes IndexedDB,
-// their queries re-evaluate automatically. A queued lock request lets a
-// follower take over if the current leader tab closes.
 export function startCardsReplication(potId: string): CardsReplicationHandle {
+  const collection = createCardsCollection(potId);
+  const syncManager = new SyncManager<{ potId: string }, CardRecord>({
+    autostart: false,
+    reactivity: solidReactivityAdapter,
+    // Version this metadata independently of card records. The first
+    // SignalDB implementation could persist an empty snapshot alongside a
+    // checkpoint, which made later loads request only deltas and render no
+    // cards. A fresh sync snapshot lets the bootstrap below repair it.
+    persistenceAdapter: (name) =>
+      createIndexedDBAdapter(`cards-sync-v2-${potId}-${name}`),
+    pull: ({ potId: id }) => pullPot(id),
+    push: (_options, { changes }) => pushChanges(changes),
+    onError: (_options, error) =>
+      console.error(`[cards-replication] ${potId}:`, error),
+  });
+  syncManager.addCollection(collection, { name: "cards", potId });
+
   let stopped = false;
   let releaseLeadership: (() => void) | undefined;
   let stopStream: (() => void) | undefined;
-  let writeChain = Promise.resolve();
   let resolveInitial!: () => void;
   let rejectInitial!: (reason: unknown) => void;
   const initialReplication = new Promise<void>((resolve, reject) => {
@@ -102,42 +118,38 @@ export function startCardsReplication(potId: string): CardsReplicationHandle {
     rejectInitial = reject;
   });
 
-  // Chains replication work so Dexie writes never overlap. Previously
-  // this passed the same `work` as both onFulfilled and onRejected,
-  // which meant a failed step called `work()` again with no argument
-  // and its rejection reason was silently discarded. Now the failure
-  // is logged before continuing, so an online-recovery issue is at
-  // least visible instead of vanishing without a trace.
-  const enqueue = (work: () => Promise<void>) => {
-    writeChain = writeChain.then(work, (err) => {
-      console.error(`[cards-replication] step failed for pot ${potId}:`, err);
-      return work();
-    });
-    return writeChain;
+  const sync = async () => {
+    await syncManager.sync("cards");
+    commitCheckpoint(potId);
   };
 
   const lead = async () => {
-    if (stopped) return;
+    await Promise.all([collection.isReady(), cardCheckpoints.isReady()]);
+    // Repair users that received the previous implementation: their local
+    // cards collection is empty, but its checkpoint says it is current. A
+    // full pull is required once; subsequent pulls remain incremental.
+    if (
+      collection.find({}, { reactive: false }).count() === 0 &&
+      cardCheckpoints.findOne({ id: potId })
+    ) {
+      cardCheckpoints.removeOne({ id: potId });
+    }
     stopStream = subscribeToCards(
       (event) => {
-        if (event.record.pot === potId) {
-          void enqueue(() => applyRecords([event.record]));
-        }
+        if (event.record.pot === potId)
+          void sync().catch((error) =>
+            console.error(`[cards-replication] ${potId}:`, error),
+          );
       },
-      () => {
-        void enqueue(() => pullPot(potId));
-      },
+      () =>
+        void sync().catch((error) =>
+          console.error(`[cards-replication] ${potId}:`, error),
+        ),
     );
-
-    try {
-      await enqueue(() => pullPot(potId));
-      resolveInitial();
-    } catch (error) {
-      rejectInitial(error);
-      throw error;
-    }
+    await syncManager.startSync("cards");
+    await sync();
+    resolveInitial();
   };
-
   const holdLock = async () => {
     try {
       await lead();
@@ -145,30 +157,26 @@ export function startCardsReplication(potId: string): CardsReplicationHandle {
         releaseLeadership = resolve;
         if (stopped) resolve();
       });
+    } catch (error) {
+      rejectInitial(error);
+      throw error;
     } finally {
       stopStream?.();
+      await syncManager.pauseSync("cards");
     }
   };
-
   const locks = typeof navigator === "undefined" ? undefined : navigator.locks;
-  if (!locks) {
-    // Web Locks is supported by current target browsers. This fallback keeps
-    // development/test environments functional, but cannot coordinate tabs.
-    void holdLock();
-  } else {
+  if (!locks) void holdLock();
+  else {
     void locks.request(lockName(potId), { ifAvailable: true }, async (lock) => {
       if (!lock) {
-        // Another tab is already the leader, so reading its shared IndexedDB
-        // state is enough for this tab to become ready.
         resolveInitial();
         await locks.request(lockName(potId), async () => holdLock());
-        return;
-      }
-      await holdLock();
+      } else await holdLock();
     });
   }
-
   return {
+    collection,
     initialReplication,
     stopReplication: () => {
       stopped = true;

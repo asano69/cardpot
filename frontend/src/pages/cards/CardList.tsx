@@ -6,7 +6,7 @@ import { PointerSensor, KeyboardSensor } from "@dnd-kit/dom";
 
 import Loading from "@/components/Loading";
 import CardItem from "./CardItem";
-import { cardsById, moveCard, potWindow } from "@/lib/stores/cardsStore";
+import { cardsForPot, moveCard, potWindow } from "@/lib/stores/cardsStore";
 import { computePosition } from "@/lib/position";
 import { useTitle } from "@/lib/useTitle";
 import { useFooterSlot } from "@/lib/footerSlot";
@@ -55,9 +55,7 @@ export default function CardList() {
   // sorted, and the store keeps it live through realtime
   // create/update/delete events.
   const cards = createMemo(() =>
-    (potWindow(pot()?.id)?.ids ?? [])
-      .map((id) => cardsById[id])
-      .filter((card) => card !== undefined)
+    cardsForPot(pot()?.id)
       // Pinned cards always sort before unpinned ones; within each
       // group the existing position/id ordering is unchanged.
       .sort((a, b) => {
@@ -69,7 +67,7 @@ export default function CardList() {
   // Footer's status-bar slot: this pot's total card count.
   useFooterSlot(() => (
     <div class="page-list-status">
-      <span class="item">{potWindow(pot()?.id)?.total ?? 0} pages</span>
+      <span class="item">{cards().length} pages</span>
     </div>
   ));
 

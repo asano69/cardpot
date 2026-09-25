@@ -9,7 +9,7 @@ import Loading from "@/components/Loading";
 import ActionsMenu from "@/components/menus/ActionsMenu";
 import { Trash2, Pin, PinOff, Wrench } from "@/lib/icons";
 import {
-  cardsById,
+  cardById,
   ensurePotLoaded,
   findCardByPotAndSlug,
   removeCard,
@@ -137,7 +137,7 @@ export default function CardForm() {
     const id = cardId();
     const next: SyncedCard = {
       id,
-      title: id ? cardsById[id]?.title : undefined,
+      title: id ? cardById(id)?.title : undefined,
     };
     const rename = isRenameOfOpenCard(synced, next);
     synced = next;
@@ -150,7 +150,7 @@ export default function CardForm() {
     setFocusLineOnOpen(1);
     setDraftYdoc(ydoc);
     // The draft's URL is already committed, so it is safe to replace it now.
-    const title = cardsById[id]?.title;
+    const title = cardById(id)?.title;
     if (title) replaceUrl(titleToSegment(title));
     setCardId(id);
     setDraft(undefined);
@@ -199,7 +199,7 @@ export default function CardForm() {
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
-  const pinned = () => cardsById[cardId() ?? ""]?.pin ?? false;
+  const pinned = () => cardById(cardId())?.pin ?? false;
   const togglePin = async () => {
     const id = cardId();
     if (!id) return;
@@ -212,7 +212,7 @@ export default function CardForm() {
 
   useTitle(() => {
     const potTitle = pot()?.title;
-    const card = cardId() ? cardsById[cardId()!] : undefined;
+    const card = cardById(cardId());
     return potTitle
       ? card
         ? `${deriveCardGridTitle(card)} - ${potTitle}`
@@ -234,7 +234,7 @@ export default function CardForm() {
 
   useFooterSlot(() => {
     const id = cardId();
-    const card = id ? cardsById[id] : undefined;
+    const card = cardById(id);
     return (
       <>
         {card && <div class="page-title">{deriveCardGridTitle(card)}</div>}
@@ -277,7 +277,7 @@ export default function CardForm() {
                 cardId={id}
                 potSlug={() => params.slug}
                 initialYdoc={draftYdoc()}
-                existingTitle={cardsById[id]?.title}
+                existingTitle={cardById(id)?.title}
                 onMergeTarget={setMergeTarget}
                 onContentSnapshot={(fn) => setContentSnapshot(() => fn)}
                 focusLine={focusLineOnOpen()}
