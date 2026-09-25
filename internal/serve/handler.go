@@ -66,7 +66,7 @@ func registerRoutes(e *core.ServeEvent) error {
 	pages := e.Router.Group("/api/pages")
 	pages.Bind(apis.RequireSuperuserAuth())
 	pages.GET("/{pot}/{slug}/links1hop", links1HopHandler)
-	// Checkpoint-based pull for the frontend's RxDB replication (see
+	// Checkpoint-based pull for the frontend's Dexie replication (see
 	// replication.go). {potId} is a pot's id, unlike {pot} above.
 	pages.GET("/{potId}/cards/pull", pullCardsHandler)
 

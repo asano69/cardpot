@@ -9,7 +9,7 @@ import { watchConnection } from "@/lib/stores/connectionStore";
 // inside the router context (e.g. Logo's <A> links).
 //
 // Card realtime is no longer a single app-wide channel here: each pot
-// starts (and stops) its own RxDB replication, including its own
+// starts (and stops) its own Dexie replication, including its own
 // Centrifuge subscription, as it's opened and left (see
 // pages/pots/PotLayout.tsx and lib/stores/cardsStore.ts).
 export default function AppShell(props: ParentProps) {

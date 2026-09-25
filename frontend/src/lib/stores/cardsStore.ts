@@ -1,20 +1,19 @@
 //
 // Mirrors one pot's "cards" at a time into a local Solid store, backed
-// by RxDB's local replica of that pot (see rxdb/cardsReplication.ts)
+// by Dexie's local replica of that pot (see dexie/cardsReplication.ts)
 // instead of PocketBase's own paginated `getList` and a hand-rolled
 // realtime reconciliation. A pot is "loaded" via ensurePotLoaded --
 // called once per pot by PotLayout.tsx, which both CardList and
 // CardForm sit under -- and "unloaded" via releasePot when the user
-// leaves it. Because RxDB replicates a whole pot's cards to IndexedDB
+// leaves it. Because Dexie replicates a whole pot's cards to IndexedDB
 // once opened (see cardsReplication.ts's own comment on this
 // tradeoff), there is no separate "page" concept here anymore: once a
 // pot's initial replication settles, every one of its cards is
 // already queryable locally.
 import { createStore, produce } from "solid-js/store";
-import type { RxDocument } from "rxdb";
-import { getDb, type CardsCollection } from "../rxdb/database";
-import { startCardsReplication } from "../rxdb/cardsReplication";
-import type { CardRxDoc } from "../rxdb/cardsSchema";
+import { liveQuery } from "dexie";
+import { db, type CardDbRecord } from "../dexie/database";
+import { startCardsReplication } from "../dexie/cardsReplication";
 import { deleteCard, updateCard } from "../api/cardApi";
 import { asCardTitle, type CardRecord } from "../models/card";
 import { titleToSlug } from "../models/slugify";
@@ -54,14 +53,12 @@ export function potWindow(potId: string | undefined): PotWindow | undefined {
   return potId ? windows[potId] : undefined;
 }
 
-// Converts one RxDB document into this store's CardRecord shape.
+// Converts one Dexie record into this store's CardRecord shape.
 // "deleted" and "created" have no local equivalent: a soft-deleted
-// card never reaches this function at all (RxDB's own _deleted flag
-// already excludes it from every query result -- see
-// cardsReplication.ts's toRxDoc), and nothing reads a live card's
+// card is physically removed from the local replica, and nothing reads a
+// live card's
 // "created" timestamp.
-function toCardRecord(doc: RxDocument<CardRxDoc>): CardRecord {
-  const data = doc.toJSON();
+function toCardRecord(data: CardDbRecord): CardRecord {
   return {
     id: data.id,
     title: asCardTitle(data.title),
@@ -85,7 +82,7 @@ interface PotSubscription {
 
 const potSubscriptions = new Map<string, PotSubscription>();
 
-// Starts mirroring potId's cards into cardsById/windows: a live RxDB
+// Starts mirroring potId's cards into cardsById/windows: a leader-only
 // replication (see cardsReplication.ts) plus a reactive query that
 // keeps this store's copy in sync as the local replica changes,
 // whether from the initial pull, a later poll, or another peer's
@@ -108,15 +105,12 @@ export function ensurePotLoaded(potId: string): Promise<void> {
   let stopRequested = false;
 
   const ready = (async () => {
-    const db = await getDb();
-    const collection: CardsCollection = db.cards;
-    const { stopReplication, initialReplication } = startCardsReplication(
-      collection,
-      potId,
-    );
+    const { stopReplication, initialReplication } =
+      startCardsReplication(potId);
 
-    const query = collection.find({ selector: { pot: potId } });
-    const subscription = query.$.subscribe((docs) => {
+    const subscription = liveQuery(() =>
+      db.cards.where("pot").equals(potId).toArray(),
+    ).subscribe((docs) => {
       withCardsFlip(() => {
         setCardsById(
           produce((store) => {
@@ -197,7 +191,7 @@ export function findCardByPotAndSlug(
 }
 
 // Puts freshly created cards into the store right away, without
-// waiting for the realtime echo to reach the local RxDB replica.
+// waiting for the realtime echo to reach the local Dexie replica.
 // CardForm reads a just-created card's title from here (see its
 // handleCreated) to update the address bar. The next reactive query
 // emission then reconciles this against the authoritative local copy.
@@ -215,7 +209,7 @@ export function mergeCards(records: CardRecord[]): void {
 // reactive query emission (from the eventual realtime echo) then
 // reconciles this against the authoritative local copy. A full
 // pending-overlay layer that survives a resync is left for a later
-// round (see docs/rxdb-offline-sync-plan.md's 段階 C).
+// round (see docs/dexie-offline-sync.md).
 function patchCard(id: string, changes: Partial<CardRecord>): void {
   withCardsFlip(() => {
     setCardsById(id, (card) => (card ? { ...card, ...changes } : card));
@@ -229,7 +223,7 @@ function patchCard(id: string, changes: Partial<CardRecord>): void {
 // racing the realtime echo's own FLIP animation, and this store no
 // longer makes that kind of local-only write to a shared,
 // server-paginated cache -- cardsById here is a straight mirror of
-// the local RxDB replica, so the eventual echo just reconfirms the
+// the local Dexie replica, so the eventual echo just reconfirms the
 // same position withCardsFlip already animated to.
 export function moveCard(card: CardRecord, position: number): void {
   const previousPosition = card.position;

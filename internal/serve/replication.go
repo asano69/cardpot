@@ -1,6 +1,6 @@
 // replication.go implements the pull side of the cards replication
-// protocol that the frontend's RxDB collection uses to fill its local
-// copy (see docs/rxdb-offline-sync-plan.md). Only reads happen here:
+// protocol that the frontend's Dexie database uses to fill its local
+// copy (see docs/dexie-offline-sync.md). Only reads happen here:
 // writes still go straight through PocketBase's own REST API.
 package serve
 
@@ -18,8 +18,8 @@ import (
 const (
 	// defaultPullLimit is used when the client sends no "limit".
 	defaultPullLimit = 200
-	// maxPullLimit caps "limit". It must stay >= the frontend's RxDB
-	// batchSize: a page shorter than batchSize tells RxDB there is
+	// maxPullLimit caps "limit". It must stay >= the frontend's Dexie
+	// batch size: a page shorter than that tells Dexie there is
 	// nothing left to pull.
 	maxPullLimit = 1000
 )
@@ -56,7 +56,7 @@ func parsePullQuery(q url.Values) (*cardCheckpoint, int, error) {
 
 // pullCards returns the cards of a pot that changed after the checkpoint,
 // oldest first, at most limit of them. Soft-deleted cards are included on
-// purpose: RxDB needs them as deletion events.
+// purpose: the local replica needs them as deletion events.
 func pullCards(app core.App, potID string, after *cardCheckpoint, limit int) ([]*core.Record, error) {
 	filter := "pot = {:pot}"
 	params := dbx.Params{"pot": potID}

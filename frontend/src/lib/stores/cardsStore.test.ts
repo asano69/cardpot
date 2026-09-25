@@ -1,19 +1,29 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { BehaviorSubject, map } from "rxjs";
-import type { CardRxDoc } from "../rxdb/cardsSchema";
+import type { CardDbRecord } from "../dexie/database";
 
 // Everything cardsStore reaches outside itself is replaced here, so
 // these tests exercise only the store's own logic: no IndexedDB, no
 // network, no DOM.
 const mocks = vi.hoisted(() => ({
-  getDb: vi.fn(),
   startCardsReplication: vi.fn(),
   updateCard: vi.fn(),
   deleteCard: vi.fn(),
+  db: undefined as unknown,
 }));
 
-vi.mock("../rxdb/database", () => ({ getDb: mocks.getDb }));
-vi.mock("../rxdb/cardsReplication", () => ({
+vi.mock("dexie", () => ({
+  liveQuery: (query: () => FakeDoc[]) => ({
+    subscribe: (onValue: (value: FakeDoc[]) => void) =>
+      docs$.subscribe(() => onValue(query())),
+  }),
+}));
+
+vi.mock("../dexie/database", () => ({
+  get db() {
+    return mocks.db;
+  },
+}));
+vi.mock("../dexie/cardsReplication", () => ({
   startCardsReplication: mocks.startCardsReplication,
 }));
 vi.mock("../api/cardApi", () => ({
@@ -33,18 +43,15 @@ import {
   setCardPinned,
 } from "./cardsStore";
 
-// The only part of an RxDocument the store reads.
-interface FakeDoc {
-  id: string;
-  toJSON: () => CardRxDoc;
-}
+// The only part of a Dexie record the store reads.
+type FakeDoc = CardDbRecord;
 
 function fakeDoc(
   potId: string,
   n: number,
-  overrides: Partial<CardRxDoc> = {},
+  overrides: Partial<CardDbRecord> = {},
 ): FakeDoc {
-  const data: CardRxDoc = {
+  const data: CardDbRecord = {
     id: `${potId}-card${n}`,
     pot: potId,
     title: `Card ${n}`,
@@ -55,17 +62,33 @@ function fakeDoc(
     updated: "2026-01-01 00:00:00.000Z",
     ...overrides,
   };
-  return { id: data.id, toJSON: () => data };
+  return data;
 }
 
-// Stands in for the local RxDB replica. Every query emits the current
-// docs of its own pot first, then again on each change -- the same
-// contract as RxDB's `find().$`.
-let docs$: BehaviorSubject<FakeDoc[]>;
+// Stands in for Dexie's liveQuery: it emits each pot's current records and every later change.
+class TestSubject<T> {
+  private observers = new Set<(value: T) => void>();
+
+  constructor(public value: T) {}
+
+  get observed(): boolean {
+    return this.observers.size > 0;
+  }
+
+  next(value: T): void {
+    this.value = value;
+    for (const observer of this.observers) observer(value);
+  }
+
+  subscribe(observer: (value: T) => void): { unsubscribe: () => void } {
+    this.observers.add(observer);
+    observer(this.value);
+    return { unsubscribe: () => this.observers.delete(observer) };
+  }
+}
+
+let docs$: TestSubject<FakeDoc[]>;
 let stopReplication: ReturnType<typeof vi.fn>;
-let collection: {
-  find: (query: { selector: { pot: string } }) => { $: unknown };
-};
 
 // The store keeps module-level state, so each test uses its own pot id
 // instead of resetting modules (which would load Solid twice).
@@ -80,16 +103,17 @@ function newPot(): string {
 
 beforeEach(() => {
   vi.resetAllMocks();
-  docs$ = new BehaviorSubject<FakeDoc[]>([]);
+  docs$ = new TestSubject<FakeDoc[]>([]);
   stopReplication = vi.fn();
-  collection = {
-    find: ({ selector }) => ({
-      $: docs$.pipe(
-        map((docs) => docs.filter((d) => d.toJSON().pot === selector.pot)),
-      ),
-    }),
+  mocks.db = {
+    cards: {
+      where: () => ({
+        equals: (potId: string) => ({
+          toArray: () => docs$.value.filter((doc) => doc.pot === potId),
+        }),
+      }),
+    },
   };
-  mocks.getDb.mockResolvedValue({ cards: collection });
   mocks.startCardsReplication.mockImplementation(() => ({
     initialReplication: Promise.resolve(),
     stopReplication,
@@ -133,7 +157,7 @@ describe("ensurePotLoaded", () => {
 
     expect(second).toBe(first);
     expect(mocks.startCardsReplication).toHaveBeenCalledTimes(1);
-    expect(mocks.startCardsReplication).toHaveBeenCalledWith(collection, pot);
+    expect(mocks.startCardsReplication).toHaveBeenCalledWith(pot);
   });
 
   it("follows later changes of the local replica", async () => {
