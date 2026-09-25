@@ -22,18 +22,28 @@ function toCardRecord(record: PulledCardRecord): CardDbRecord {
 // Writes one batch of records to the local replica. When `checkpoint` is
 // given, it is saved in the same transaction, so a batch is never applied
 // without advancing its checkpoint (or the reverse).
+//
+// A record is skipped when the local copy is newer than it. Events can reach
+// this function out of order (e.g. a pull batch racing a realtime event), so
+// the server's "updated" timestamp decides which version wins. Both sides use
+// PocketBase's same fixed-format string, so a plain string comparison orders
+// them correctly. Equal timestamps are still applied, which keeps replaying
+// the same record harmless.
 async function applyRecords(
   records: PulledCardRecord[],
   checkpoint?: CardCheckpointRecord,
 ): Promise<void> {
-  const liveCards = records
-    .filter((record) => !record.deleted)
-    .map(toCardRecord);
-  const deletedIds = records
-    .filter((record) => Boolean(record.deleted))
-    .map((record) => record.id);
-
   await db.transaction("rw", db.cards, db.cardCheckpoints, async () => {
+    const local = await db.cards.bulkGet(records.map((record) => record.id));
+    const fresh = records.filter(
+      (record, i) => !local[i] || local[i]!.updated <= record.updated,
+    );
+
+    const liveCards = fresh.filter((record) => !record.deleted).map(toCardRecord);
+    const deletedIds = fresh
+      .filter((record) => Boolean(record.deleted))
+      .map((record) => record.id);
+
     if (liveCards.length) await db.cards.bulkPut(liveCards);
     if (deletedIds.length) await db.cards.bulkDelete(deletedIds);
     if (checkpoint) await db.cardCheckpoints.put(checkpoint);
