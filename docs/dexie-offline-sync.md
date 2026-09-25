@@ -78,7 +78,9 @@ const enqueue = (work: () => Promise<void>) => {
 ```
 これにより `onEvent`/`onResync` 経由の失敗もコンソールに残るようになった。挙動そのもの（失敗しても次のイベントで回復を試みる）は変えていない。
 
-### 2. `applyRecords` のコード重複
+### 2. `applyRecords` のコード重複（対応済み）
+
+`applyRecords(records, checkpoint?)` に一本化し、pull 時はチェックポイント更新を同一トランザクションで行う。
 `cardsReplication.ts` には module レベルの `applyRecords(records)` 関数があるのに、`pullPot` 内のバルク書き込みは（チェックポイント更新とのトランザクションを一体化するためか）ほぼ同じロジックを再度インライン実装しています。ロジックが2箇所に分散していて、片方だけ直しても気づきにくい典型的な保守性リスクです。`applyRecords` を「(records, checkpointUpdate?)」のように拡張して1本化するか、少なくともコメントで「意図的に重複させている理由」を書いておくべきです。
 
 ### 3. 順序保証がない（レース条件）

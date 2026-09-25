@@ -19,7 +19,13 @@ function toCardRecord(record: PulledCardRecord): CardDbRecord {
   return card;
 }
 
-async function applyRecords(records: PulledCardRecord[]): Promise<void> {
+// Writes one batch of records to the local replica. When `checkpoint` is
+// given, it is saved in the same transaction, so a batch is never applied
+// without advancing its checkpoint (or the reverse).
+async function applyRecords(
+  records: PulledCardRecord[],
+  checkpoint?: CardCheckpointRecord,
+): Promise<void> {
   const liveCards = records
     .filter((record) => !record.deleted)
     .map(toCardRecord);
@@ -27,9 +33,10 @@ async function applyRecords(records: PulledCardRecord[]): Promise<void> {
     .filter((record) => Boolean(record.deleted))
     .map((record) => record.id);
 
-  await db.transaction("rw", db.cards, async () => {
+  await db.transaction("rw", db.cards, db.cardCheckpoints, async () => {
     if (liveCards.length) await db.cards.bulkPut(liveCards);
     if (deletedIds.length) await db.cards.bulkDelete(deletedIds);
+    if (checkpoint) await db.cardCheckpoints.put(checkpoint);
   });
 }
 
@@ -55,17 +62,7 @@ async function pullPot(potId: string): Promise<void> {
       updatedAt: last.updated,
       id: last.id,
     };
-    await db.transaction("rw", db.cards, db.cardCheckpoints, async () => {
-      const liveCards = records
-        .filter((record) => !record.deleted)
-        .map(toCardRecord);
-      const deletedIds = records
-        .filter((record) => Boolean(record.deleted))
-        .map((record) => record.id);
-      if (liveCards.length) await db.cards.bulkPut(liveCards);
-      if (deletedIds.length) await db.cards.bulkDelete(deletedIds);
-      await db.cardCheckpoints.put(nextCheckpoint);
-    });
+    await applyRecords(records, nextCheckpoint);
     checkpoint = nextCheckpoint;
 
     if (records.length < PULL_BATCH_SIZE) return;
