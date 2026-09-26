@@ -9,7 +9,6 @@ import type { CardRecord } from "@/lib/models/card";
 import {
   cardCheckpoints,
   createCardsCollection,
-  type CardCheckpoint,
 } from "@/lib/signaldb/cardsCollection";
 import {
   withCardsFlip,
@@ -19,16 +18,28 @@ import {
 
 const PULL_BATCH_SIZE = 200;
 const lockName = (potId: string) => `cardpot:cards-replication:${potId}`;
-// A checkpoint must not advance until SyncManager has applied its matching
-// changes. Advancing it in `pull` can leave an empty replica permanently
-// caught up when a tab is closed between fetching and persisting.
-const pendingCheckpoints = new Map<string, CardCheckpoint>();
 
 interface PulledCardRecord extends CardRecord {
   deleted: string;
 }
 interface PullResponse {
   records: PulledCardRecord[];
+}
+
+// Whether two pulled/local card records carry the same data, aside
+// from identity. Used below to skip re-applying a pulled record that
+// already matches what this tab already has -- most commonly its own
+// change echoed back through the pull API -- so it doesn't trigger a
+// redundant write or FLIP re-animation.
+function recordsEqual(a: CardRecord, b: CardRecord): boolean {
+  return (
+    a.title === b.title &&
+    a.description === b.description &&
+    a.image === b.image &&
+    a.position === b.position &&
+    a.pin === b.pin &&
+    a.deleted === b.deleted
+  );
 }
 
 // A pulled record is either genuinely new to THIS tab's collection
@@ -74,24 +85,31 @@ async function pullPot(
       if (record.deleted) {
         if (existing) changes.removed.push(record);
       } else if (existing) {
-        changes.modified.push(record);
+        if (!recordsEqual(existing, record)) changes.modified.push(record);
       } else {
         changes.added.push(record);
       }
     }
     const last = records.at(-1)!;
     checkpoint = { id: potId, updatedAt: last.updated, cardId: last.id };
+    // Persisted immediately, one batch at a time, instead of being
+    // deferred until SyncManager finishes applying the returned
+    // changeset (this used to go through a separate "pending" map
+    // flushed only by our own explicit sync() wrapper below).
+    // SignalDB's own debounced auto-push also drives a pull through
+    // this exact function, and that path never went through the old
+    // deferred commit step -- so the checkpoint stayed behind what
+    // had actually been fetched, and that staleness is what kept a
+    // change made in one tab from reaching another tab until a full
+    // reload re-pulled everything. This does reopen a narrow window
+    // where a tab crashing between this write and SyncManager
+    // applying the changeset would skip those records for good; that
+    // is judged an acceptable trade for fixing the far more commonly
+    // hit staleness bug.
+    cardCheckpoints.replaceOne({ id: potId }, checkpoint, { upsert: true });
     if (records.length < PULL_BATCH_SIZE) break;
   }
-  if (checkpoint) pendingCheckpoints.set(potId, checkpoint);
   return { changes };
-}
-
-function commitCheckpoint(potId: string): void {
-  const checkpoint = pendingCheckpoints.get(potId);
-  if (!checkpoint) return;
-  cardCheckpoints.replaceOne({ id: potId }, checkpoint, { upsert: true });
-  pendingCheckpoints.delete(potId);
 }
 
 async function pushChanges(changes: Changeset<CardRecord>): Promise<void> {
@@ -177,7 +195,6 @@ export function startCardsReplication(potId: string): CardsReplicationHandle {
       .then(() =>
         withCardsFlipAsync(async () => {
           await syncManager.sync("cards");
-          commitCheckpoint(potId);
         }),
       );
     return syncing;

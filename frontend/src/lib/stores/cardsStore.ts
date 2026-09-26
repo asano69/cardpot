@@ -126,15 +126,18 @@ function findOwningCollection(id: string) {
 // The local write below is picked up by SignalDB's own change
 // listener and pushed automatically (debounced ~100ms -- see
 // @signaldb/sync's addCollection), so nothing here needs to trigger a
-// sync explicitly. The remaining flicker risk -- a pull already in
-// flight when this write lands, resolving afterward with stale data
-// -- is handled on the pull side instead: sync() calls are serialized
-// and wrapped in withCardsFlipAsync (see cardsReplication.ts), so an
-// out-of-order pull still animates rather than silently reverting.
+// sync explicitly. It is applied WITHOUT withCardsFlip on purpose:
+// dnd-kit has already animated the drop itself, so FLIP-wrapping this
+// same write would measure "before" from the card's pre-drag DOM
+// position and animate it away from where dnd-kit just placed it --
+// visible as a snap-back-then-forward flicker. Only the eventual
+// remote echo of this change (see withCardsFlipAsync in
+// cardsReplication.ts) still needs FLIP, since that one has no
+// preceding drag animation to piggyback on.
 export function moveCard(card: CardRecord, position: number): void {
   const cards = potSubscriptions.get(card.pot)?.cards;
   if (!cards) return;
-  withCardsFlip(() => cards.updateOne({ id: card.id }, { $set: { position } }));
+  cards.updateOne({ id: card.id }, { $set: { position } });
 }
 
 function nextPinnedPosition(card: CardRecord): number {
