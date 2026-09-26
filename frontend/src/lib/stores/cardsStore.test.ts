@@ -29,6 +29,20 @@ vi.mock("../signaldb/cardsCollection", () => ({
   writeCache: vi.fn(),
   deleteFromCache: vi.fn(),
   forgetCache: vi.fn(),
+  readCheckpoint: vi.fn(async () => null),
+  writeCheckpoint: vi.fn(),
+}));
+
+// The store reaches the server's card list only through PocketBase's
+// The IndexedDB-backed cache (lib/signaldb/cardsCollection.ts) needs a real
+// IndexedDB implementation that jsdom does not provide. It's a fire-and-
+// forget write-through the store never reads back from directly, so tests
+// stub it out entirely rather than pulling in a fake-indexeddb dependency.
+vi.mock("../signaldb/cardsCollection", () => ({
+  readCache: vi.fn(async () => []),
+  writeCache: vi.fn(),
+  deleteFromCache: vi.fn(),
+  forgetCache: vi.fn(),
 }));
 
 // The store reaches the server's card list only through PocketBase's
@@ -84,8 +98,17 @@ function watch() {
 
 // A gap resyncs every loaded window, so pots left loaded by earlier tests
 // would consume the pages a test queues for its own pot.
+//
+// getList is also reset here: mockClear() alone only clears call
+// records, not any still-queued mockResolvedValueOnce/
+// mockRejectedValueOnce values, so a test that ends up calling
+// getList fewer times than it queued values for would leak its
+// leftover queued response into the next test's first call(s).
+// mockReset() clears that queue too, so every test starts from a
+// clean slate regardless of how many calls the previous test made.
 beforeEach(() => {
   for (const potId of "abcdefghijklmnopq") releasePot(potId);
+  getList.mockReset();
 });
 
 describe("loadNextCardsPage", () => {
@@ -119,7 +142,7 @@ describe("loadNextCardsPage", () => {
     await loadNextCardsPage("b");
     expect(potWindow("b")?.total).toBe(100);
 
-    getList.mockClear();
+    getList.mockReset();
     await loadNextCardsPage("b");
     expect(getList).not.toHaveBeenCalled();
   });
@@ -235,7 +258,7 @@ describe("resyncPot", () => {
     nextPage(cards("i", 100, 200), 250);
     await loadNextCardsPage("i");
 
-    getList.mockClear();
+    getList.mockReset();
     nextPage(cards("i", 0, 100), 251);
     nextPage(cards("i", 100, 200), 251);
     await resyncPot("i");
