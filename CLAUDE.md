@@ -52,7 +52,7 @@ from flask import Flask
 - clauderic/dnd-kit v0.5.0
 - CodeMirror6
 - yjs
-- maxnowack/signaldb
+- Dexie.js 
 - googlechrome/workbox
 
 

@@ -61,7 +61,7 @@
 - 呼び出し側（`skip`, `limit`）に対して「pinned件数を数える→pinned/unpinnedへの按分を計算→それぞれ範囲クエリ」というロジックを`queryCardsPage`内に実装
 - `countCards`も`[pot]` indexの`.count()`に変更（既にO(N)フィルタからの改善）
 
-### 明示的な確認が必要な仕様変更（勝手に決めません）
+### 明示的な確認が必要な仕様変更
 現在の`{pin:-1, position:-1, id:1}`ソートのうち、`id`昇順のタイブレークは**厳密には維持できません**（IndexedDBのcompound indexは全フィールド同一方向でしか使えないため）。ただし：
 - `position`の同値は`lib/position.ts`のフラクショナルインデックス方式によりほぼ発生しない
 - 最終的な表示順序は`CardList.tsx`が独自に`sort()`し直しているため、`queryCardsPage`の順序はページング境界の一貫性にのみ影響する
