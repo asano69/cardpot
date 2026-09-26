@@ -2,7 +2,6 @@ import { createStore, produce } from "solid-js/store";
 import {
   deleteCard,
   fetchCardBySlug,
-  fetchCardsPage,
   updateCard,
   type CardEvent,
 } from "../api/cardApi";
@@ -138,8 +137,21 @@ function ensurePotSynced(potId: string): Promise<void> {
   return promise;
 }
 
-// Brings potId's SignalDB cache fully up to date via the checkpoint-
-// based pull protocol (see lib/api/replication.ts), resuming from
+// Pulls every change to potId's SignalDB cache since its stored
+// checkpoint (see lib/api/replication.ts), applies the diff (upsert
+// live records, drop deleted ones -- see applyPulledRecords), and
+// advances the checkpoint. Shared by the initial sync (syncPotReplica)
+// and resyncPot's catch-up sync after a realtime gap -- both just need
+// "the cache is now current", differing only in what they do with it
+// afterward.
+async function pullAndApplyDiff(potId: string): Promise<void> {
+  const after = await readCheckpoint(potId);
+  const { records, checkpoint } = await pullAll(potId, after);
+  await applyPulledRecords(potId, records);
+  if (checkpoint) await writeCheckpoint(potId, checkpoint);
+}
+
+// Brings potId's SignalDB cache fully up to date, resuming from
 // wherever this pot's last pull left off. Awaited by loadNextCardsPage
 // (through ensurePotSynced) before the first page is read from the
 // cache, so the grid never shows a stale or partial slice of it. A
@@ -147,10 +159,7 @@ function ensurePotSynced(potId: string): Promise<void> {
 // retry) tries again from the same checkpoint.
 async function syncPotReplica(potId: string): Promise<void> {
   try {
-    const after = await readCheckpoint(potId);
-    const { records, checkpoint } = await pullAll(potId, after);
-    await applyPulledRecords(potId, records);
-    if (checkpoint) await writeCheckpoint(potId, checkpoint);
+    await pullAndApplyDiff(potId);
   } catch (err) {
     console.error("[cards] failed to sync replica:", err);
   }
@@ -315,33 +324,45 @@ function handleCardEvent(e: CardEvent) {
 
 // Reloads the part of a pot's card list the window currently covers, for
 // when realtime events may have been missed and could not be replayed (see
-// subscribeToCards). Cards that no longer exist are dropped. Pages are
-// fetched one after another, so a large window takes several requests --
-// acceptable for a rare recovery.
+// subscribeToCards). Rather than re-fetching pages from the server, this
+// pulls only what changed since the pot's stored checkpoint (see
+// pullAndApplyDiff above), applies that diff to the SignalDB replica, and
+// re-reads the window from it -- the same source loadNextCardsPage already
+// reads from (see queryCardsPage/countCards in
+// lib/signaldb/cardsCollection.ts). The window is re-read in one query
+// instead of paging through it, since the replica already holds every
+// card of the pot locally.
 //
 // A page load still in flight while this runs may append a page fetched
 // before the resync; ids already in the window are ignored, so at worst
 // that page is slightly stale.
 export async function resyncPot(potId: string): Promise<void> {
   const win = windows[potId];
-  // Nothing loaded yet: the first page load fetches fresh data anyway.
+  // Nothing loaded yet: the first page load starts a fresh sync anyway.
   if (!win?.loaded) return;
+  const windowSize = win.ids.length;
 
-  const pages = Math.max(1, Math.ceil(win.ids.length / PAGE_SIZE));
-  const items: CardRecord[] = [];
-  let total = 0;
   try {
-    for (let page = 1; page <= pages; page++) {
-      const result = await fetchCardsPage(potId, page, PAGE_SIZE);
-      items.push(...result.items);
-      total = result.totalItems;
-    }
+    await pullAndApplyDiff(potId);
   } catch (err) {
     console.error("[cards] failed to resync pot:", err);
     return;
   }
 
-  // The user may have left the pot while the requests were in flight.
+  // The user may have left the pot while the pull was in flight.
+  if (!windows[potId]) return;
+
+  let items: CardRecord[];
+  let total: number;
+  try {
+    items = await queryCardsPage(potId, 0, windowSize);
+    total = await countCards(potId);
+  } catch (err) {
+    console.error("[cards] failed to reload cards after resync:", err);
+    return;
+  }
+
+  // The user may have left the pot while the reload was in flight.
   if (!windows[potId]) return;
 
   const fresh = new Set(items.map((card) => card.id));
@@ -350,16 +371,20 @@ export async function resyncPot(potId: string): Promise<void> {
   setWindows(
     potId,
     produce((w) => {
-      w.ids = [...fresh];
+      w.ids = items.map((card) => card.id);
       w.total = total;
     }),
   );
+  // A card that fell out of the window (or was actually deleted --
+  // pullAndApplyDiff above already handled that in the replica itself)
+  // is no longer displayed, so it has no reason to still live in the UI
+  // store. Nothing here touches the SignalDB replica: a card that was
+  // merely reordered out of the window is still a live card there.
   setCardsById(
     produce((store) => {
       for (const id of vanished) delete store[id];
     }),
   );
-  for (const id of vanished) void deleteFromCache(potId, id);
 }
 
 // Keeps every loaded pot window live through the shared cards channel and

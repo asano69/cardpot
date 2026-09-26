@@ -52,7 +52,7 @@
 **変更内容**
 - `fetchCardsPage`、`PotWindow.total`をREST由来で持つロジック、`PAGE_SIZE`定数など、REST pagingに紐づくコードを削除。
 - `readCache`による「まず古いキャッシュを一瞬見せてから上書き」という二段階ペイントも不要になる（SignalDB自体がreactiveにUIへ流れるので、pull完了を待つだけで済む）。関連コメントも整理。
-- ドキュメント（`docs/dexie-offline-sync.md`）は今回Dexie前提で参考にならなかった旨を踏まえ、SignalDB版の設計として書き直すか、もしくは新規ドキュメントに置き換える。
+
 
 ---
 
@@ -113,3 +113,24 @@
 
 - `cardsStore.test.ts`は`nextPage`（旧・`getList`用）を`nextLocalPage`（`queryCardsPage`/`countCards`用、`loadNextCardsPage`系のテストで使用）と`nextServerPage`（`getList`用、`resyncPot`系のテストで使用）に分離した。
 - 「ソフトデリート除外をサーバーに問い合わせている」ことを検証していた旧テスト（`asks the server only for cards that are not deleted`）は、`loadNextCardsPage`がサーバーを呼ばなくなったため削除。ソフトデリート除外の責務は今後`pullCardsHandler`（差分プロトコル）＋`applyPulledRecords`（SignalDBからの削除適用）側にあることを前提にする。
+
+---
+
+## Stage 3 実装ノート
+
+実装済み。Stage 2のときと同じ理由で、経緯と設計判断を残す。
+
+### 1. `resyncPot`はSignalDBへの差分適用＋ローカル再読み込みに置き換えた
+
+- 旧実装は`fetchCardsPage`（REST）でwindowと同じページ数だけ取得し直していた。新実装は`syncPotReplica`が使っていたロジックを`pullAndApplyDiff`として切り出し、`resyncPot`からも呼ぶようにした：保存済みcheckpointからの差分pull → `applyPulledRecords`でSignalDBに適用（deleteは削除、それ以外はupsert）→ checkpoint更新。
+- 差分適用が終わった後、windowが今までカバーしていた件数（`win.ids.length`）ぶんを`queryCardsPage(potId, 0, windowSize)`で**1回のクエリ**として読み直す。SignalDBはpotの全カードを保持する完全レプリカなので、ページごとに何度も問い合わせる必要がない。
+- `vanished`（もう表示されなくなったカード）の判定はそのまま維持：再読み込みした`items`に含まれないidは、削除されたか、単に並び替えでwindow外に出ただけ。どちらであっても`cardsById`からは削除する（表示用ストアの整合性のため）が、SignalDBの永続キャッシュ側は`deleteFromCache`を呼ばない。永続キャッシュからの削除は`applyPulledRecords`が本当に削除されたカードだけを対象に行うので、二重管理にならない。
+
+### 2. `resyncPot`はもうサーバーに直接アクセスしない
+
+- `fetchCardsPage`（`lib/api/cardApi.ts`）は`resyncPot`から呼ばれなくなった。関数自体はStage 4で削除する予定なので、このコミットでは残してある。
+- テスト（`cardsStore.test.ts`）も合わせて更新：`pb.collection("cards").getList`をスパイしていた`getList`と、それを使う`nextServerPage`ヘルパーは不要になったため削除し、代わりに`pullAll`（`../api/replication`）の戻り値をキューする`nextDiff`ヘルパーを追加した。ローカル再読み込みの検証は既存の`nextLocalPage`（`queryCardsPage`/`countCards`用）をそのまま流用している。
+
+### 3. Stage 4への引き継ぎ
+
+- `fetchCardsPage`、`PotWindow.total`のREST由来ロジック（今回のリファクタで実質的に無くなった）、この`docs/signaldb-offline-sync.md`自体の整理はまだ手つかず。Stage 4でまとめて片付ける。

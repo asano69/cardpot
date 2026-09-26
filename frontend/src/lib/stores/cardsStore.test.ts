@@ -1,5 +1,4 @@
-import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
-import pb from "../api/pb";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { subscribeToCards } from "../api/realtime";
 import { pullAll } from "../api/replication";
 import { queryCardsPage, countCards } from "../signaldb/cardsCollection";
@@ -46,12 +45,6 @@ vi.mock("../signaldb/cardsCollection", () => ({
   writeCheckpoint: vi.fn(),
 }));
 
-// resyncPot still pages over the network (see docs/signaldb-offline-
-// sync.md's Stage 3, not yet done), so it alone still goes through
-// PocketBase's "cards" service. Spying on the cached instance replaces
-// the network without mocking any module.
-const getList = vi.spyOn(pb.collection("cards"), "getList") as unknown as Mock;
-
 // Each test uses its own pot id: the store is module-level state.
 
 function card(id: string, pot: string, position = 1): CardRecord {
@@ -76,18 +69,22 @@ function cards(pot: string, from: number, to: number): CardRecord[] {
   );
 }
 
-// Queues the next page loadNextCardsPage will read from the local
-// SignalDB cache (see queryCardsPage/countCards in cardsStore.ts).
+// Queues the next page loadNextCardsPage (or resyncPot's own window
+// re-read, see resyncPot in cardsStore.ts) will read from the local
+// SignalDB cache (see queryCardsPage/countCards there).
 function nextLocalPage(items: CardRecord[], total: number) {
   vi.mocked(queryCardsPage).mockResolvedValueOnce(items);
   vi.mocked(countCards).mockResolvedValueOnce(total);
 }
 
-// Queues the next page resyncPot will fetch from the server -- it
-// still pages over the REST API (see docs/signaldb-offline-sync.md's
-// Stage 3, not yet done).
-function nextServerPage(items: CardRecord[], totalItems: number) {
-  getList.mockResolvedValueOnce({ items, totalItems });
+// Queues the diff resyncPot will pull and apply to the SignalDB
+// replica (see pullAndApplyDiff in cardsStore.ts) before re-reading the
+// window from it. The records' content rarely matters to these tests
+// -- they only exercise how resyncPot re-reads the window afterward
+// (see nextLocalPage) -- so an empty diff is enough unless a test
+// needs otherwise.
+function nextDiff(records: CardRecord[]) {
+  vi.mocked(pullAll).mockResolvedValueOnce({ records, checkpoint: null });
 }
 
 // Starts watching and returns functions that deliver a realtime event, or a
@@ -119,7 +116,6 @@ function watch() {
 // clean slate regardless of how many calls the previous test made.
 beforeEach(() => {
   for (const potId of "abcdefghijklmnopq") releasePot(potId);
-  getList.mockReset();
   vi.mocked(queryCardsPage).mockReset();
   vi.mocked(countCards).mockReset();
   vi.mocked(pullAll).mockClear();
@@ -251,8 +247,11 @@ describe("resyncPot", () => {
     nextLocalPage(cards("h", 0, 3), 3);
     await loadNextCardsPage("h");
 
-    // h-0 was deleted and h-3 created while events were missed.
-    nextServerPage(cards("h", 1, 4), 3);
+    // Simulates h-0 having been deleted and h-3 created while events
+    // were missed: the pulled diff itself is irrelevant here, only
+    // what the cache looks like once resyncPot re-reads the window.
+    nextDiff([]);
+    nextLocalPage(cards("h", 1, 4), 3);
     await resyncPot("h");
 
     expect(potWindow("h")?.ids).toEqual(["h-1", "h-2", "h-3"]);
@@ -261,27 +260,25 @@ describe("resyncPot", () => {
     expect(cardsById["h-3"]).toBeDefined();
   });
 
-  it("reloads every page the window covers", async () => {
+  it("re-reads the whole window in one local query, not one page at a time", async () => {
     nextLocalPage(cards("i", 0, 100), 250);
     await loadNextCardsPage("i");
     nextLocalPage(cards("i", 100, 200), 250);
     await loadNextCardsPage("i");
 
-    getList.mockReset();
-    nextServerPage(cards("i", 0, 100), 251);
-    nextServerPage(cards("i", 100, 200), 251);
+    vi.mocked(queryCardsPage).mockReset();
+    nextDiff([]);
+    nextLocalPage(cards("i", 0, 200), 251);
     await resyncPot("i");
 
-    expect(getList).toHaveBeenCalledTimes(2);
-    expect(getList).toHaveBeenNthCalledWith(1, 1, 100, expect.anything());
-    expect(getList).toHaveBeenNthCalledWith(2, 2, 100, expect.anything());
+    expect(queryCardsPage).toHaveBeenCalledTimes(1);
+    expect(queryCardsPage).toHaveBeenCalledWith("i", 0, 200);
     expect(potWindow("i")?.total).toBe(251);
   });
 
   it("does nothing while nothing is loaded", async () => {
-    getList.mockClear();
     await resyncPot("j");
-    expect(getList).not.toHaveBeenCalled();
+    expect(pullAll).not.toHaveBeenCalled();
   });
 
   it("leaves the window untouched when a request fails", async () => {
@@ -289,7 +286,7 @@ describe("resyncPot", () => {
     await loadNextCardsPage("k");
 
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
-    getList.mockRejectedValueOnce(new Error("offline"));
+    vi.mocked(pullAll).mockRejectedValueOnce(new Error("offline"));
     await resyncPot("k");
     logged.mockRestore();
 
@@ -304,8 +301,10 @@ describe("resyncPot", () => {
     nextLocalPage(cards("q", 0, 1), 1);
     await loadNextCardsPage("q");
 
-    nextServerPage(cards("p", 1, 2), 1);
-    nextServerPage(cards("q", 1, 2), 1);
+    nextDiff([]);
+    nextDiff([]);
+    nextLocalPage(cards("p", 1, 2), 1);
+    nextLocalPage(cards("q", 1, 2), 1);
     resync();
 
     await vi.waitFor(() => {
@@ -319,7 +318,8 @@ describe("resyncPot", () => {
     nextLocalPage(cards("l", 0, 2), 2);
     await loadNextCardsPage("l");
 
-    nextServerPage(cards("l", 1, 3), 2);
+    nextDiff([]);
+    nextLocalPage(cards("l", 1, 3), 2);
     resync();
 
     await vi.waitFor(() => expect(potWindow("l")?.ids).toEqual(["l-1", "l-2"]));
