@@ -8,7 +8,7 @@
 
 
 ```mermaid
-graph TD
+graph LR
     PB["PocketBase<br/>GET /api/pages/{potId}/cards/pull"]
     SDB["SignalDB<br/>(IndexedDB, potごとの完全レプリカ)"]
     STORE["Solid store<br/>(cardsById / windows)"]
