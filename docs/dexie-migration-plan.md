@@ -80,6 +80,39 @@
 - コードベース中の "SignalDB" への言及（コメント含む）を洗い出して更新
 - `bun install`で`bun.lock`を再生成
 
----
 
-各ステージは独立にレビュー・マージ可能な単位です。Stage1から着手してよければ、`cardsCollection.ts`の新規実装を出力します。またStage2の「idタイブレーク省略」の可否だけ先に確認させてください。
+# 備考
+## DexieのLiveQueryはあえて使わない
+
+今回の移行計画でも `dexie-react-hooks` 相当の仕組み（Dexie本体には無く、`liveQuery()`関数自体はcoreにありますが、Solid用のreactiveバインディングは別途自作が必要）は使わない前提で組んでいます。理由は、これまでの議論と完全に一貫しています。
+
+## 理由：SignalDBのreactivityアダプタを切った理由と同じ
+
+以前確認した通り、このアプリのアーキテクチャは：
+
+- **Solid store（`cardsById`/`windows`）が唯一のUIが読むreactiveな状態**
+- SignalDB（今後はDexie）は「明示的な関数呼び出しでのみ読み書きされる永続化層」であり、UIに直接バインドされない
+
+`docs/signaldb-offline-sync.md` に明記されている通りです：
+> SignalDB... UIから直接reactiveにバインドされることはなく、`queryCardsPage`/`countCards`という明示的な関数呼び出しでのみ読まれる
+
+`liveQuery()`をSolidで使うには、`from`（RxJSのObservable相当）を`createSignal`にブリッジする自作アダプタが必要になり、これはまさに`@signaldb/solid`が担っていた役割そのものです。つまり `liveQuery` を導入すると、削除したはずの「未使用のreactivity統合レイヤー」を**Dexie版として再び作ることになり**、以前の判断（「削除して良い」）と矛盾します。
+
+## もう一つの理由：業務ロジックがreactive queryに乗らない
+
+`loadNextCardsPage`のwindow管理（pin優先ソート、重複排除、削除時のズレ吸収）や`resyncPot`のcheckpoint差分適用は、単純な「クエリ結果をそのまま表示」ではなく、**複数のステップを経た手続き的なロジック**です。`liveQuery`で自動追随させても、その結果を今の`windows`/`cardsById`の形に変換する手続きは結局手で書く必要があり、恩恵が薄いという判断は変わりません。
+
+## Stage 1の設計に反映すべき点
+
+先ほどの計画で `queryCardsPage`/`countCards`/`readCheckpoint` はSignalDB版と同じく**普通の`await`ベースの一回限りのクエリ**として実装し、`liveQuery`は使いません。これはコメントとして明示しておくと、SignalDB版にあった「なぜreactive:falseなのか」という疑問と同じものが今後Dexie版で再発するのを防げます：
+
+```ts
+// This module deliberately does not use Dexie's liveQuery(): the
+// reactive source the UI actually renders from is the Solid store in
+// cardsStore.ts (cardsById/windows), not this cache directly. Every
+// read here is a one-shot query, and cardsStore.ts is responsible for
+// pushing results into the Solid store itself (see mergeCards).
+```
+
+
+
