@@ -96,7 +96,7 @@ export function mergeCards(
     list.push(record);
     byPot.set(record.pot, list);
   }
-  for (const [potId, list] of byPot) writeCache(potId, list);
+  for (const [potId, list] of byPot) void writeCache(potId, list);
 }
 
 // Loads the next page of a pot's card list (the first page when nothing
@@ -226,7 +226,7 @@ function dropCard(id: string, potId: string | undefined) {
       delete store[id];
     }),
   );
-  if (potId) deleteFromCache(potId, id);
+  if (potId) void deleteFromCache(potId, id);
 }
 
 // A created card only matters here if its pot's window is loaded;
@@ -234,7 +234,7 @@ function dropCard(id: string, potId: string | undefined) {
 function addCreatedCard(record: CardRecord) {
   if (!windows[record.pot]?.loaded) return;
   setCardsById(record.id, record);
-  writeCache(record.pot, [record]);
+  void writeCache(record.pot, [record]);
   setWindows(
     record.pot,
     produce((w) => {
@@ -261,7 +261,7 @@ function handleCardEvent(e: CardEvent) {
       // An update for a card we don't hold is ignored, so the store
       // never grows beyond what the UI actually loaded.
       setCardsById(e.record.id, e.record);
-      writeCache(e.record.pot, [e.record]);
+      void writeCache(e.record.pot, [e.record]);
     }
   });
 }
@@ -312,7 +312,7 @@ export async function resyncPot(potId: string): Promise<void> {
       for (const id of vanished) delete store[id];
     }),
   );
-  for (const id of vanished) deleteFromCache(potId, id);
+  for (const id of vanished) void deleteFromCache(potId, id);
 }
 
 // Keeps every loaded pot window live through the shared cards channel and

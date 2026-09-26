@@ -45,15 +45,31 @@ export async function readCache(potId: string): Promise<CardRecord[]> {
 // Write-through: mirrors a batch of cards into potId's cache.
 // Fire-and-forget -- a failure here must never affect the live UI,
 // which never reads from this cache directly.
-export function writeCache(potId: string, records: CardRecord[]): void {
+//
+// Awaits isReady() first, same as readCache above: a collection
+// cacheFor() has only just created hasn't hydrated its in-memory
+// state from IndexedDB yet, and mutating it before that finishes is a
+// no-op that the hydration then silently overwrites once it
+// completes -- e.g. deleting a card on a page that never called
+// readCache for this pot (opening a card straight from a URL, never
+// visiting its card list) would never actually reach IndexedDB, and
+// the card would reappear next time this cache repaints from it.
+export async function writeCache(
+  potId: string,
+  records: CardRecord[],
+): Promise<void> {
   const collection = cacheFor(potId);
+  await collection.isReady();
   for (const record of records) {
     collection.replaceOne({ id: record.id }, record, { upsert: true });
   }
 }
 
-export function deleteFromCache(potId: string, id: string): void {
-  cacheFor(potId).removeOne({ id });
+// See writeCache's own comment above on awaiting isReady() first.
+export async function deleteFromCache(potId: string, id: string): Promise<void> {
+  const collection = cacheFor(potId);
+  await collection.isReady();
+  collection.removeOne({ id });
 }
 
 // Drops potId's in-memory Collection handle when the pot is left.
