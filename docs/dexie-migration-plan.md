@@ -1,3 +1,11 @@
+## リファクタリングの背景
+
+- SignalDBの Cursor.getItems() は：フィルタ(全件 or index絞り込み) → ①ソート(M件) → ②skip → ③limit という順序で、①のソートが毎回M件全体に対して走ります。indexを張ってもフィルタ（O(N)→O(M)）は速くなりますが、ソート済みのindexという概念自体が無いため、ソートコストはM件分そのまま残ります。
+
+- DexieはIndexedDBのネイティブindexを直接使います。IndexedDBのindexは内部的にB-treeとしてソート順を常時維持しているため、.offset(skip).limit(limit) はカーソルをskip件分進めてlimit件読むだけで済みます。計算量は O(skip + limit) であり、Mの全件を毎回ソートし直す必要がありません。
+
+- このコストが10万件スケールでは致命的なので、signalDBからdexie.jsにリファクタリングする. dexies.jsとSignalDBの両方をつかう中間状態は必要ない.
+
 ## 事前確認：壊してはいけない契約
 
 `cardsCollection.ts` が外部に見せている7関数と、それぞれの呼び出し元（すべて `cardsStore.ts` とそのテスト）を棚卸しします。
