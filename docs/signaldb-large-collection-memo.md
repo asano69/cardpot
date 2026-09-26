@@ -24,190 +24,26 @@ signalDBのsolidアダプタがあるが、10万件規模のコレクション�
 
 実用上は、10万件のコレクションでは `find({})` のような無条件クエリを避け、セレクタ + インデックス + `fieldTracking` を組み合わせるのが SignalDB 側が想定する使い方です。 signaldb:127-131 
 
-## Notes
 
-- Solid ガイドの例では `<For each={Posts.find(...).fetch()}>` と直接クエリを張っていますが、これは小規模データ向けの簡易例です。 signaldb:81-85 
-- なお、アダプタ実装(`src/index.ts`)自体は提供されていますが、`Cursor` / `Collection` のクエリ再評価の内部実装(通知→再走査の経路や selector マッチングの最適化詳細)はインデックス上限のためこのコンテキストでは確認できていません。正確な再計算量を知りたい場合は Devin セッションで `packages/base/core/src/Collection/` と `Cursor` 実装を直接確認することをおすすめします。
+この回答は、先ほどの推測を裏付けるだけでなく、実装上の根拠まで示してくれていますね。整理すると、cardpotの設計判断は理にかなっていたと言えます。
 
-Wiki pages you might want to explore:
-- [Reactivity System (maxnowack/signaldb)](/wiki/maxnowack/signaldb#4)
-- [Changelogs & Release Process (maxnowack/signaldb)](/wiki/maxnowack/signaldb#8.2)
-### Citations
-**File:** packages/reactivity-adapters/solid/src/index.ts (L4-20)
-```typescript
-const solidReactivityAdapter = createReactivityAdapter({
-  create: () => {
-    const [depend, rerun] = createSignal(undefined, { equals: false })
-    return {
-      depend: () => {
-        depend()
-      },
-      notify: () => {
-        rerun()
-      },
-    }
-  },
-  isInScope: () => !!getOwner(),
-  onDispose: (callback) => {
-    onCleanup(callback)
-  },
-})
-```
-**File:** packages/base/core/__tests__/Cursor.spec.ts (L461-474)
-```typescript
-      collection.updateOne({ id: 1 }, { $set: { name: 'item1_modified' } })
-      await new Promise((resolve) => {
-        setTimeout(resolve, 10)
-      })
+## cardpotの選択の正当性
 
-      expect(notify).toHaveBeenCalled()
-      disposal()
-      expect(disposal).toHaveBeenCalled()
-      collection.updateOne({ id: 1 }, { $set: { name: 'item1_' } })
-      await new Promise((resolve) => {
-        setTimeout(resolve, 10)
-      })
-      expect(notify).toHaveBeenCalledTimes(1)
-      cursor.cleanup()
-```
-**File:** packages/base/core/__tests__/Cursor.spec.ts (L477-515)
-```typescript
-    it('should requery only once after batch operation', () => {
-      const depCreation = vi.fn()
-      const dep = vi.fn()
-      const notify = vi.fn()
-      const scopeCheck = vi.fn()
+`queryCardsPage`/`countCards` は `{ sort: {...}, skip, limit, reactive: false }` を明示していますが、これは今回の回答が指摘する「10万件規模では `find({})` 系の広いセレクタは再計算コストが無視できない」というリスクを、そもそも**reactiveを使わないことで完全に回避**する選択です。
 
-      const reactivity = createReactivityAdapter({
-        create() {
-          depCreation()
-          return {
-            depend() {
-              dep()
-            },
-            notify() {
-              notify()
-            },
-          }
-        },
-        isInScope() {
-          scopeCheck()
-          return true
-        },
-      })
-      const collection2 = new Collection<{ id: string, name: string }>({
-        reactivity,
-      })
-      const cursor = collection2.find({})
-      const result = cursor.fetch()
-      expect(result).toHaveLength(0)
+さらに、cardpotのアクセスパターンを見ると、reactive queryを使ってもあまり恩恵がなかったはずです：
 
-      collection2.batch(() => {
-        // create items
-        for (let i = 0; i < 10_000; i += 1) {
-          collection2.insert({ id: i.toString(), name: `John ${i}` })
-          expect(notify).toHaveBeenCalledTimes(0)
-        }
-      })
-      expect(notify).toHaveBeenCalled()
-    })
-```
-**File:** docs/queries/index.md (L60-64)
-```markdown
-::: tip
-With the `fields` option you can also control when you query will rerun. If you only query for a field that is not changing, the query will not rerun.
+- `queryCardsPage`: `skip`/`limit`はあるが `{}`（無条件セレクタ）→ 回答にある「セレクタ + インデックス + `fieldTracking`」の組み合わせ最適化の恩恵を受けにくい形
+- ページング結果は `mergeCards` で毎回Solid storeに書き込まれるので、reactiveで自動追随させても、どのみち `windows[potId].ids` の並び替えや重複排除といった業務ロジックは手動でやる必要がある
 
-Also see [Field-Level Reactitivity](#field-level-reactivity)
-:::
-```
-**File:** docs/queries/index.md (L72-81)
-```markdown
-### `skip` and `limit`
+つまり、reactive queryを使ったとしても `fieldTracking: true` や `createIndex` を別途チューニングする追加コストが発生するだけで、「明示的な関数呼び出し＋手動でSolid storeに反映」という今の設計より複雑になった可能性が高いです。simplicity重視の方針とも整合します。
 
-To skip or limit the result of a query, use the `skip` or `limit` options. Both options are optional.
+## 一方で気に留めておくと良い点
 
-```js
-collection.find({}, {
-  skip: 10,
-  limit: 10,
-})
-```
-```
-**File:** docs/queries/index.md (L83-92)
-```markdown
-## Field-Level Reactivity
+`Collection.setFieldTracking` や `createIndex` は「後から有効化できる最適化」として存在するので、将来的にもし以下のような状況になったら検討の余地はあります：
 
-SignalDB introduces a powerful enhancement to its reactivity system called **Field-Level Reactivity**, which ensures that reactive functions (such as `effect` or `autorun`) only rerun when specific fields accessed in your code are changed. Previously, the reactive system would rerun the query if any field in any item of the result set was modified, regardless of whether those fields were actually used in the code. This led to unnecessary reactivity and potential performance bottlenecks, especially with large datasets.
+- `queryCardsPage` のskip/limitクエリ自体が遅くなってきた場合（現状はIndexedDB上の話であり、SignalDB自身のインメモリ走査コストとは別軸の懸念点ですが）
+- `position`/`pin` でのソートに `createIndex` を張ることで、フルスキャンを避けたい場合
 
-### Key Features
+ただし現状 `reactive: false` で運用している限り、`notify()`/`rerun()` 周りのコスト（今回の回答の本題）はそもそも発生していないので、**今すぐ手を入れる理由はありません**。「reactivityアダプタを使っていないなら `@signaldb/solid` 依存自体が本当に必要か」という以前の指摘は、この観点からもやはり見直す価値がありそうです（テストコード `cardsCollection.test.ts` だけのために依存しているなら、プレーンな `Collection` で書き換えて依存を削れる可能性があります）。
 
-* **Field-Level Reactivity**: Reactive reruns now occur only when the fields actually accessed by your code are modified, rather than triggering for all changes in the dataset.
-* **Item-Level Reactivity**: If a query returns multiple items but you only access fields from specific items, changes in unaccessed items will not trigger a rerun.
-* **Automatic Field Tracking**: Instead of manually specifying which fields to track using the `fields` option, SignalDB now automatically tracks fields as you access them. This reduces the chance of developer oversight and simplifies code maintenance.
-
-```
-**File:** docs/queries/index.md (L113-125)
-```markdown
-#### 3. Enable Field Tracking in `.find()` Options
-
-You can enable field tracking on a per-query basis by passing the fieldTracking: true option to the .find() method. When this option is set, reactivity is scoped to the fields you access.
-
-```js
-effect(() => {
-  const items = someCollection.find({}, { fieldTracking: true }).fetch()
-  // Access the fields you care about here
-  console.log(items[0].name) // Will rerun only if 'name' field of the 0th item changes
-})
-```
-
-This behavior optimizes your app’s performance by reducing the number of unnecessary reruns. Instead of rerunning every time any field in any document changes, it only reruns when the relevant fields you’re interacting with are modified.
-```
-**File:** docs/queries/index.md (L127-131)
-```markdown
-### Benefits of Automatic Field Tracking
-
-1. Improved Performance: By reducing the scope of reactive reruns to only relevant data, SignalDB minimizes computational overhead and maximizes efficiency, particularly in scenarios where queries return large datasets or where irrelevant fields change frequently.
-2. Simplified Code: Developers no longer need to manually specify fields to track. With automatic field tracking, the system handles this for you, allowing you to focus on business logic rather than managing reactivity manually.
-3. Reduced Developer Error: Manually tracking fields can be error-prone, especially as queries evolve. Automatic field-level reactivity ensures that your queries remain optimal even as your code changes, making it easier to maintain over time.
-```
-**File:** packages/base/core/__tests__/Collection.spec.ts (L660-689)
-```typescript
-    it('should be faster with field indices', () => {
-      const col1 = new Collection<{ id: string, name: string, num: number }>({
-        indices: [createIndex('num')],
-      })
-      const col2 = new Collection<{ id: string, name: string, num: number }>()
-
-      Collection.batch(() => {
-        // create items
-        for (let i = 0; i < 10_000; i += 1) {
-          col1.insert({ id: i.toString(), name: 'John', num: i })
-          col2.insert({ id: i.toString(), name: 'John', num: i })
-        }
-      })
-
-      const indexQueryTime = measureTime(() => {
-        const item = col1.findOne({ num: 999 })
-        expect(item).toEqual({ id: '999', name: 'John', num: 999 })
-      })
-
-      const nonIndexQueryTime = measureTime(() => {
-        const item = col2.findOne({ num: 999 })
-        expect(item).toEqual({ id: '999', name: 'John', num: 999 })
-      })
-
-      const percentage = (100 / nonIndexQueryTime) * indexQueryTime
-      // eslint-disable-next-line no-console
-      console.log('field index performance:', { indexQueryTime, nonIndexQueryTime, percentage })
-
-      // index query should use less than 10% of the time of a non-index query
-      expect(percentage).toBeLessThan(10)
-```
-**File:** docs/guides/solid-js/index.md (L81-85)
-```markdown
-    <For each={Posts.find({}, { sort: { time: -1 } }).fetch()}>{post => (
-      <li>
-        {post.title} <span>({post.author})</span>
-      </li>
-    )}</For>
-```
