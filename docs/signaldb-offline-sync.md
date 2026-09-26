@@ -102,3 +102,50 @@ Centrifugeの購読が「履歴切れ」（サーバー再起動、履歴の保�
 - `nextDiff(records)`: `pullAll`が次に返す`{records, checkpoint: null}`をキューする。`ensurePotSynced`（初回同期）と`resyncPot`（差分適用）、両方の経路で消費される。
 - `../api/realtime`と`../signaldb/cardsCollection`はモジュールごと`vi.mock`している。前者はCentrifugeへの実接続が必要なため、後者はjsdomにIndexedDB実装が無いため。
 - `beforeEach`で毎回`releasePot`を全potId分呼び、`queryCardsPage`/`countCards`/`pullAll`のモックをリセットする。`resync()`のテストがロード済みの全potを対象にするため、前のテストのpotが残っていると意図しないページを消費してしまう。
+
+
+---
+
+# なぜDexie.jsではなくSignalDBをつかうのか？
+
+実際のコード（`lib/signaldb/cardsCollection.ts`、`cardsCollection.test.ts`、`docs/signaldb-offline-sync.md`）を根拠に整理すると、**恩恵を受けている点**と、**SignalDBの機能でありながら実際には使っていない点**の両方があります。誇張せずに言うと以下の通りです。
+
+## 実際に恩恵を受けている点
+
+### 1. スキーマレスなMongo風クエリ（インデックス定義不要）
+```ts
+collection.find({}, { sort: { pin: -1, position: -1, id: 1 }, skip, limit })
+```
+Dexie.jsだと `pin` `position` の複合ソートをこの形でやるには、`.stores()` に複合インデックスをあらかじめ宣言し、バージョンを上げてマイグレーションする必要があります。SignalDB（内部はmingo）は任意のフィールドで即座にfind/sortでき、**スキーマ定義もマイグレーションも不要**です。`CLAUDE.md` の「データベースのマイグレーションはPocketBaseのWEB UIから行う」という方針と同じ発想を、ローカルキャッシュ側でも実現できています。
+
+### 2. Persistenceアダプタの分離によるテスト容易性
+`cardsCollection.test.ts` を見ると：
+```ts
+new Collection<{...}>({ reactivity: solidReactivityAdapter })
+```
+persistenceアダプタを渡さず、**完全にインメモリで**CRUDテストしています。Dexieは内部でIndexedDB APIに直結しているため、テストには `fake-indexeddb` の導入とjsdom設定が必須ですが（実際 `cardsStore.test.ts` では逆にcardsCollectionモジュール自体をモックしている理由がこれ）、SignalDBはpersistenceを差し替え可能な設計なので、ロジックだけを試したいテストが軽量に書けます。
+
+### 3. checkpoint保存も同じ枠組みで実現
+`cards-cache-checkpoints` という別コレクションを、カード本体と全く同じAPI（`replaceOne`, `find`）で扱えています。Dexieでも可能ですが、テーブルごとに`.stores()`定義が要る分、SignalDBの「その場でコレクションを作る」身軽さが活きています。
+
+## 実は恩恵を受けていない点（正直に言うと）
+
+`@signaldb/solid` の**リアクティビティアダプタ**が依存関係にあり、`cardsCollection.test.ts` でも渡していますが、本番コード（`queryCardsPage`, `countCards`, `readCheckpoint`）は**すべて `reactive: false` を明示**しています：
+```ts
+{ sort: {...}, skip, limit, reactive: false }
+```
+
+`docs/signaldb-offline-sync.md` にもはっきり書かれている通り、
+> SignalDB... UIから直接reactiveにバインドされることはなく、`queryCardsPage`/`countCards`という明示的な関数呼び出しでのみ読まれる「ページング用のローカルインデックス」
+
+つまり、UIが実際に読む唯一の反応的な状態は `cardsStore.ts` の Solid `createStore`（`cardsById`/`windows`）であり、SignalDB → Solid store への同期は `mergeCards`/`dropCard` 内で**手動の二重書き込み**によって行われています。SignalDBのreactive queryをそのままUIにバインドしていれば、この二重管理は不要だったはずです（＝Dexieの `liveQuery` 相当の恩恵を、あえて使わない設計にしている）。
+
+これは設計ミスというより意図的な選択に見えます。理由として考えられるのは：
+- 無限スクロールのwindow管理（pin優先ソート・重複排除・削除時のズレ吸収）は業務ロジックが複雑で、reactive queryに任せるより明示的な関数の方が制御しやすい
+- 10万件規模のコレクションに対してreactive queryを張ると、購読コストや再計算コストが無視できない可能性がある
+
+## まとめ
+- **享受している**: スキーマレスなクエリ／マイグレーション不要／persistence分離によるテスト容易性
+- **享受していない**: リアクティビティ統合（SignalDBの目玉機能の一つだが、あえて`reactive:false`にして自前のSolid storeで二重管理）
+
+「simplicityを重視する」という観点で見ると、リアクティビティアダプタを使わないなら `@signaldb/solid` への依存自体が本当に必要か（テストのためだけに残っているなら、テストもプレーンな `Collection`＋no reactivity adapter で書けるはず）は一度見直す価値があるかもしれません。
