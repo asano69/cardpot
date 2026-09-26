@@ -27,7 +27,6 @@
     "@lezer/markdown": "^1.7.2",
     "@signaldb/core": "1.8.1",
     "@signaldb/indexeddb": "1.1.0",
-    "@signaldb/solid": "1.0.0",
     "@solidjs/router": "^0.16.1",
     "centrifuge": "^5.7.4",
     "globals": "^17.7.0",

@@ -21,7 +21,6 @@
         "@lezer/markdown": "^1.7.2",
         "@signaldb/core": "1.8.1",
         "@signaldb/indexeddb": "1.1.0",
-        "@signaldb/solid": "1.0.0",
         "@solidjs/router": "^0.16.1",
         "centrifuge": "^5.7.4",
         "globals": "^17.7.0",
@@ -441,8 +440,6 @@
     "@signaldb/core": ["@signaldb/core@1.8.1", "", { "dependencies": { "fast-sort": "^3.4.1", "mingo": "^7.1.1" } }, "sha512-85+ehSokMaKrPue42wPLmF+tU2jfky99kC2UlamfYS64I1YMMCWDeOdx17PNMpTxLdGFlCgnDEpTZB5XO3HFyQ=="],
 
     "@signaldb/indexeddb": ["@signaldb/indexeddb@1.1.0", "", { "peerDependencies": { "@signaldb/core": "1.x" } }, "sha512-TZIyLG7X11pwdGgQ9uD9k4OvxVwBmGjE7AQ4ZkSLEAvI7O822lwz+fTdJL2d/6sTQ5hGvoXkoqwcZCyb7e8g+w=="],
-
-    "@signaldb/solid": ["@signaldb/solid@1.0.0", "", { "peerDependencies": { "@signaldb/core": "1.x", "solid-js": "1.x.x" } }, "sha512-E7MormqRIJZ/cObG5GowW23VRaaKyWyuQifvgMoMpkIMmOS/72IkXCIodTHkNYi2tCfQPnn4zMQFHKBPFQq/Jw=="],
 
     "@solid-primitives/event-listener": ["@solid-primitives/event-listener@2.4.6", "", { "dependencies": { "@solid-primitives/utils": "^6.4.1" }, "peerDependencies": { "solid-js": "^1.6.12" } }, "sha512-5I0YJcTVYIWoMmgBSROBZGcz+ymhew/pGTg2dHW74BUjFKsV8Li4bOZYl0YAGP4mHw5o4UBd9/BEesqBci3wxw=="],
 

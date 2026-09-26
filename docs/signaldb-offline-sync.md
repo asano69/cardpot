@@ -106,46 +106,57 @@ Centrifugeの購読が「履歴切れ」（サーバー再起動、履歴の保�
 
 ---
 
+# 具体例
+
+新しいタブでひらいときはindexedDBからsoldStoreにデータが供給され、オンライン時は、centrifugeから直接SolidStoreが更新され、一方でsignalDBにもデータが挿入されるということか？
+
+## 新しいタブを開いたとき
+
+1. `loadNextCardsPage` が呼ばれ、`windows[potId]` が無ければまず `ensurePotSynced` → `pullAndApplyDiff` を実行
+   - `readCheckpoint` でSignalDBに保存済みのcheckpointを読む
+   - `pullAll` でサーバーから**差分**を取得（前回の会話で確認した通り）
+   - `applyPulledRecords` でその差分をSignalDB（IndexedDB）に反映（`writeCache`/`deleteFromCache`）
+2. 同期が終わったあと `queryCardsPage`/`countCards` で**SignalDBから**ページを読み、`mergeCards` でSolid store（`cardsById`/`windows`）に反映
+
+なので「IndexedDBからSolidStoreに供給」というより正確には「**サーバーとの差分同期を終えたSignalDBから**SolidStoreに供給」です。SignalDBの中身自体もこのタイミングでサーバーの最新状態に更新されています。
+
+## オンライン中（Centrifuge経由）
+
+`handleCardEvent`（`watchCards`経由）を見ると、イベント種別ごとに：
+
+- `create` → `addCreatedCard`: `setCardsById`でSolid storeに直接反映 **かつ** `writeCache`でSignalDBにも書き込み
+- `update` → `setCardsById`でSolid store反映 **かつ** `writeCache`でSignalDBにも書き込み
+- `delete`/ソフトデリート → `dropCard`: Solid storeから削除 **かつ** `deleteFromCache`でSignalDBからも削除
+
+なので「SolidStoreが直接更新され、一方でSignalDBにも挿入される」は正確です。両方が**同じイベントハンドラ内で同時に**（`writeCache`/`deleteFromCache`は`void`でfire-and-forget）行われます。
+
+## 補足：この二重書き込みの例外
+
+- `openCardBySlug`（URLから直接カードを開く）は**SignalDBを経由せず**サーバーから直接1件取得し、`mergeCards`でSolid storeとSignalDB双方に書き込みます。SignalDBの読み取り経路（`queryCardsPage`）を通らずに、書き込みだけは通る形です。
+- `moveCard`/`setCardPinned`/`removeCard` などのローカル操作も同様に、`mergeCards`/`dropCard`経由でSolid storeとSignalDBの両方に反映されます。
+
+まとめると、**SignalDBは「サーバーとの差分同期の受け皿」兼「ページング用の永続キャッシュ」**、**Solid storeは「UIが実際に読む唯一のreactiveな状態」**という役割分担で、両者は `mergeCards`/`dropCard`/`applyPulledRecords` という限られた入口関数を通じて常に手動で同期させている、という理解で合っています。
+
+---
+
 # なぜDexie.jsではなくSignalDBをつかうのか？
 
-実際のコード（`lib/signaldb/cardsCollection.ts`、`cardsCollection.test.ts`、`docs/signaldb-offline-sync.md`）を根拠に整理すると、**恩恵を受けている点**と、**SignalDBの機能でありながら実際には使っていない点**の両方があります。誇張せずに言うと以下の通りです。
 
-## 実際に恩恵を受けている点
-
-### 1. スキーマレスなMongo風クエリ（インデックス定義不要）
+## 1. スキーマレスなMongo風クエリ（インデックス定義不要）
 ```ts
 collection.find({}, { sort: { pin: -1, position: -1, id: 1 }, skip, limit })
 ```
 Dexie.jsだと `pin` `position` の複合ソートをこの形でやるには、`.stores()` に複合インデックスをあらかじめ宣言し、バージョンを上げてマイグレーションする必要があります。SignalDB（内部はmingo）は任意のフィールドで即座にfind/sortでき、**スキーマ定義もマイグレーションも不要**です。`CLAUDE.md` の「データベースのマイグレーションはPocketBaseのWEB UIから行う」という方針と同じ発想を、ローカルキャッシュ側でも実現できています。
 
-### 2. Persistenceアダプタの分離によるテスト容易性
+## 2. Persistenceアダプタの分離によるテスト容易性
 `cardsCollection.test.ts` を見ると：
 ```ts
 new Collection<{...}>({ reactivity: solidReactivityAdapter })
 ```
 persistenceアダプタを渡さず、**完全にインメモリで**CRUDテストしています。Dexieは内部でIndexedDB APIに直結しているため、テストには `fake-indexeddb` の導入とjsdom設定が必須ですが（実際 `cardsStore.test.ts` では逆にcardsCollectionモジュール自体をモックしている理由がこれ）、SignalDBはpersistenceを差し替え可能な設計なので、ロジックだけを試したいテストが軽量に書けます。
 
-### 3. checkpoint保存も同じ枠組みで実現
+## 3. checkpoint保存も同じ枠組みで実現
 `cards-cache-checkpoints` という別コレクションを、カード本体と全く同じAPI（`replaceOne`, `find`）で扱えています。Dexieでも可能ですが、テーブルごとに`.stores()`定義が要る分、SignalDBの「その場でコレクションを作る」身軽さが活きています。
 
-## 実は恩恵を受けていない点（正直に言うと）
 
-`@signaldb/solid` の**リアクティビティアダプタ**が依存関係にあり、`cardsCollection.test.ts` でも渡していますが、本番コード（`queryCardsPage`, `countCards`, `readCheckpoint`）は**すべて `reactive: false` を明示**しています：
-```ts
-{ sort: {...}, skip, limit, reactive: false }
-```
 
-`docs/signaldb-offline-sync.md` にもはっきり書かれている通り、
-> SignalDB... UIから直接reactiveにバインドされることはなく、`queryCardsPage`/`countCards`という明示的な関数呼び出しでのみ読まれる「ページング用のローカルインデックス」
-
-つまり、UIが実際に読む唯一の反応的な状態は `cardsStore.ts` の Solid `createStore`（`cardsById`/`windows`）であり、SignalDB → Solid store への同期は `mergeCards`/`dropCard` 内で**手動の二重書き込み**によって行われています。SignalDBのreactive queryをそのままUIにバインドしていれば、この二重管理は不要だったはずです（＝Dexieの `liveQuery` 相当の恩恵を、あえて使わない設計にしている）。
-
-これは設計ミスというより意図的な選択に見えます。理由として考えられるのは：
-- 無限スクロールのwindow管理（pin優先ソート・重複排除・削除時のズレ吸収）は業務ロジックが複雑で、reactive queryに任せるより明示的な関数の方が制御しやすい
-- 10万件規模のコレクションに対してreactive queryを張ると、購読コストや再計算コストが無視できない可能性がある
-
-## まとめ
-- **享受している**: スキーマレスなクエリ／マイグレーション不要／persistence分離によるテスト容易性
-- **享受していない**: リアクティビティ統合（SignalDBの目玉機能の一つだが、あえて`reactive:false`にして自前のSolid storeで二重管理）
-
-「simplicityを重視する」という観点で見ると、リアクティビティアダプタを使わないなら `@signaldb/solid` への依存自体が本当に必要か（テストのためだけに残っているなら、テストもプレーンな `Collection`＋no reactivity adapter で書けるはず）は一度見直す価値があるかもしれません。

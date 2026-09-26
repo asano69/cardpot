@@ -1,6 +1,5 @@
 import { Collection } from "@signaldb/core";
 import createIndexedDBAdapter from "@signaldb/indexeddb";
-import solidReactivityAdapter from "@signaldb/solid";
 import type { CardRecord } from "../models/card";
 import type { Checkpoint } from "../api/replication";
 
@@ -24,9 +23,12 @@ const collections = new Map<string, Collection<CardRecord>>();
 function cacheFor(potId: string): Collection<CardRecord> {
   let collection = collections.get(potId);
   if (!collection) {
+    // No reactivity adapter: every read below (queryCardsPage, countCards)
+    // passes reactive: false, since the reactive source the UI actually
+    // renders from is the Solid store in cardsStore.ts, not this
+    // collection directly.
     collection = new Collection<CardRecord>({
       name: `cards-cache:${potId}`,
-      reactivity: solidReactivityAdapter,
       persistence: createIndexedDBAdapter<CardRecord, string>(
         `cards-cache-${potId}`,
       ),
@@ -115,9 +117,10 @@ interface CheckpointRecord {
   recordId: string; // Checkpoint.id, renamed to avoid clashing with `id` above
 }
 
+// No reactivity adapter here either -- see cacheFor's own comment above;
+// readCheckpoint always passes reactive: false.
 const checkpoints = new Collection<CheckpointRecord>({
   name: "cards-cache-checkpoints",
-  reactivity: solidReactivityAdapter,
   persistence: createIndexedDBAdapter<CheckpointRecord, string>(
     "cards-cache-checkpoints",
   ),

@@ -1,14 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { Collection } from "@signaldb/core";
-import solidReactivityAdapter from "@signaldb/solid";
 
 describe("SignalDB cards collection", () => {
   it("supports CRUD operations", () => {
-    const cards = new Collection<{ id: string; pot: string; position: number }>(
-      {
-        reactivity: solidReactivityAdapter,
-      },
-    );
+    const cards = new Collection<{ id: string; pot: string; position: number }>();
 
     cards.insert({ id: "card-1", pot: "pot-1", position: 1000 });
     cards.updateOne({ id: "card-1" }, { $set: { position: 2000 } });
