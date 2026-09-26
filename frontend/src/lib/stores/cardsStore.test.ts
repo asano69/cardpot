@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { subscribeToCards } from "../api/realtime";
 import { pullAll } from "../api/replication";
-import { queryCardsPage, countCards } from "../signaldb/cardsCollection";
+import { queryCardsPage, countCards } from "../dexie/cardsCollection";
 import type { CardEvent } from "../api/cardApi";
 import type { CardRecord } from "../models/card";
 
@@ -30,17 +30,16 @@ vi.mock("../api/replication", () => ({
   pullAll: vi.fn(async () => ({ records: [], checkpoint: null })),
 }));
 
-// The IndexedDB-backed cache (lib/signaldb/cardsCollection.ts) needs a real
+// The IndexedDB-backed cache (lib/dexie/cardsCollection.ts) needs a real
 // IndexedDB implementation that jsdom does not provide, so it's stubbed out
 // entirely. queryCardsPage/countCards are what loadNextCardsPage now reads
 // from (see nextLocalPage below); writeCache/deleteFromCache stay no-ops,
 // since the tests never need the write side to actually persist anything.
-vi.mock("../signaldb/cardsCollection", () => ({
+vi.mock("../dexie/cardsCollection", () => ({
   queryCardsPage: vi.fn(async () => []),
   countCards: vi.fn(async () => 0),
   writeCache: vi.fn(),
   deleteFromCache: vi.fn(),
-  forgetCache: vi.fn(),
   readCheckpoint: vi.fn(async () => null),
   writeCheckpoint: vi.fn(),
 }));

@@ -12,12 +12,11 @@ import { withCardsFlip, registerCardElement } from "../cardFlip";
 import {
   countCards,
   deleteFromCache,
-  forgetCache,
   queryCardsPage,
   readCheckpoint,
   writeCache,
   writeCheckpoint,
-} from "../signaldb/cardsCollection";
+} from "../dexie/cardsCollection";
 import { pullAll } from "../api/replication";
 
 // Re-exported so CardItem only needs to import from this module
@@ -257,7 +256,6 @@ export function releasePot(potId: string) {
       }
     }),
   );
-  forgetCache(potId);
   potSyncPromises.delete(potId);
 }
 
