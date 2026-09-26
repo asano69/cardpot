@@ -1,86 +1,63 @@
-# SignalDB による Cards オフライン同期
+「SignalDBを完全な差分同期可能なローカルレプリカにする」という設計に転換すれば、position順のwindowという制約自体をなくせるので、ご指摘の通りresyncPotで全量再フェッチが原理的に不要になります。
 
-Cards のローカルミラーは SignalDB の `Collection<CardRecord>` である。pot ごとに
-`frontend/src/lib/signaldb/cardsCollection.ts` が IndexedDB 永続化付き Collection を
-作成し、`frontend/src/lib/signaldb/cardsReplication.ts` が既存の checkpoint pull API と
-Centrifuge の通知を同期する。サーバー側の replication API と realtime publish の契約は
-変更していない。
+## Stage 1: SignalDBを「キャッシュ」から「完全レプリカ＋checkpoint保持」に変える（UIは無変更）
 
-## アーキテクチャ
+**目的**：まずネットワーク層だけを差し替え、画面表示ロジックには一切触れない。リスクを最小化した土台作り。
 
-```
-PocketBase (cards collection, soft-delete)
-   │ create/update/delete hook (internal/realtime/register.go)
-   ▼
-Centrifuge "cards" channel
-   │ WebSocket
-   ▼
-frontend/src/lib/api/realtime.ts (subscribeToCards)
-   │ 変更通知 / resync 通知
-   ▼
-frontend/src/lib/signaldb/cardsReplication.ts
-   │ SyncManager.pull / SyncManager.push
-   ▼
-SignalDB Collection<CardRecord>
-   │ IndexedDB persistence + Solid reactivity
-   ▼
-frontend/src/lib/stores/cardsStore.ts
-   │ cardsForPot / cardById / withCardsFlip
-   ▼
-UI (CardList / CardForm)
-```
+**変更内容**
+- `lib/api/replication.ts`（新規）：`/api/pages/{potId}/cards/pull`を`updatedAt`/`id`のcheckpointでループ呼び出しするクライアント。`pullCardsHandler`のコメント通り「返ってきたページがlimitより短ければ完了」というシンプルな終了条件。
+- `lib/signaldb/cardsCollection.ts`を拡張：pot単位のカードcollectionに加えて、同じpotの`checkpoint`（`{updatedAt, id}`）を保存する小さなキーだけのcollectionかkey-value的な仕組みを追加。
+- pot初回オープン時、既存の`readCache`によるペイントはそのまま残しつつ、バックグラウンドで「checkpointから現在までpullし切る」処理を追加。checkpointがnull（初回同期）なら結果的にフル取得になるが、これは避けようがない（差分の起点が存在しないため）。
 
-## コンポーネントの責務
+**影響範囲**：`cardsById`/`windows`（既存のUI用Solidストア）はまだ触らない。既存の`fetchCardsPage`ベースの表示ロジックと並行して動くだけ。
 
-- **`signaldb/cardsCollection.ts`**: `CardRecord` の Collection と、pot ごとの
-  pull checkpoint Collection を定義する。いずれも IndexedDB に永続化される。
-- **`signaldb/cardsReplication.ts`**: `SyncManager` の pull/push を構成する。
-  pull は `/api/pages/{potId}/cards/pull` を `(updatedAt, id)` checkpoint と
-  `limit=200` で最後のバッチまで取得し、ソフト削除レコードを Collection の削除変更へ
-  変換する。push は更新を `updateCard`、削除を `deleteCard` に送る。
-- **`cardsStore.ts`**: pot の同期ライフサイクルを公開する薄い UI 向け facade。
-  読み取りは Collection のリアクティブな `find().fetch()` / `findOne()` を直接使い、
-  Dexie `liveQuery` の結果を別の Solid store に複製しない。
-- **`cardFlip.ts`**: 並び替えアニメーションだけを担う UI 層。`moveCard`、
-  `setCardPinned`、`removeCard` は引き続き `withCardsFlip` 内で Collection を変更する。
+**確認できること**：pull→SignalDB反映→checkpoint更新、が単体で正しく動くこと。UI側の回帰リスクはほぼゼロ。
 
-## 同期フロー
+---
 
-### pot を開く
+## Stage 2: UIのデータソースをREST pagingからSignalDBに切り替える
 
-1. `ensurePotLoaded(potId)` が pot 専用 Collection と replication handle を作る。
-2. リーダータブは Web Locks の `cardpot:cards-replication:<potId>` を取得し、
-   Centrifuge 購読を開始する。
-3. `SyncManager` が最初の pull を実行する。pull の変更が Collection へ適用された後にのみ
-   checkpoint を保存するため、取得済みだが未保存の状態でタブを閉じても checkpoint だけが
-   先へ進むことはない。
-4. UI は Collection を直接読むため、レコードの更新に応じて再評価される。
+**目的**：ここで初めて「windowという概念」を捨て、SignalDBを唯一のUIソースにする。
 
-### リモート更新・再接続
+**変更内容**
+- `cardsStore.ts`の内部実装を書き換え：`fetchCardsPage`によるページ送りをやめ、SignalDBの`collection.find({pot: potId}, {sort: {pin: -1, position: -1, id: 1}, reactive: true})`から直接取得する形に。
+- ただし外部に見せるAPI（`potWindow`, `cardsById`, `loadNextCardsPage`など）のシグネチャは変えない方針を推奨。CardItem/CardForm/CardListなど呼び出し側を一斉に書き換えずに済み、変更をこのファイル内に閉じ込められる。
+- Centrifugeのリアルタイムイベント（`handleCardEvent`）も、直接Solidストアを書き換えるのではなく、まずSignalDBの該当collectionに`replaceOne`/`removeOne`し、その変化がSignalDBのreactive queryを通じて自動的にUIへ伝播する形にする（`@signaldb/solid`はすでに依存に入っている）。
 
-Centrifuge の card イベントまたは resync 通知を受けたリーダーは pull を再実行し、完了後
-`BroadcastChannel` で同じ pot を開いている他タブへ通知する。各フォロワータブは通知を受けて
-自身の `SyncManager.sync()` を実行する。これにより、SignalDB の IndexedDB 書き込みを別タブの
-Collection が自動では購読しない制約を補う。
+**影響範囲**：`cardsStore.ts`のみ。外部インターフェースが変わらないので、コンシューマー側の変更は不要。
 
-Centrifuge history で回復できない長いオフライン期間でも、次の同期は永続化された checkpoint
-から差分を取得する。checkpoint が存在するのに Collection が空の旧スナップショットは、起動時に
-checkpoint を捨てて一度だけフル pull し、復旧する。
+**注意点**：Stage 1のpull同期がまだ終わっていないpotについては、「ロード中」表示を維持する必要がある（`loaded`フラグの意味を「pull完了」に寄せる）。
 
-### ローカル操作
+---
 
-カードの移動、pin 切替、削除は Collection を先に更新するため、UI には即時に反映される。
-`SyncManager` が生成した変更を push し、失敗は replication の `onError` で記録される。新規作成は
-既存の作成 API がサーバーへ保存した後、`mergeCards` がローカル Collection に追加する。
+## Stage 3: `resyncPot`をcheckpoint差分に置き換える（本題）
 
-## マルチタブと停止
+**目的**：ここでようやく「全量再フェッチをやめる」が実現する。
 
-Web Locks により、pot ごとに Centrifuge 購読と通常の pull を実行するリーダーは1タブだけになる。
-リーダーが閉じると待機中のフォロワーがロックを取得して引き継ぐ。`releasePot` は購読、
-BroadcastChannel、同期を停止し、その pot の Collection handle を UI から外す。
+**なぜ今なら可能か**：SignalDBがそのpotの**全カード**をローカルに持つようになったため、並び替え（position順）はクライアント側で毎回計算し直せる。これまでの「window（上位N件だけ）」方式だと、サーバの`updated`差分だけでは「今の上位N件」を再構成できなかった（他カードとの相対順位が分からないため）が、全件複製なら問題にならない。
 
-## 旧 Dexie 実装からの変更点
+**変更内容**
+- Centrifugeの`onResync`（履歴切れ検知）で呼んでいた`resyncPot`の中身を、`fetchCardsPage`によるページ再取得から、保存済みcheckpointを使った`pullCards`差分適用に置き換える。
+- 差分適用：`pullCards`が返す各レコードについて、`deleted`が立っていればSignalDBから削除、そうでなければ`upsert`。適用後にcheckpointを最新の`(updated, id)`に更新。
+- 「久しぶりにオンラインに戻った」ケース（タブを開いたまま長時間オフライン→復帰）も、この同じ経路（保存済みcheckpoint→差分pull→SignalDB反映）で処理できる。ユーザーが要望していた「SignalDBに差分を反映してからハイドレーション」がここで実現する：pull適用が終わるまでは既存のSignalDBの中身（＝多少古いが一貫性のあるデータ）をそのまま表示し続け、適用完了後に新しい状態へ自然に再レンダリングされる（reactive queryなので明示的な「ハイドレーション」処理を書く必要すらない）。
 
-Dexie の `liveQuery`、カード ID map、window state を使った二重の状態管理は廃止した。Collection の
-リアクティブクエリを UI が直接読むことで、IndexedDB の全件結果を毎回 Solid store と O(n) で照合する
-処理をなくしている。Dexie 依存および `frontend/src/lib/dexie/` は削除済みである。
+**影響範囲**：`resyncPot`関数のみ。Stage 2で既にSignalDBがUIソースになっているため、この変更はデータ取得経路の差し替えだけで、UIコードには触れない。
+
+---
+
+## Stage 4: 旧ページング経路の削除と整理
+
+**目的**：もう使われなくなった古いコードパスを消して、実装をシンプルに保つ（CLAUDE.mdの方針通り）。
+
+**変更内容**
+- `fetchCardsPage`、`PotWindow.total`をREST由来で持つロジック、`PAGE_SIZE`定数など、REST pagingに紐づくコードを削除。
+- `readCache`による「まず古いキャッシュを一瞬見せてから上書き」という二段階ペイントも不要になる（SignalDB自体がreactiveにUIへ流れるので、pull完了を待つだけで済む）。関連コメントも整理。
+- ドキュメント（`docs/dexie-offline-sync.md`）は今回Dexie前提で参考にならなかった旨を踏まえ、SignalDB版の設計として書き直すか、もしくは新規ドキュメントに置き換える。
+
+---
+
+## 全体を通しての留意点
+
+- **初回同期（checkpoint未保有）は依然としてフル取得になる**。これは「差分の起点がない」以上避けられません。「2回目以降の再接続」で不要になる、というのが正確な言い方です。
+- 1ポット最大10万件（CLAUDE.md記載）を前提とすると、SignalDBが全件をIndexedDBに持つことになるため、初回同期のコストとストレージ使用量は増えます。ここは「シンプルさ」とのトレードオフとして許容するかどうかの判断が要ります。
+- 各Stageは独立してmerge可能な粒度にしてあるので、Stage 1だけ入れて様子を見る、Stage 2で問題が出たらStage 3を保留する、といった段階的なロールバックがしやすい構成です。
