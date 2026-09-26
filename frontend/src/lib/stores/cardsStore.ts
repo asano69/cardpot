@@ -14,8 +14,11 @@ import {
   deleteFromCache,
   forgetCache,
   readCache,
+  readCheckpoint,
   writeCache,
+  writeCheckpoint,
 } from "../signaldb/cardsCollection";
+import { pullAll } from "../api/replication";
 
 // Re-exported so CardItem only needs to import from this module
 // (cardFlip.ts's registration map is an implementation detail of how
@@ -99,6 +102,46 @@ export function mergeCards(
   for (const [potId, list] of byPot) void writeCache(potId, list);
 }
 
+// Applies a batch of pulled records (see lib/api/replication.ts) to
+// potId's SignalDB cache: a soft-deleted record is removed, everything
+// else is upserted. This only touches the cache -- it is not the live
+// UI store (cardsById/windows), which Stage 1 leaves untouched.
+async function applyPulledRecords(
+  potId: string,
+  records: CardRecord[],
+): Promise<void> {
+  const deleted = records.filter((record) => record.deleted);
+  const live = records.filter((record) => !record.deleted);
+  if (live.length) await writeCache(potId, live);
+  for (const record of deleted) await deleteFromCache(potId, record.id);
+}
+
+// Pots currently being pulled to current (see syncPotReplica below),
+// so a pot opened twice in quick succession only starts one pull.
+const syncingPots = new Set<string>();
+
+// Brings potId's SignalDB cache fully up to date via the checkpoint-
+// based pull protocol (see lib/api/replication.ts), resuming from
+// wherever this pot's last pull left off. Runs independently of the
+// REST-paged window this store still uses for the UI -- see
+// loadNextCardsPage, which calls this fire-and-forget. A failure is
+// only logged; the next pot open (or a future periodic retry) tries
+// again from the same checkpoint.
+async function syncPotReplica(potId: string): Promise<void> {
+  if (syncingPots.has(potId)) return;
+  syncingPots.add(potId);
+  try {
+    const after = await readCheckpoint(potId);
+    const { records, checkpoint } = await pullAll(potId, after);
+    await applyPulledRecords(potId, records);
+    if (checkpoint) await writeCheckpoint(potId, checkpoint);
+  } catch (err) {
+    console.error("[cards] failed to sync replica:", err);
+  } finally {
+    syncingPots.delete(potId);
+  }
+}
+
 // Loads the next page of a pot's card list (the first page when nothing
 // is loaded yet) and appends it to that pot's window. A no-op while a
 // request is in flight or once every card is loaded. A failure is only
@@ -131,6 +174,12 @@ export async function loadNextCardsPage(potId: string): Promise<void> {
         }),
       );
     }
+
+    // Stage 1 of docs/signaldb-offline-sync.md: brings this pot's
+    // SignalDB cache fully up to date in the background, independent
+    // of the REST-paged window below. Fire-and-forget -- it never
+    // blocks or affects what's painted here.
+    void syncPotReplica(potId);
   }
   const win = windows[potId];
   if (win.loading || (win.loaded && win.ids.length >= win.total)) return;

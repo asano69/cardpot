@@ -2,6 +2,7 @@ import { Collection } from "@signaldb/core";
 import createIndexedDBAdapter from "@signaldb/indexeddb";
 import solidReactivityAdapter from "@signaldb/solid";
 import type { CardRecord } from "../models/card";
+import type { Checkpoint } from "../api/replication";
 
 // Plain IndexedDB-backed cache of a pot's cards, used only to paint
 // something immediately when a pot is (re)opened -- most importantly
@@ -77,4 +78,51 @@ export async function deleteFromCache(potId: string, id: string): Promise<void> 
 // hydrate from next time the pot is opened.
 export function forgetCache(potId: string): void {
   collections.delete(potId);
+}
+
+// One record per pot, storing the checkpoint pullAll (see
+// lib/api/replication.ts) should resume from next time. Kept in its
+// own collection rather than a field on cacheFor's per-pot collection:
+// the checkpoint is a different concern from the cards themselves, and
+// this lets it be read/written without touching the card cache at all.
+// Shared across every pot, so it's created eagerly rather than lazily
+// like cacheFor's per-pot collections.
+interface CheckpointRecord {
+  id: string; // potId -- this collection's own primary key
+  updatedAt: string;
+  recordId: string; // Checkpoint.id, renamed to avoid clashing with `id` above
+}
+
+const checkpoints = new Collection<CheckpointRecord>({
+  name: "cards-cache-checkpoints",
+  reactivity: solidReactivityAdapter,
+  persistence: createIndexedDBAdapter<CheckpointRecord, string>(
+    "cards-cache-checkpoints",
+  ),
+});
+
+// Returns the checkpoint stored for potId, or null when this pot has
+// never been pulled before (a fresh replica, or one from before this
+// feature existed).
+export async function readCheckpoint(
+  potId: string,
+): Promise<Checkpoint | null> {
+  await checkpoints.isReady();
+  const [record] = checkpoints
+    .find({ id: potId }, { reactive: false })
+    .fetch();
+  return record ? { updatedAt: record.updatedAt, id: record.recordId } : null;
+}
+
+// Persists the checkpoint to resume potId's next pull from.
+export async function writeCheckpoint(
+  potId: string,
+  checkpoint: Checkpoint,
+): Promise<void> {
+  await checkpoints.isReady();
+  checkpoints.replaceOne(
+    { id: potId },
+    { id: potId, updatedAt: checkpoint.updatedAt, recordId: checkpoint.id },
+    { upsert: true },
+  );
 }
