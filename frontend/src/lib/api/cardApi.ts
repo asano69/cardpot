@@ -44,43 +44,6 @@ export async function updateCardTitle(
   });
 }
 
-// Sort order
-// Sort order for every windowed card listing: pinned cards first,
-// then descending position, with id as a tiebreak for equal
-// positions. Mirrors CardList.tsx's own client-side sort from the
-// full-fetch era, so paging through this produces the same order the
-// grid used to show.
-const CARDS_SORT = "-pin,-position,id";
-
-export interface CardsPage {
-  items: CardRecord[];
-  totalItems: number;
-}
-
-// Fetches one page of a pot's cards via PocketBase's built-in list
-// pagination -- no custom backend route needed, since filter + sort +
-// page/perPage + totalItems are all standard `getList` features.
-//
-// requestKey: null opts out of the SDK's auto-cancellation, which
-// aborts an in-flight request whenever another one with the same
-// method and path starts -- here that would let a page load and a
-// slug lookup (or two quick page loads) cancel each other.
-export async function fetchCardsPage(
-  potId: string,
-  page: number,
-  perPage: number,
-): Promise<CardsPage> {
-  const result = await pb
-    .collection("cards")
-    .getList<CardRecord>(page, perPage, {
-      // Soft-deleted cards (a "deleted" date is set) are never listed.
-      filter: pb.filter('pot = {:pot} && deleted = ""', { pot: potId }),
-      sort: CARDS_SORT,
-      requestKey: null,
-    });
-  return { items: result.items, totalItems: result.totalItems };
-}
-
 // Resolves a single card by its URL slug, without fetching the rest
 // of the pot -- replaces the old approach of scanning every already-
 // loaded card with titleToSlug (see cardsStore.ts's
