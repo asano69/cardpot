@@ -11,9 +11,10 @@ import type { CardRecord } from "../models/card";
 import { computePosition } from "../position";
 import { withCardsFlip, registerCardElement } from "../cardFlip";
 import {
+  countCards,
   deleteFromCache,
   forgetCache,
-  readCache,
+  queryCardsPage,
   readCheckpoint,
   writeCache,
   writeCheckpoint,
@@ -42,7 +43,10 @@ export { cardsById };
 // realtime or local change can reorder cards inside the window.
 export interface PotWindow {
   ids: string[];
-  // Server-reported number of cards in the pot (all pages).
+  // Number of cards in the pot, counted from this pot's SignalDB
+  // cache (see lib/signaldb/cardsCollection.ts's countCards) -- kept
+  // fully up to date by the checkpoint pull protocol, independent of
+  // how many pages have actually been loaded into `ids`.
   total: number;
   // Whether the first page request has settled, successfully or not.
   loaded: boolean;
@@ -70,9 +74,10 @@ export function potWindow(potId: string | undefined): PotWindow | undefined {
 //
 // Every merge also write-throughs into each record's own pot's
 // IndexedDB cache (see lib/signaldb/cardsCollection.ts), fire-and-
-// forget, so the pot repaints instantly next time it's opened --
-// most importantly while offline. The UI itself never reads from
-// that cache.
+// forget: that cache is what loadNextCardsPage pages through locally
+// once a pot has synced (see queryCardsPage/countCards there), so
+// keeping it current here is what keeps local pagination in sync with
+// whatever the Solid store above just applied.
 export function mergeCards(
   records: CardRecord[],
   options?: { skipFlip?: boolean },
@@ -116,20 +121,31 @@ async function applyPulledRecords(
   for (const record of deleted) await deleteFromCache(potId, record.id);
 }
 
-// Pots currently being pulled to current (see syncPotReplica below),
-// so a pot opened twice in quick succession only starts one pull.
-const syncingPots = new Set<string>();
+// Resolves once potId's SignalDB cache has completed its checkpoint
+// sync for the current pot-open session. A second concurrent call
+// (e.g. loadNextCardsPage's initial call racing an
+// IntersectionObserver firing immediately) resolves against this same
+// in-flight promise instead of starting a duplicate pull. Cleared in
+// releasePot, so reopening the pot starts a fresh sync.
+const potSyncPromises = new Map<string, Promise<void>>();
+
+function ensurePotSynced(potId: string): Promise<void> {
+  let promise = potSyncPromises.get(potId);
+  if (!promise) {
+    promise = syncPotReplica(potId);
+    potSyncPromises.set(potId, promise);
+  }
+  return promise;
+}
 
 // Brings potId's SignalDB cache fully up to date via the checkpoint-
 // based pull protocol (see lib/api/replication.ts), resuming from
-// wherever this pot's last pull left off. Runs independently of the
-// REST-paged window this store still uses for the UI -- see
-// loadNextCardsPage, which calls this fire-and-forget. A failure is
-// only logged; the next pot open (or a future periodic retry) tries
-// again from the same checkpoint.
+// wherever this pot's last pull left off. Awaited by loadNextCardsPage
+// (through ensurePotSynced) before the first page is read from the
+// cache, so the grid never shows a stale or partial slice of it. A
+// failure is only logged; the next pot open (or a future periodic
+// retry) tries again from the same checkpoint.
 async function syncPotReplica(potId: string): Promise<void> {
-  if (syncingPots.has(potId)) return;
-  syncingPots.add(potId);
   try {
     const after = await readCheckpoint(potId);
     const { records, checkpoint } = await pullAll(potId, after);
@@ -137,8 +153,6 @@ async function syncPotReplica(potId: string): Promise<void> {
     if (checkpoint) await writeCheckpoint(potId, checkpoint);
   } catch (err) {
     console.error("[cards] failed to sync replica:", err);
-  } finally {
-    syncingPots.delete(potId);
   }
 }
 
@@ -147,78 +161,61 @@ async function syncPotReplica(potId: string): Promise<void> {
 // request is in flight or once every card is loaded. A failure is only
 // logged and leaves the window as it was.
 //
+// Stage 2 of docs/signaldb-offline-sync.md: pages are read from
+// potId's local SignalDB cache (see queryCardsPage/countCards in
+// lib/signaldb/cardsCollection.ts), not the server, once the cache has
+// finished its checkpoint sync (see ensurePotSynced) -- so opening a
+// pot waits for that sync before anything is shown, rather than
+// painting a possibly-stale cache first.
+//
 // The page requested is the one containing the window's end, not "the
 // last page + 1": after a card inside the window is deleted, the
-// server's list shifts up by one, and asking for the following page
+// cache's list shifts up by one, and asking for the following page
 // would skip the card that slid into the gap. The overlap this causes
 // is harmless because ids already in the window are ignored.
 export async function loadNextCardsPage(potId: string): Promise<void> {
   if (!windows[potId]) {
-    setWindows(potId, { ids: [], total: 0, loaded: false, loading: false });
-
-    // Instant paint from whatever this pot's IndexedDB cache still
-    // holds from a previous visit, before the network request below
-    // even starts -- this is what makes an already-visited pot show
-    // something immediately while offline.
-    const cached = await readCache(potId);
-    if (!windows[potId]) return; // pot was released while the cache read was in flight
-    if (cached.length) {
-      mergeCards(cached, { skipFlip: true });
-      setWindows(
-        potId,
-        produce((w) => {
-          const seen = new Set(w.ids);
-          for (const card of cached) {
-            if (!seen.has(card.id)) w.ids.push(card.id);
-          }
-        }),
-      );
-    }
-
-    // Stage 1 of docs/signaldb-offline-sync.md: brings this pot's
-    // SignalDB cache fully up to date in the background, independent
-    // of the REST-paged window below. Fire-and-forget -- it never
-    // blocks or affects what's painted here.
-    void syncPotReplica(potId);
+    setWindows(potId, { ids: [], total: 0, loaded: false, loading: true });
+    await ensurePotSynced(potId);
+    if (!windows[potId]) return; // pot was released while syncing
+    setWindows(potId, "loading", false);
   }
   const win = windows[potId];
   if (win.loading || (win.loaded && win.ids.length >= win.total)) return;
 
   setWindows(potId, "loading", true);
-  let result: Awaited<ReturnType<typeof fetchCardsPage>> | undefined;
+  let items: CardRecord[] = [];
   try {
-    const page = Math.floor(win.ids.length / PAGE_SIZE) + 1;
-    result = await fetchCardsPage(potId, page, PAGE_SIZE);
+    items = await queryCardsPage(potId, win.ids.length, PAGE_SIZE);
   } catch (err) {
     console.error("[cards] failed to load cards page:", err);
   }
 
-  // The user may have left the pot while the request was in flight.
+  // The user may have left the pot while the query was in flight.
   if (!windows[potId]) return;
 
-  if (result) {
-    const items = result.items;
-    mergeCards(items, { skipFlip: true });
-    setWindows(
-      potId,
-      produce((w) => {
-        const seen = new Set(w.ids);
-        let added = 0;
-        for (const card of items) {
-          if (!seen.has(card.id)) {
-            w.ids.push(card.id);
-            added++;
-          }
+  mergeCards(items, { skipFlip: true });
+  let added = 0;
+  setWindows(
+    potId,
+    produce((w) => {
+      const seen = new Set(w.ids);
+      for (const card of items) {
+        if (!seen.has(card.id)) {
+          w.ids.push(card.id);
+          added++;
         }
-        // A page that adds nothing new means the server's list no
-        // longer lines up with the window (e.g. cards were reordered
-        // elsewhere). Treat the window as complete so scrolling cannot
-        // request the same page forever; a reload fixes it.
-        w.total = added === 0 ? w.ids.length : result.totalItems;
-      }),
-    );
-  }
-  setWindows(potId, { loaded: true, loading: false });
+      }
+    }),
+  );
+
+  // A page that adds nothing new means the cache's list no longer
+  // lines up with the window (e.g. cards were reordered elsewhere).
+  // Treat the window as complete so scrolling cannot request the same
+  // page forever; a reload fixes it.
+  const total = added === 0 ? windows[potId].ids.length : await countCards(potId);
+  if (!windows[potId]) return; // pot was released while counting
+  setWindows(potId, { total, loaded: true, loading: false });
 }
 
 // Fetches one card by its URL slug straight from the server and puts
@@ -252,6 +249,7 @@ export function releasePot(potId: string) {
     }),
   );
   forgetCache(potId);
+  potSyncPromises.delete(potId);
 }
 
 // Removes a card from the store and, when its pot has a loaded window,

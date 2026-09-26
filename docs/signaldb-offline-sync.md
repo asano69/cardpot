@@ -61,3 +61,55 @@
 - **初回同期（checkpoint未保有）は依然としてフル取得になる**。これは「差分の起点がない」以上避けられません。「2回目以降の再接続」で不要になる、というのが正確な言い方です。
 - 1ポット最大10万件（CLAUDE.md記載）を前提とすると、SignalDBが全件をIndexedDBに持つことになるため、初回同期のコストとストレージ使用量は増えます。ここは「シンプルさ」とのトレードオフとして許容するかどうかの判断が要ります。
 - 各Stageは独立してmerge可能な粒度にしてあるので、Stage 1だけ入れて様子を見る、Stage 2で問題が出たらStage 3を保留する、といった段階的なロールバックがしやすい構成です。
+
+---
+
+## Stage 2 実装ノート（Stage 3/4 着手前に必読）
+
+実装済み。次のStageを担当する人（自分を含む）が経緯を再確認できるよう、下した設計判断とその理由を残す。
+
+### 1. ページングは「(a) SignalDBをローカルにskip/limitクエリする」を採用
+
+- `windows[potId].ids` という「読み込んだ範囲」の概念、`PAGE_SIZE`によるDOM描画件数の抑制は**そのまま維持**した。
+- 変えたのはデータの取得元だけ：`fetchCardsPage`（サーバーへのREST GET）から`queryCardsPage`（`lib/signaldb/cardsCollection.ts`、ローカルのSignalDBコレクションへの`find({}, {sort, skip, limit})`）に置き換えた。
+- 理由：1ポット10万件（CLAUDE.md）を想定すると、pull完了後に全件を一気に`ids`へ入れる方式（案b）は無限スクロールを無意味にし、DOM件数が跳ね上がる。案(a)なら既存の無限スクロールUXを一切変えずに済む。
+- ソート順は旧`CARDS_SORT`（`-pin,-position,id`）と同じ意味になるよう`{ pin: -1, position: -1, id: 1 }`をSignalDB側にも指定した。**このソート仕様を変えるときはサーバー側`cardApi.ts`のCARDS_SORTとの整合を必ず確認すること**（今のところ二重管理）。
+
+### 2. リアクティブ反映は「SignalDB＝永続層、Solidストア＝表示用ミラー」の単純化方式
+
+- `@signaldb/solid`のreactive `find()`を`cardsById`/`windows`に直結する設計（ドキュメント案の素直な実装）は**採用しなかった**。モジュールトップレベルでのreactiveスコープ管理が複雑になり、シンプルさ重視の方針に反するため。
+- 代わりに、`mergeCards`/`dropCard`/`handleCardEvent`など**既存の更新関数はそのまま残し**、その関数の中で「SignalDBへの書き込み（`writeCache`/`deleteFromCache`、fire-and-forget）」と「Solidストアへの反映」を両方行う、という元々の構造をほぼ維持した。
+- 結果として、SignalDBコレクションはUIから直接読まれるreactiveな情報源ではなく、`queryCardsPage`/`countCards`という**明示的な関数呼び出しでのみ**読まれる「ページング用のローカルインデックス」という位置づけになった。
+- この判断により、外部インターフェース（`potWindow`, `cardsById`, `loadNextCardsPage`, `CardItem`/`CardList`等の呼び出し側）は**一切変更不要**だった。
+
+### 3. 初回表示は「pull完了まで待ってから描画」（stale cacheの即時ペイントは廃止）
+
+- Stage 1にあった「まず古いIndexedDBキャッシュを一瞬見せてから、バックグラウンドでpullする」という二段階ペイントは**廃止**した。
+- `readCache`（全件一括読み込み関数）は削除し、`queryCardsPage`/`countCards`に置き換えた。
+- `loadNextCardsPage`は、pot初回オープン時に`ensurePotSynced(potId)`（内部で`syncPotReplica`を呼ぶ）の完了を`await`してから最初のページを読むようになった。オフライン時などpullが失敗しても、SignalDBの中身（前回同期時点のもの）はそのまま使われる（`syncPotReplica`内でエラーはログのみで握りつぶし、既存キャッシュは無傷）。
+- **これが後続StageへのDependency**: Centrifugeの履歴切れ（`onResync`）時、SignalDBが全件複製として機能するようになったので、`resyncPot`もいずれ「checkpoint差分をSignalDBに適用するだけ」に置き換えられるはず、というのがStage 3の狙い（下記参照）。
+
+### 4. 同時オープンの重複pull防止：`ensurePotSynced`
+
+- 同じpotが短時間に複数回開かれる（例：`loadNextCardsPage`の初回呼び出しと`IntersectionObserver`の初回発火が競合する）ケースに備え、pot単位の同期Promiseを`potSyncPromises: Map<string, Promise<void>>`にキャッシュした。
+- 二度目以降の呼び出しは同じPromiseを待つだけで、`pullAll`を二重に発行しない。
+- `releasePot`でこのMapのエントリも削除するようにした（再オープン時に必ず新しい同期を始めるため）。
+
+### 5. `resyncPot`は今回のスコープ外（変更なし）
+
+- `resyncPot`は依然として`fetchCardsPage`（REST）ベースのまま。
+- **Stage 3で対応すべきこと**：`resyncPot`を「保存済みcheckpointからの差分pull→SignalDB反映→（reactiveでなく）ローカルストアへの再ハイドレーション」に置き換える。具体的には、`syncPotReplica`相当のロジックを再利用しつつ、pull後に`windows[potId].ids`を「今表示している範囲だけ」SignalDBから読み直す形になるはず。
+- ユーザーの要望（「ひさしぶりにオンラインになったときはSignalDBに差分反映→SignalDB=>Solid.jsでUIをハイドレーション」）はStage 3のスコープであり、今回はまだ手を付けていない。
+
+### 6. `lib/signaldb/cardsCollection.ts`のAPI変更まとめ
+
+| 旧 | 新 | 備考 |
+| --- | --- | --- |
+| `readCache(potId)` (全件取得) | `queryCardsPage(potId, skip, limit)` + `countCards(potId)` | ソートは`{pin:-1, position:-1, id:1}`固定 |
+| （なし） | `countCards` | `.count()`メソッドを使用（`@signaldb/core`のカーソルに実在することを確認済み） |
+| `writeCache`/`deleteFromCache`/`forgetCache`/`readCheckpoint`/`writeCheckpoint` | 変更なし | Stage 1のまま |
+
+### 7. テストの構造
+
+- `cardsStore.test.ts`は`nextPage`（旧・`getList`用）を`nextLocalPage`（`queryCardsPage`/`countCards`用、`loadNextCardsPage`系のテストで使用）と`nextServerPage`（`getList`用、`resyncPot`系のテストで使用）に分離した。
+- 「ソフトデリート除外をサーバーに問い合わせている」ことを検証していた旧テスト（`asks the server only for cards that are not deleted`）は、`loadNextCardsPage`がサーバーを呼ばなくなったため削除。ソフトデリート除外の責務は今後`pullCardsHandler`（差分プロトコル）＋`applyPulledRecords`（SignalDBからの削除適用）側にあることを前提にする。

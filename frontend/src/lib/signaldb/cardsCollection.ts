@@ -4,13 +4,16 @@ import solidReactivityAdapter from "@signaldb/solid";
 import type { CardRecord } from "../models/card";
 import type { Checkpoint } from "../api/replication";
 
-// Plain IndexedDB-backed cache of a pot's cards, used only to paint
-// something immediately when a pot is (re)opened -- most importantly
-// while offline. This is NOT a source of truth and is never synced
-// back to the server. The real, authoritative store is
-// cardsStore.ts's in-memory Solid store, kept live via Centrifuge
-// (see lib/api/realtime.ts). The UI never reads from this collection
-// reactively -- only a one-shot read on pot open (see readCache).
+// IndexedDB-backed local replica of each pot's cards, kept fully up to
+// date via the checkpoint pull protocol (see lib/api/replication.ts
+// and cardsStore.ts's ensurePotSynced/syncPotReplica). Once a pot has
+// synced, cardsStore.ts's loadNextCardsPage pages through this cache
+// locally (see queryCardsPage/countCards below) instead of the
+// server, so windowed pagination for large pots stays fast without
+// re-fetching everything on scroll. The Solid store in cardsStore.ts
+// remains the reactive source the UI actually renders from -- this
+// collection is written to and read from only inside cardsStore.ts's
+// own functions, never bound directly to the UI.
 //
 // Named distinctly from the earlier SyncManager-based collections
 // ("cards-<pot>", "cards-sync-v2-...") so a browser that still has
@@ -33,28 +36,47 @@ function cacheFor(potId: string): Collection<CardRecord> {
   return collection;
 }
 
-// Returns every card cached for potId, once the cache has hydrated
-// from IndexedDB. Called once per pot, right before the first network
-// fetch, so the pot can paint from cache immediately (see
-// cardsStore.ts's loadNextCardsPage).
-export async function readCache(potId: string): Promise<CardRecord[]> {
+// Returns up to `limit` cards from potId's cache, starting after
+// `skip` cards, sorted the same way the UI grid displays them (pinned
+// first, then descending position, with id as a tiebreak -- mirrors
+// the server's old CARDS_SORT). Used by cardsStore.ts's
+// loadNextCardsPage to page through the cache locally instead of over
+// the network, now that the cache is kept fully up to date by the
+// checkpoint pull protocol (see ensurePotSynced there).
+export async function queryCardsPage(
+  potId: string,
+  skip: number,
+  limit: number,
+): Promise<CardRecord[]> {
   const collection = cacheFor(potId);
   await collection.isReady();
-  return collection.find({}, { reactive: false }).fetch();
+  return collection
+    .find(
+      {},
+      { sort: { pin: -1, position: -1, id: 1 }, skip, limit, reactive: false },
+    )
+    .fetch();
+}
+
+// Total number of cards currently cached for potId.
+export async function countCards(potId: string): Promise<number> {
+  const collection = cacheFor(potId);
+  await collection.isReady();
+  return collection.find({}, { reactive: false }).count();
 }
 
 // Write-through: mirrors a batch of cards into potId's cache.
-// Fire-and-forget -- a failure here must never affect the live UI,
-// which never reads from this cache directly.
+// Fire-and-forget -- a failure here must never block the caller (e.g.
+// applying a realtime event or a pulled diff).
 //
-// Awaits isReady() first, same as readCache above: a collection
-// cacheFor() has only just created hasn't hydrated its in-memory
-// state from IndexedDB yet, and mutating it before that finishes is a
-// no-op that the hydration then silently overwrites once it
-// completes -- e.g. deleting a card on a page that never called
-// readCache for this pot (opening a card straight from a URL, never
-// visiting its card list) would never actually reach IndexedDB, and
-// the card would reappear next time this cache repaints from it.
+// Awaits isReady() first: a collection cacheFor() has only just
+// created hasn't hydrated its in-memory state from IndexedDB yet, and
+// mutating it before that finishes is a no-op that the hydration then
+// silently overwrites once it completes -- e.g. deleting a card on a
+// page that opens a card straight from a URL, without ever calling
+// queryCardsPage/countCards for that pot first, would never actually
+// reach IndexedDB, and the card would reappear next time this cache
+// is read.
 export async function writeCache(
   potId: string,
   records: CardRecord[],
