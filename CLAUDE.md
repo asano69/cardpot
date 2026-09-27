@@ -42,17 +42,16 @@ from flask import Flask
 - Go 1.26.0 (1.27はライブラリ非対応)
 - PocketBase v0.39+
 - reearth/ygo v1.49.5
-- blevesearch/bleve
 - centrifugal/centrifuge v0.39+
+- google/mangle
+- blevesearch/bleve
 
 ### frontend
 - Solid.js v1.9
+- yjs
+- Dexie.js
+- CodeMirror6
+- googlechrome/workbox
 - Kobalte v0.13+
 - Tailwind v4 / CSS Modules
 - clauderic/dnd-kit v0.5.0
-- CodeMirror6
-- yjs
-- Dexie.js 
-- googlechrome/workbox
-
-
