@@ -282,49 +282,49 @@ export default function CardForm() {
           </Show>
         </div>
         {/* Sticky vertical menu to the right of the editor: the open
-            card's pin/delete actions, moved here from TopBar so they
-            sit next to the editor instead of at the top of the page.
-            Hidden for a draft, which has no card to pin or delete
-            yet. */}
+            card's pin/delete actions. Always rendered so the layout
+            does not shift when a draft becomes a real card; while
+            there is no card yet (a draft), the buttons are disabled. */}
         <div class="page-menu flex flex-col gap-1">
-          <Show when={cardId()}>
-            <button
-              type="button"
-              aria-label={pinned() ? "Unpin" : "Pin"}
-              class="tool-btn"
-              onClick={togglePin}
-            >
-              {pinned() ? <PinOff size={20} /> : <Pin size={20} />}
-            </button>
-            <button
-              type="button"
-              aria-label="Delete"
-              class="tool-btn"
-              onClick={handleDelete}
-            >
-              <Trash2 size={20} />
-            </button>
-            {/* Debug-only dropdown: exports either the card's raw Yjs
-                text (handleShowRawText) or its parsed syntax tree
-                (handleDumpSyntaxTree) as a blob in a new tab, replacing
-                the About button's old single-action click. */}
-            <ActionsMenu
-              label="Debug options"
-              triggerClass="tool-btn"
-              items={[
-                {
-                  label: "Show raw text",
-                  icon: Wrench,
-                  onSelect: handleShowRawText,
-                },
-                {
-                  label: "Dump syntax tree",
-                  icon: Wrench,
-                  onSelect: handleDumpSyntaxTree,
-                },
-              ]}
-            />
-          </Show>
+          <button
+            type="button"
+            aria-label={pinned() ? "Unpin" : "Pin"}
+            class="tool-btn"
+            disabled={!cardId()}
+            onClick={togglePin}
+          >
+            {pinned() ? <PinOff size={20} /> : <Pin size={20} />}
+          </button>
+          <button
+            type="button"
+            aria-label="Delete"
+            class="tool-btn"
+            disabled={!cardId()}
+            onClick={handleDelete}
+          >
+            <Trash2 size={20} />
+          </button>
+          {/* Debug-only dropdown: exports either the card's raw Yjs
+              text (handleShowRawText) or its parsed syntax tree
+              (handleDumpSyntaxTree) as a blob in a new tab, replacing
+              the About button's old single-action click. */}
+          <ActionsMenu
+            label="Debug options"
+            triggerClass="tool-btn"
+            disabled={!cardId()}
+            items={[
+              {
+                label: "Show raw text",
+                icon: Wrench,
+                onSelect: handleShowRawText,
+              },
+              {
+                label: "Dump syntax tree",
+                icon: Wrench,
+                onSelect: handleDumpSyntaxTree,
+              },
+            ]}
+          />
         </div>
       </div>
     </Show>

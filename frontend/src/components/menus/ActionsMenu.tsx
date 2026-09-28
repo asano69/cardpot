@@ -17,6 +17,8 @@ export interface ActionsMenuProps {
   // that places the menu somewhere with its own tool-button styling (e.g.
   // CardForm's page-menu) can override it.
   triggerClass?: string;
+  // Disables the trigger button, so the menu cannot be opened.
+  disabled?: boolean;
 }
 
 // Reusable "..." dropdown menu: an icon-button trigger plus a list of
@@ -29,6 +31,7 @@ export default function ActionsMenu(props: ActionsMenuProps) {
       <DropdownMenu.Trigger
         aria-label={props.label ?? "Actions"}
         class={props.triggerClass ?? "icon-btn"}
+        disabled={props.disabled}
       >
         <Ellipsis size={24} />
       </DropdownMenu.Trigger>
