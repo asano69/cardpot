@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"log/slog"
 	"strings"
 	"sync"
 
@@ -44,6 +45,20 @@ func Load(app core.App) (*Engine, error) {
 		))
 	}
 
+	cards, err := app.FindRecordsByFilter("cards", `deleted = ""`, "", 0, 0, nil)
+	if err != nil {
+		return nil, fmt.Errorf("load cards: %w", err)
+	}
+	for _, card := range cards {
+		store.Add(ast.NewAtom("card_title",
+			ast.String(card.GetString("pot")),
+			ast.String(card.Id),
+			ast.String(card.GetString("titleLc")),
+		))
+	}
+
+	slog.Info("datalog: loaded link facts", "count", len(links))
+
 	unit, err := parse.Unit(strings.NewReader(defaultRules))
 	if err != nil {
 		return nil, fmt.Errorf("parse rules: %w", err)
@@ -57,24 +72,35 @@ func Load(app core.App) (*Engine, error) {
 
 // Links2Hop returns the ids of the cards that share a link target with cardID.
 func (e *Engine) Links2Hop(cardID string) ([]string, error) {
+	return e.related("links2hop", cardID)
+}
+
+// Links1Hop returns the ids of the cards that link to, or are linked from, cardID.
+func (e *Engine) Links1Hop(cardID string) ([]string, error) {
+	return e.related("links1hop", cardID)
+}
+
+// related returns B for every fact pred(cardID, B).
+func (e *Engine) related(pred, cardID string) ([]string, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
 	// Built as text and parsed, the same way datalog-poc does. Card ids are
 	// [a-z0-9]{15}, so quoting them with %q cannot break the query.
-	query, err := e.interp.ParseQuery(fmt.Sprintf("links2hop(%q, B)", cardID))
+	query, err := e.interp.ParseQuery(fmt.Sprintf("%s(%q, B)", pred, cardID))
 	if err != nil {
-		return nil, fmt.Errorf("parse links2hop query: %w", err)
+		return nil, fmt.Errorf("parse %s query: %w", pred, err)
 	}
 	facts, err := e.interp.Query(query)
 	if err != nil {
-		return nil, fmt.Errorf("query links2hop: %w", err)
+		return nil, fmt.Errorf("query %s: %w", pred, err)
 	}
+	slog.Info("datalog: "+pred+" query", "card", cardID, "results", len(facts))
 	ids := make([]string, 0, len(facts))
 	for _, fact := range facts {
 		id, err := fact.Args[1].(ast.Constant).StringValue()
 		if err != nil {
-			return nil, fmt.Errorf("read links2hop result: %w", err)
+			return nil, fmt.Errorf("read %s result: %w", pred, err)
 		}
 		ids = append(ids, id)
 	}
