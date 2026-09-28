@@ -1,3 +1,6 @@
+/* eslint-disable solid/reactivity --
+   This component is keyed by cardId (see CardForm), so it is remounted per
+   card and its props are intentionally read once during setup. */
 import { onCleanup } from "solid-js";
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";

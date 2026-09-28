@@ -53,6 +53,8 @@ export default function CardItem(props: CardItemProps) {
     // edit form) instead of only some inner element, so clicking
     // anywhere on the card opens it.
     <li
+      // setRef is a ref callback, not a reactive value.
+      // eslint-disable-next-line solid/reactivity
       ref={setRef}
       class="card-grid-item"
       classList={{ "opacity-40": isDragging() }}

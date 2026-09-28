@@ -51,6 +51,8 @@ function applyAttrs(preset: ThemePreset, mode: Mode) {
 // a settings component happens to mount.
 const [mode, setModeSignal] = createSignal<Mode>(readStoredMode());
 const [preset, setPresetSignal] = createSignal<ThemePreset>(readStoredPreset());
+// Deliberately untracked: this runs once at import time, before first paint.
+// eslint-disable-next-line solid/reactivity
 applyAttrs(preset(), mode());
 
 // Keeps data-mode in sync with the OS preference while "system" is

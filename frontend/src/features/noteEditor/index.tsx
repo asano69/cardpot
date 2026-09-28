@@ -1,3 +1,7 @@
+/* eslint-disable solid/reactivity --
+   The editor is created once per mount: props are read during setup, and
+   mountEditor is a ref callback, which the rule mistakes for a plain
+   function used in JSX. */
 import { onCleanup } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { EditorState } from "@codemirror/state";
