@@ -973,19 +973,15 @@ func init() {
 						"type": "text"
 					},
 					{
-						"autogeneratePattern": "",
 						"help": "",
 						"hidden": false,
-						"id": "text3112513328",
-						"max": 9007199254740991,
-						"min": 0,
+						"id": "json1843675174",
+						"maxSize": 100000,
 						"name": "description",
-						"pattern": "",
 						"presentable": false,
-						"primaryKey": false,
 						"required": false,
 						"system": false,
-						"type": "text"
+						"type": "json"
 					},
 					{
 						"exceptDomains": null,
