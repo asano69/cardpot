@@ -32,12 +32,10 @@ const RIPPLE_OPTIONS = {
 // card already fades to opacity-40 the moment isDragging() goes true
 // (see CardItem.tsx), which fades out any in-progress ripple right
 // along with it.
-export function ripple(el: Element) {
+export function ripple(el: HTMLElement) {
   const onPointerDown = (event: PointerEvent) => ripplet(event, RIPPLE_OPTIONS);
-  el.addEventListener("pointerdown", onPointerDown as EventListener);
-  onCleanup(() =>
-    el.removeEventListener("pointerdown", onPointerDown as EventListener),
-  );
+  el.addEventListener("pointerdown", onPointerDown);
+  onCleanup(() => el.removeEventListener("pointerdown", onPointerDown));
 }
 
 // Registers `ripple` as a valid Solid JSX directive (`use:ripple`)

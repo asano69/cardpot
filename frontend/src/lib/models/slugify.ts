@@ -67,6 +67,8 @@ function encodeUnsafeChars(slug: string): string {
     .replaceAll("/", "%2F")
     .replaceAll("#", "%23")
     .replaceAll("?", "%3F")
+    // Matching ASCII control characters is the whole point of this regex.
+    // eslint-disable-next-line no-control-regex
     .replace(/[\x00-\x1f\x7f]/g, encodeControlChar);
 }
 

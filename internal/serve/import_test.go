@@ -10,7 +10,8 @@ import (
 )
 
 // newImportTestApp extends newLinksTestApp with what Import touches beyond
-// it: the card_ydocs log and the cards' image and position fields.
+// it: the card_ydocs log and the cards' image and position fields. The log
+// needs a "created" field because ydocPersistence replays it in that order.
 func newImportTestApp(t *testing.T) core.App {
 	t.Helper()
 	app := newLinksTestApp(t)
@@ -25,7 +26,11 @@ func newImportTestApp(t *testing.T) core.App {
 	}
 
 	ydocs := core.NewBaseCollection("card_ydocs")
-	ydocs.Fields.Add(&core.TextField{Name: "card"}, &core.TextField{Name: "payload"})
+	ydocs.Fields.Add(
+		&core.TextField{Name: "card"},
+		&core.TextField{Name: "payload"},
+		&core.AutodateField{Name: "created", OnCreate: true},
+	)
 	if err := app.Save(ydocs); err != nil {
 		t.Fatalf("create card_ydocs collection: %v", err)
 	}
