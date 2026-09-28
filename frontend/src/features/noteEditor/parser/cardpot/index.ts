@@ -11,6 +11,7 @@ import { parser } from "@lezer/markdown";
 
 import { codeLanguageWrap } from "./codeLanguages";
 import { hideContent, isIndent, isMark, revealStyle } from "./nodeProps";
+import { parseBareUrl } from "./rules/bareUrl";
 import { parseBlank } from "./rules/blank";
 import { parseBracket } from "./rules/bracket";
 import { parseDecoration } from "./rules/decoration";
@@ -82,6 +83,7 @@ const cardpotParser = parser.configure({
     "StrongImage",
     "StrongIcon",
     "HashTag",
+    "BareUrl",
     "Blank",
     "Indent",
   ],
@@ -97,6 +99,8 @@ const cardpotParser = parser.configure({
       ProjectLink: "cm-wikilink",
       Strong: "cm-bold",
       HashTag: "cm-hashtag",
+      // No marks, so nothing is ever hidden: this only styles the URL.
+      BareUrl: "cm-wikilink",
       Blank: "cm-blank",
       // Whole-line node, not a delimiter pair: only the leading ">"
       // is an isMark child (see rules/quote.ts), so syntaxReveal
@@ -156,6 +160,7 @@ const cardpotParser = parser.configure({
     { name: "CardpotBracket", parse: parseBracket },
     { name: "CardpotInlineCode", parse: parseInlineCode },
     { name: "CardpotHashTag", parse: parseHashTag },
+    { name: "CardpotBareUrl", parse: parseBareUrl },
   ],
   // Nests a `code:` block's content in whatever language its metadata
   // (e.g. "code:ts") resolves to, loaded on demand -- see
@@ -195,6 +200,7 @@ export const StrongMark = node("StrongMark");
 export const StrongImage = node("StrongImage");
 export const StrongIcon = node("StrongIcon");
 export const HashTag = node("HashTag");
+export const BareUrl = node("BareUrl");
 export const Blank = node("Blank");
 export const CodeBlock = node("CodeBlock");
 export const CodeBlockMark = node("CodeBlockMark");

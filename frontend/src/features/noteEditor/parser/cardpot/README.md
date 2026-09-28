@@ -159,6 +159,7 @@ parse 関数の契約（`(cx: BlockContext, line: Line) => boolean`）:
 | 3 | `CardpotBracket` | `bracket.ts` | 上記以外の `[...]` すべて |
 | 4 | `CardpotInlineCode` | `inlineCode.ts` | `` `code` `` |
 | 5 | `CardpotHashTag` | `hashTag.ts` | `#tag` |
+| 6 | `CardpotBareUrl` | `bareUrl.ts` | `https://...`（括弧なしの URL） |
 
 順序には意味がある。`[* x]` が WikiLink に、`[ ]` が WikiLink になってしまわないよう、**特殊な角括弧を先に、汎用の `bracket.ts` を後に**置いている。
 
@@ -250,6 +251,7 @@ parse 関数の契約（`(cx: InlineContext, next: number, pos: number) => numbe
 | `StrongImage` | なし | — | 範囲は括弧を含まない URL のみ |
 | `StrongIcon` / `Icon` / `GoogleMap` / `Math` | なし | — | 現状は見た目の特別扱いなし |
 | `HashTag` / `Blank` | なし | `cm-hashtag` / `cm-blank` | mark を持たないので常に表示 |
+| `BareUrl` | なし | `cm-wikilink` | 括弧なしの URL。クリックで新規タブ。`]` の手前で終わる |
 
 ## 8. NodeProp と表示層（`nodeProps.ts`）
 

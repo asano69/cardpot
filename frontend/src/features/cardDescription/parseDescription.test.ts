@@ -40,6 +40,14 @@ describe("parseDescription", () => {
     ]);
   });
 
+  it("keeps a bare URL as an external link", () => {
+    expect(parseDescription("see https://e.com/ now")).toEqual([
+      { kind: "text", text: "see " },
+      { kind: "external-link", text: "https://e.com/" },
+      { kind: "text", text: " now" },
+    ]);
+  });
+
   it("drops image notation", () => {
     expect(parseDescription("x [https://e.com/a.png] y")).toEqual([
       { kind: "text", text: "x  y" },

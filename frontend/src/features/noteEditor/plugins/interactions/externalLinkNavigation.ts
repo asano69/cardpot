@@ -1,6 +1,6 @@
 import { EditorView } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { ExternalLink } from "../../parser/cardpot";
+import { BareUrl, ExternalLink } from "../../parser/cardpot";
 import { decideBracketNodeType } from "../../parser/cardpot/rules/bracket";
 
 // Makes an ExternalLink node ("[url]", "[url label]", or "[label url]")
@@ -33,18 +33,21 @@ export function externalLinkNavigation() {
       if (pos == null) return false;
 
       let node = syntaxTree(view.state).resolve(pos, 1);
-      while (node && node.type !== ExternalLink) {
+      while (node && node.type !== ExternalLink && node.type !== BareUrl) {
         node = node.parent;
       }
       if (!node) return false;
 
-      // Strip the surrounding "[" and "]" to recover the raw bracket
+      // A bare URL's whole range is its href. For a bracketed link,
+      // strip the surrounding "[" and "]" to recover the raw bracket
       // content, then reuse the same classification logic the parser
-      // used to build this node (see rules/bracket.ts) to recover its
-      // href -- this node's href is not stored as a node attribute of
-      // its own, only implied by its content.
-      const content = view.state.sliceDoc(node.from + 1, node.to - 1);
-      const { href } = decideBracketNodeType(content);
+      // used to build this node (see rules/bracket.ts) -- its href is
+      // not stored as a node attribute, only implied by its content.
+      const href =
+        node.type === BareUrl
+          ? view.state.sliceDoc(node.from, node.to)
+          : decideBracketNodeType(view.state.sliceDoc(node.from + 1, node.to - 1))
+              .href;
       if (!href) return false;
 
       event.preventDefault();

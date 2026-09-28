@@ -48,6 +48,24 @@ describe("Cardpot Lezer syntax", () => {
     expect(tree("# →#notTag←")).toBe("Document(Paragraph)");
   });
 
+  it("parses a URL written directly in text", () => {
+    expect(tree("see https://example.com/a?b=1 and http://x.y end")).toBe(
+      "Document(Paragraph(BareUrl,BareUrl))",
+    );
+    // Not a URL: no scheme separator, or nothing after it.
+    expect(tree("https:/example.com http://")).toBe("Document(Paragraph)");
+  });
+
+  it("does not let a bare URL swallow a closing bracket", () => {
+    expect(tree("[* see https://example.com/]")).toBe(
+      "Document(Paragraph(Bold(BoldMark,BareUrl,BoldMark)))",
+    );
+    // Inside a bracketed link the bracket rule wins; no nested BareUrl.
+    expect(tree("[https://example.com/ label]")).toBe(
+      "Document(Paragraph(ExternalLink(ExternalLinkMark,ExternalLinkMark)))",
+    );
+  });
+
   it("parses whitespace-only brackets as blanks before WikiLinks", () => {
     expect(tree("[ ] [　] [\t] [ 　 \t　\t ] [page]")).toBe(
       "Document(Paragraph(Blank,Blank,Blank,Blank,WikiLink(WikiLinkMark,WikiLinkMark)))",

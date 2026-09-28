@@ -59,6 +59,9 @@ function walk(node: SyntaxNode, doc: string, out: DescriptionSegment[]) {
       push(out, { kind: "external-link", text: label ?? href ?? "" });
     } else if (name === "Code") {
       push(out, { kind: "inline-code", text: inner(doc, child) });
+    } else if (name === "BareUrl") {
+      const url = doc.slice(child.from, child.to);
+      push(out, { kind: "external-link", text: url });
     } else if (name === "HashTag") {
       push(out, { kind: "hashtag", text: doc.slice(child.from, child.to) });
     } else if (IMAGES.has(name) || child.type.prop(isMark)) {
