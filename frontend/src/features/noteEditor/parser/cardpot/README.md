@@ -208,6 +208,7 @@ parse 関数の契約（`(cx: InlineContext, next: number, pos: number) => numbe
 | 9 | 末尾トークンがURL | ExternalLink（ラベル = 末尾以外） | 同上 |
 | 10 | それ以外 | WikiLink | `WikiLink(Mark, Mark)` |
 
+- URL とラベルの区切りは ECMAScript の空白（`\s`）1文字で、全角スペースやタブも含む（scrapbox-parser 互換）。Go 側 `internal/parser/decide.go` も同じ。
 - 「URL」= `://` を含み `new URL()` で解釈できるもの。「画像URL」= Gyazo か、URL 末尾（クエリ・フラグメントを除く直前）の拡張子が画像（png, jpg, gif, svg, webp など）。`...&s=10.png` や `...#.png` のように拡張子をクエリ側に足した URL も画像になる（Scrapbox 互換）。
 - ラベル付き ExternalLink のラベルだけがインライン再帰解析される。**WikiLink の中身は解析しない**（`[a [b] c]` は1つの WikiLink で、内側の `[b]` はノードにならない）。
 - ラベル付き ExternalLink では、URL 側の mark が URL とその直後（直前）の空白まで広がる。`[https://e.com label]` の開き mark は `[https://e.com `、`[label https://e.com]` の閉じ mark は ` https://e.com]`。これによりカーソルが触れていない間はラベルだけが表示される。ラベルなし（`[https://e.com]`）の mark は括弧1文字ずつのまま。

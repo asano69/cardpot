@@ -84,6 +84,19 @@ describe("Cardpot Lezer syntax", () => {
     ]);
   });
 
+  it("treats a full-width space as the separator of a labelled link", () => {
+    expect(tree("[aaa\u3000https://example.com/]")).toBe(
+      "Document(Paragraph(ExternalLink(ExternalLinkMark,ExternalLinkMark)))",
+    );
+    expect(tree("[https://example.com/\u3000aaa]")).toBe(
+      "Document(Paragraph(ExternalLink(ExternalLinkMark,ExternalLinkMark)))",
+    );
+    // Without a URL a full-width space is still part of the title.
+    expect(tree("[日本語\u3000タイトル]")).toBe(
+      "Document(Paragraph(WikiLink(WikiLinkMark,WikiLinkMark)))",
+    );
+  });
+
   it("parses a URL written directly in text", () => {
     expect(tree("see https://example.com/a?b=1 and http://x.y end")).toBe(
       "Document(Paragraph(BareUrl,BareUrl))",

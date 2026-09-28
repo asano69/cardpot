@@ -51,10 +51,14 @@ export function decideBracketNodeType(content: string): BracketDecision {
   if (ICON_RE.test(content)) return { kind: "Icon" };
   if (PROJECT_RE.test(content)) return { kind: "ProjectLink" };
 
-  const firstSpace = content.indexOf(" ");
+  // Any ECMAScript whitespace separates tokens, like scrapbox-parser's
+  // \s+ (a full-width space typed by an IME must work too). All such
+  // characters are one UTF-16 unit, so "+ 1" below skips exactly one.
+  const firstSpace = content.search(/\s/u);
   const first = firstSpace === -1 ? content : content.slice(0, firstSpace);
   const rest = firstSpace === -1 ? undefined : content.slice(firstSpace + 1);
-  const lastSpace = content.lastIndexOf(" ");
+  // The last whitespace is the one followed only by non-whitespace.
+  const lastSpace = content.search(/\s(?=\S*$)/u);
   const last = lastSpace === -1 ? undefined : content.slice(lastSpace + 1);
   if (
     COORDINATE_RE.test(content) ||

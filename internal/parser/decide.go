@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 )
 
 // Decision is the classification of a non-empty bracket notation.
@@ -57,11 +58,14 @@ func DecideBracket(content string) Decision {
 		return Decision{Kind: KindProjectLink}
 	}
 
-	firstSpace := strings.IndexByte(content, ' ')
-	lastSpace := strings.LastIndexByte(content, ' ')
+	// Any ECMAScript whitespace separates tokens; keep in sync with
+	// frontend rules/bracket.ts.
+	firstSpace := strings.IndexFunc(content, isJSSpace)
+	lastSpace := strings.LastIndexFunc(content, isJSSpace)
 	first, last := content, ""
 	if firstSpace >= 0 {
-		first, last = content[:firstSpace], content[lastSpace+1:]
+		_, width := utf8.DecodeRuneInString(content[lastSpace:])
+		first, last = content[:firstSpace], content[lastSpace+width:]
 	}
 	if coordinateRe.MatchString(content) || coordinateRe.MatchString(first) || coordinateRe.MatchString(last) {
 		return Decision{Kind: KindGoogleMap}
