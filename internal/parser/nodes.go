@@ -3,7 +3,10 @@
 // rules and should be kept in lockstep with them.
 package parser
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 // Kind identifies what a Node represents.
 type Kind string
@@ -29,12 +32,24 @@ const (
 )
 
 // Node is a notation found in a card. Only Line, Decoration, and Strong have
-// children. Text holds the raw title, wiki-link title, image source, or raw
-// bracket content, according to Kind.
+// children. Text holds the raw title, wiki-link title, image source, raw
+// bracket content, or a code block's declaration after "code:" (for example
+// "main.rs(rust)"), according to Kind.
 type Node struct {
 	Kind     Kind
 	Text     string
 	Children []*Node
+
+	// StartLine and EndLine are the 0-based, half-open line range
+	// [StartLine, EndLine) of a top-level block node in the card text.
+	// Blank lines belong to no node. They are not set on inline nodes.
+	StartLine, EndLine int
+
+	// Body holds the body lines of a CodeBlock, one entry per source line
+	// (so len(Body) == EndLine-StartLine-1). The declaration's indent plus
+	// one character is removed from each line; any deeper whitespace is part
+	// of the code and is kept.
+	Body []string
 }
 
 // String renders a node's tree shape.
@@ -47,6 +62,23 @@ func (n *Node) String() string {
 		parts[i] = child.String()
 	}
 	return string(n.Kind) + "(" + strings.Join(parts, ",") + ")"
+}
+
+// codeLangRe matches an explicit language in parentheses at the end of a code
+// declaration, as in "main.rs(rust)". Keep in sync with frontend
+// codeLanguages.ts.
+var codeLangRe = regexp.MustCompile(`\(([^()]+)\)$`)
+
+// CodeLanguage returns the language of a CodeBlock: the text in trailing
+// parentheses when present ("main.rs(rust)" -> "rust"), otherwise the whole
+// declaration ("python" -> "python"). It is empty for a bare "code:".
+func (n *Node) CodeLanguage() string {
+	if m := codeLangRe.FindStringSubmatch(n.Text); m != nil {
+		if lang := strings.TrimSpace(m[1]); lang != "" {
+			return lang
+		}
+	}
+	return n.Text
 }
 
 func walkNodes(nodes []*Node, fn func(*Node) bool) bool {

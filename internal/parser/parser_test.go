@@ -52,6 +52,90 @@ func TestTitleAndBlocks(t *testing.T) {
 	}
 }
 
+func TestCodeBlockBodyAndLineRange(t *testing.T) {
+	// Lines: 0 title, 1 before, 2 declaration, 3-5 body, 6 after.
+	text := testTitle + "before\n\tcode:main.rs(rust)\n\t\tfn main() {\n\t\t\t\u3000x\n\t\t}\nafter"
+	nodes := Parse(text).Nodes
+	if len(nodes) != 4 {
+		t.Fatalf("got %d nodes, want 4", len(nodes))
+	}
+
+	code := nodes[2]
+	if code.Kind != KindCodeBlock || code.Text != "main.rs(rust)" {
+		t.Errorf("code node = %q %q", code.Kind, code.Text)
+	}
+	if code.StartLine != 2 || code.EndLine != 6 {
+		t.Errorf("range = [%d, %d), want [2, 6)", code.StartLine, code.EndLine)
+	}
+	// Only the block's own indent level is removed; deeper whitespace stays.
+	want := []string{"fn main() {", "\t\u3000x", "}"}
+	if !slices.Equal(code.Body, want) {
+		t.Errorf("Body = %q, want %q", code.Body, want)
+	}
+
+	if nodes[1].StartLine != 1 || nodes[1].EndLine != 2 {
+		t.Errorf("line range = [%d, %d), want [1, 2)", nodes[1].StartLine, nodes[1].EndLine)
+	}
+	if nodes[3].StartLine != 6 || nodes[3].EndLine != 7 {
+		t.Errorf("line range = [%d, %d), want [6, 7)", nodes[3].StartLine, nodes[3].EndLine)
+	}
+}
+
+func TestCodeBlockBodyIsRelativeToDeclaration(t *testing.T) {
+	// The declaration's own nesting must not leak into the code, or Python
+	// would fail with "unexpected indent". The same code gives the same Body
+	// at any depth.
+	cases := []string{
+		"code:py\n\tdef f():\n\t\treturn 1",
+		"\tcode:py\n\t\tdef f():\n\t\t\treturn 1",
+		"\u3000\u3000code:py\n\u3000\u3000\u3000def f():\n\u3000\u3000\u3000\treturn 1",
+	}
+	want := []string{"def f():", "\treturn 1"}
+	for _, c := range cases {
+		code := Parse(testTitle + c).Nodes[1] // nodes[0] is the title
+		if !slices.Equal(code.Body, want) {
+			t.Errorf("%q: Body = %q, want %q", c, code.Body, want)
+		}
+	}
+}
+
+func TestCodeBlockLanguage(t *testing.T) {
+	cases := []struct {
+		decl, text, lang string
+	}{
+		{"code:python", "python", "python"},
+		{"code: python", "python", "python"}, // space after the colon is trimmed
+		{"code:main.rs(rust)", "main.rs(rust)", "rust"},
+		{"code:", "", ""},
+	}
+	for _, c := range cases {
+		nodes := Parse(testTitle + c.decl + "\n\tx").Nodes
+		code := nodes[1] // nodes[0] is the title
+		if code.Kind != KindCodeBlock || code.Text != c.text || code.CodeLanguage() != c.lang {
+			t.Errorf("%q: Text = %q, CodeLanguage() = %q, want %q / %q",
+				c.decl, code.Text, code.CodeLanguage(), c.text, c.lang)
+		}
+	}
+}
+
+func TestDropRunes(t *testing.T) {
+	cases := []struct {
+		in   string
+		n    int
+		want string
+	}{
+		{"\t\tfoo", 2, "foo"},
+		{"\u3000\u3000foo", 1, "\u3000foo"},
+		{"ab", 2, ""},
+		{"a", 3, ""},
+	}
+	for _, c := range cases {
+		if got := dropRunes(c.in, c.n); got != c.want {
+			t.Errorf("dropRunes(%q, %d) = %q, want %q", c.in, c.n, got, c.want)
+		}
+	}
+}
+
 func TestFirstImageSrc(t *testing.T) {
 	cases := []struct{ text, want string }{
 		{testTitle + "[https://example.com/a.png]", "https://example.com/a.png"},

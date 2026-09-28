@@ -292,8 +292,21 @@ const descriptionMaxRunes = 120
 // joined by a newline and cut to descriptionMaxRunes runes. The
 // title itself is excluded here since it's resolved separately (see
 // slug.go's resolveSlugAndTitle).
+//
+// A code: block is shown without its declaration line, and each of its
+// body lines is wrapped in backticks. The rewrite happens in place, so
+// the block keeps its position among the other lines.
 func buildPreview(text string) string {
 	lines := strings.Split(text, "\n")
+	for _, node := range parser.Parse(text).Nodes {
+		if node.Kind != parser.KindCodeBlock {
+			continue
+		}
+		lines[node.StartLine] = "" // the declaration is dropped
+		for i, body := range node.Body {
+			lines[node.StartLine+1+i] = quoteCodeLine(body)
+		}
+	}
 	if len(lines) > 0 {
 		lines = lines[1:] // drop the title line
 	}
@@ -306,6 +319,15 @@ func buildPreview(text string) string {
 		}
 	}
 	return truncateRunes(strings.Join(body, "\n"), descriptionMaxRunes)
+}
+
+// quoteCodeLine wraps one code line in backticks. A line with nothing but
+// whitespace becomes empty, so it is skipped like any other blank line.
+func quoteCodeLine(line string) string {
+	if strings.TrimSpace(line) == "" {
+		return ""
+	}
+	return "`" + line + "`"
 }
 
 // truncateRunes cuts s to at most max runes (not bytes), so a card

@@ -35,6 +35,15 @@ func TestBuildPreview_NoBodyLines_EmptyString(t *testing.T) {
 	}
 }
 
+func TestBuildPreview_CodeBlockKeepsPositionAndQuotesLines(t *testing.T) {
+	text := "Title\nbefore\ncode:go\n\tx := 1\n\t   \n\treturn\nafter"
+	got := buildPreview(text)
+	want := "before\n`x := 1`\n`return`\nafter"
+	if got != want {
+		t.Errorf("buildPreview(...) = %q, want %q", got, want)
+	}
+}
+
 func TestBuildPreview_EmptyText_EmptyString(t *testing.T) {
 	got := buildPreview("")
 	if got != "" {

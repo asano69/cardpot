@@ -22,12 +22,15 @@ func parseBlocks(lines []string) []*Node {
 	var nodes []*Node
 	for !c.done() {
 		start := c.i
+		var n *Node
 		if isBlank(c.line()) {
 			c.next()
-		} else if n := tryBlockRules(c); n != nil {
+		} else if n = tryBlockRules(c); n == nil {
+			n = parseLine(c)
+		}
+		if n != nil {
+			n.StartLine, n.EndLine = start, c.i
 			nodes = append(nodes, n)
-		} else {
-			nodes = append(nodes, parseLine(c))
 		}
 		if c.i == start {
 			c.next()
@@ -55,12 +58,21 @@ func parseLine(c *cursor) *Node {
 // raw body lines. It mirrors frontend rules/codeBlock.ts.
 func parseCodeBlock(c *cursor) *Node {
 	depth, offset := measureIndent(c.line())
-	if !strings.HasPrefix(c.line()[offset:], "code:") {
+	rest := c.line()[offset:]
+	if !strings.HasPrefix(rest, "code:") {
 		return nil
 	}
 	c.next()
-	bodyLines(c, depth)
-	return &Node{Kind: KindCodeBlock}
+
+	// Every body line is deeper than the declaration, so dropping depth+1
+	// characters removes only the block's own indent level.
+	raw := bodyLines(c, depth)
+	body := make([]string, len(raw))
+	for i, line := range raw {
+		body[i] = dropRunes(line, depth+1)
+	}
+	info := strings.TrimSpace(strings.TrimPrefix(rest, "code:"))
+	return &Node{Kind: KindCodeBlock, Text: info, Body: body}
 }
 
 func bodyLines(c *cursor, depth int) []string {

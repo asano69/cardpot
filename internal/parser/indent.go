@@ -23,6 +23,18 @@ func measureIndent(line string) (depth, offset int) {
 	return depth, len(line)
 }
 
+// dropRunes returns s without its first n characters (not bytes). It returns
+// an empty string when s has fewer than n characters.
+func dropRunes(s string, n int) string {
+	for i := range s {
+		if n == 0 {
+			return s[i:]
+		}
+		n--
+	}
+	return ""
+}
+
 // isBlank reports whether s is empty or consists solely of ECMAScript space.
 func isBlank(s string) bool {
 	_, offset := measureIndent(s)
