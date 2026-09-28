@@ -13,7 +13,7 @@ import { countIndent, indentRangeForLine } from "../../parser/cardpot/indent";
 // codeBlockLines.ts / hangingIndent.ts for the same CodeBlock
 // lookup). Leading whitespace there is raw code, not a bullet to
 // release.
-function enclosingCodeBlock(
+export function enclosingCodeBlock(
   state: EditorState,
   pos: number,
 ): SyntaxNode | null {

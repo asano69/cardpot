@@ -31,6 +31,7 @@ import { syntaxReveal } from "./plugins/decorations/syntaxReveal";
 import { wikiLinkNavigation } from "./plugins/interactions/wikiLinkNavigation";
 import { externalLinkNavigation } from "./plugins/interactions/externalLinkNavigation";
 import { pasteUrlDecode } from "./plugins/interactions/pasteUrlDecode";
+import { pasteCodeBlockIndent } from "./plugins/interactions/pasteCodeBlockIndent";
 import type { TitleCandidate } from "@/lib/models/card";
 import { registerDebugView } from "./debug";
 
@@ -122,6 +123,9 @@ export default function NoteEditor(props: NoteEditorProps) {
         wikiLinkNavigation(props.potSlug, navigate),
         externalLinkNavigation(),
         pasteUrlDecode(),
+        // Keeps a multi-line paste inside a `code:` block from ending the
+        // block (see pasteCodeBlockIndent.ts).
+        pasteCodeBlockIndent(),
         // A single real tab character per indent level, not spaces --
         // indentMore/indentLess (bound below) both insert/remove
         // whatever this unit is. The parser itself accepts any
