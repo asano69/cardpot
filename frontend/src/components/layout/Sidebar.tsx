@@ -18,7 +18,6 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [];
 
 export interface SidebarProps {
-  isMobile: boolean;
   open: boolean;
   onClose: () => void;
 }
@@ -28,36 +27,31 @@ export default function Sidebar(props: SidebarProps) {
 
   return (
     <>
-      {/* Overlay only exists on mobile, where the sidebar floats above
-          the page instead of sitting in the flex layout. Kept mounted
-          while isMobile stays true so its opacity can transition
-          in/out instead of popping in/out with the sidebar. */}
-      <Show when={props.isMobile}>
-        <div
-          class="absolute inset-0 z-20 bg-black/40 transition-opacity duration-200"
-          classList={{ "pointer-events-none opacity-0": !props.open }}
-          onClick={() => props.onClose()}
-        />
-      </Show>
+      {/* The sidebar always floats above the page instead of sitting in
+          the flex layout. The overlay stays mounted so its opacity can
+          transition in/out instead of popping in/out with the sidebar. */}
+      <div
+        class="absolute inset-0 z-20 bg-black/40 transition-opacity duration-200"
+        classList={{ "pointer-events-none opacity-0": !props.open }}
+        onClick={() => props.onClose()}
+      />
 
       {/* Always mounted (not conditionally rendered via <Show>) so the
           transform transition below actually animates open <-> closed
-          instead of the element just appearing/disappearing. On mobile
-          it's translated off-screen when closed; on desktop `open` is
-          always true (see MainLayout), so it never moves. */}
+          instead of the element just appearing/disappearing. It's
+          translated off-screen when closed. */}
       <aside
-        aria-hidden={props.isMobile && !props.open}
+        aria-hidden={!props.open}
         classList={{
-          "absolute inset-y-0 left-0 z-30": props.isMobile,
           // Shadow only while actually visible: it's dropped entirely
           // once closed instead of just relying on -translate-x-full to
           // carry it off-screen, since the shadow's blur radius would
           // otherwise still bleed a few pixels into the viewport from
           // just past the left edge.
-          "shadow-popover": props.isMobile && props.open,
-          "-translate-x-full": props.isMobile && !props.open,
+          "shadow-popover": props.open,
+          "-translate-x-full": !props.open,
         }}
-        class="flex h-full min-h-0 w-64 flex-col border-r border-border bg-bg transition-transform duration-200 ease-in-out"
+        class="absolute inset-y-0 left-0 z-30 flex h-full min-h-0 w-64 flex-col border-r border-border bg-bg transition-transform duration-200 ease-in-out"
       >
         {/* Scrollable middle section: nav items plus the pot list.
             min-h-0 + overflow-y-auto is what lets a long pot list

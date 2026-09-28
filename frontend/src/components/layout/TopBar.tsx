@@ -9,7 +9,6 @@ import UserMenu from "./UserMenu";
 import { topBarActions, topBarPotLink } from "@/lib/topBarSlot";
 
 export interface TopBarProps {
-  isMobile: boolean;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
   // Extra classes for the outer <header>, so callers can control the
@@ -32,19 +31,17 @@ export default function TopBar(props: TopBarProps) {
     >
       <div class="grid w-full grid-cols-[1fr_auto_1fr] items-center px-2 md:px-8">
         <div class="flex items-center gap-3 justify-self-start">
-          {/* Toggle button only exists on mobile; on desktop the
-              sidebar is always visible so there's nothing to toggle. */}
-          <Show when={props.isMobile}>
-            <button
-              type="button"
-              onClick={() => props.onToggleSidebar()}
-              aria-label="Toggle sidebar"
-              aria-expanded={props.sidebarOpen}
-              class="icon-btn"
-            >
-              {props.sidebarOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
-          </Show>
+          {/* The sidebar is always collapsed by default, so this
+              toggle is shown on every device. */}
+          <button
+            type="button"
+            onClick={() => props.onToggleSidebar()}
+            aria-label="Toggle sidebar"
+            aria-expanded={props.sidebarOpen}
+            class="icon-btn"
+          >
+            {props.sidebarOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
           {/* Version hidden on mobile: there isn't room for it next to
               the hamburger toggle and title. */}
           <Logo linkable />

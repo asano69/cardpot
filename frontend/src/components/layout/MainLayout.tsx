@@ -2,16 +2,10 @@ import { createSignal, type ParentProps } from "solid-js";
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
-import { createIsMobile } from "@/lib/mediaQuery";
 
 export default function MainLayout(props: ParentProps) {
-  // Whether the viewport is currently mobile-sized. Drives both the
-  // toggle button's visibility (TopBar) and the sidebar's overlay vs.
-  // always-visible behavior (Sidebar).
-  const isMobile = createIsMobile();
-
-  // Only meaningful on mobile: whether the overlay sidebar is open. On
-  // desktop the sidebar is always shown regardless of this value.
+  // Whether the overlay sidebar is open. The sidebar is collapsed by
+  // default on every device and never sits in the page layout itself.
   const [sidebarOpen, setSidebarOpen] = createSignal(false);
   const toggleSidebar = () => setSidebarOpen((open) => !open);
 
@@ -24,7 +18,6 @@ export default function MainLayout(props: ParentProps) {
           controlled here (not inside TopBar) via the `class` prop, so
           this is the one place to tweak the bar's size. */}
       <TopBar
-        isMobile={isMobile()}
         sidebarOpen={sidebarOpen()}
         onToggleSidebar={toggleSidebar}
         class="h-10"
@@ -37,11 +30,7 @@ export default function MainLayout(props: ParentProps) {
           gives Sidebar's mobile overlay a positioning context that
           starts below TopBar instead of covering the whole viewport. */}
       <div class="relative flex min-h-0 flex-1">
-        <Sidebar
-          isMobile={isMobile()}
-          open={isMobile() ? sidebarOpen() : true}
-          onClose={() => setSidebarOpen(false)}
-        />
+        <Sidebar open={sidebarOpen()} onClose={() => setSidebarOpen(false)} />
 
         {/* Main content. flex flex-col lets a page that wants to fill
             the remaining height (e.g. the note editor) do so via
