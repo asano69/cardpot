@@ -126,27 +126,6 @@ func TestFindCardBySlug_IgnoresDeletedCard(t *testing.T) {
 	}
 }
 
-func TestLinks1Hop_ExcludesDeletedCards(t *testing.T) {
-	app := newLinksTestApp(t)
-	pot := createPot(t, app, "pot1")
-
-	center := createLinksTestCard(t, app, pot.Id, "Center", "")
-	outTarget := createLinksTestCard(t, app, pot.Id, "OutTarget", "")
-	inSource := createLinksTestCard(t, app, pot.Id, "InSource", "")
-	createLink(t, app, center.Id, pot.Id, "OutTarget")
-	createLink(t, app, inSource.Id, pot.Id, "Center")
-	softDelete(t, app, outTarget)
-	softDelete(t, app, inSource)
-
-	got, err := links1Hop(app, pot.Id, center.GetString("titleLc"), center.Id)
-	if err != nil {
-		t.Fatalf("links1Hop: %v", err)
-	}
-	if len(got) != 0 {
-		t.Errorf("got %d linked cards, want 0 (both are deleted): %v", len(got), got)
-	}
-}
-
 func TestOwnTargetTitleLcs(t *testing.T) {
 	app := newLinksTestApp(t)
 	pot := createPot(t, app, "pot1")
@@ -160,40 +139,5 @@ func TestOwnTargetTitleLcs(t *testing.T) {
 	}
 	if len(got) != 2 {
 		t.Errorf("ownTargetTitleLcs = %v, want 2 entries", got)
-	}
-}
-
-func TestLinks1Hop_MergesOutgoingAndIncoming(t *testing.T) {
-	app := newLinksTestApp(t)
-	pot := createPot(t, app, "pot1")
-
-	center := createLinksTestCard(t, app, pot.Id, "Center", "center desc")
-	createLinksTestCard(t, app, pot.Id, "OutTarget", "out desc")
-	inSource := createLinksTestCard(t, app, pot.Id, "InSource", "in desc")
-
-	// Center links out to OutTarget and to a page that doesn't exist yet.
-	createLink(t, app, center.Id, pot.Id, "OutTarget")
-	createLink(t, app, center.Id, pot.Id, "Ghost")
-	// InSource links in to Center.
-	createLink(t, app, inSource.Id, pot.Id, "Center")
-
-	got, err := links1Hop(app, pot.Id, center.GetString("titleLc"), center.Id)
-	if err != nil {
-		t.Fatalf("links1Hop: %v", err)
-	}
-
-	if len(got) != 2 {
-		t.Fatalf("got %d linked cards, want 2 (Ghost must be excluded): %v", len(got), got)
-	}
-
-	byTitle := make(map[string]linkedCard, len(got))
-	for _, c := range got {
-		byTitle[c.Title] = c
-	}
-	if _, ok := byTitle["OutTarget"]; !ok {
-		t.Errorf("missing outgoing target %q in result: %v", "OutTarget", got)
-	}
-	if _, ok := byTitle["InSource"]; !ok {
-		t.Errorf("missing incoming source %q in result: %v", "InSource", got)
 	}
 }

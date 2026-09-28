@@ -66,9 +66,6 @@ func registerRoutes(e *core.ServeEvent) error {
 	// collections themselves do.
 	pages := e.Router.Group("/api/pages")
 	pages.Bind(apis.RequireSuperuserAuth())
-	// The old SQL implementation, kept to compare against the Datalog one.
-	pages.GET("/{pot}/{slug}/links1hop-sql", links1HopHandler)
-
 	// Test stage: card_links is loaded into Mangle once at startup and is not
 	// refreshed afterwards (restart the server to pick up new links).
 	engine, err := datalog.Load(e.App)

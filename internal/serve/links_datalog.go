@@ -14,8 +14,7 @@ import (
 )
 
 // relatedCardsHandler answers with the cards whose ids query returns for the
-// requested card, under the JSON key "key". The response entries have the
-// same shape as links1HopHandler's.
+// requested card, under the JSON key "key".
 func relatedCardsHandler(key string, query func(cardID string) ([]string, error)) func(*core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		pot, err := e.App.FindFirstRecordByFilter(
