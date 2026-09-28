@@ -1,14 +1,13 @@
 import {
   EditorView,
-  ViewPlugin,
   Decoration,
   WidgetType,
   type DecorationSet,
-  type ViewUpdate,
 } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
 import { CodeBlock } from "../../parser/cardpot";
 import { indentRangeForLine } from "../../parser/cardpot/indent";
+import { decorationPlugin } from "./decorationPlugin";
 
 // Width of one indent level's mark element, in pixels (see
 // IndentMarkWidget below). Also used by editorTheme.ts to size the
@@ -131,29 +130,14 @@ function buildDecorations(view: EditorView): DecorationSet {
   return Decoration.set(decorations, true);
 }
 
-export const hangingIndent = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet;
-
-    constructor(view: EditorView) {
-      this.decorations = buildDecorations(view);
-    }
-
-    update(update: ViewUpdate) {
-      // Indent ranges come from the syntax tree, which the language parses
-      // incrementally and can extend without any document change (e.g. once
-      // a long document finishes its background parse), so a new tree must
-      // also trigger a rebuild.
-      if (
-        update.docChanged ||
-        update.viewportChanged ||
-        syntaxTree(update.startState) !== syntaxTree(update.state)
-      ) {
-        this.decorations = buildDecorations(update.view);
-      }
-    }
-  },
-  {
-    decorations: (plugin) => plugin.decorations,
-  },
-);
+export const hangingIndent = decorationPlugin({
+  build: buildDecorations,
+  // Indent ranges come from the syntax tree, which the language parses
+  // incrementally and can extend without any document change (e.g. once
+  // a long document finishes its background parse), so a new tree must
+  // also trigger a rebuild.
+  shouldRebuild: (update) =>
+    update.docChanged ||
+    update.viewportChanged ||
+    syntaxTree(update.startState) !== syntaxTree(update.state),
+});

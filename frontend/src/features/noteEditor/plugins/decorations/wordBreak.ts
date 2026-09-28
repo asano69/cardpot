@@ -1,10 +1,9 @@
 import {
   EditorView,
-  ViewPlugin,
   Decoration,
   type DecorationSet,
-  type ViewUpdate,
 } from "@codemirror/view";
+import { decorationPlugin } from "./decorationPlugin";
 
 // Word-break strategy for the editor's body text, built from two
 // layers:
@@ -53,21 +52,9 @@ function buildDecorations(view: EditorView): DecorationSet {
   return Decoration.set(decorations, true);
 }
 
-export const wordBreak = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet;
-
-    constructor(view: EditorView) {
-      this.decorations = buildDecorations(view);
-    }
-
-    update(update: ViewUpdate) {
-      if (update.docChanged || update.viewportChanged) {
-        this.decorations = buildDecorations(update.view);
-      }
-    }
-  },
-  {
-    decorations: (plugin) => plugin.decorations,
-  },
-);
+// Guarded against IME composition too: re-splitting the composing word
+// into different marks on every keystroke redraws the DOM being composed.
+export const wordBreak = decorationPlugin({
+  build: buildDecorations,
+  shouldRebuild: (update) => update.docChanged || update.viewportChanged,
+});

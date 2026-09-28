@@ -1,12 +1,11 @@
 import {
   EditorView,
-  ViewPlugin,
   Decoration,
   WidgetType,
   type DecorationSet,
-  type ViewUpdate,
 } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
+import { decorationPlugin } from "./decorationPlugin";
 import type { SyntaxNodeRef } from "@lezer/common";
 import { Bold, revealStyle, isMark, hideContent } from "../../parser/cardpot";
 
@@ -157,27 +156,13 @@ function buildDecorations(view: EditorView): DecorationSet {
   return Decoration.set(decorations, true);
 }
 
-export const syntaxReveal = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet;
-
-    constructor(view: EditorView) {
-      this.decorations = buildDecorations(view);
-    }
-
-    update(update: ViewUpdate) {
-      // A new syntax tree (e.g. after a background parse of a long
-      // document) also changes which nodes exist to be styled or hidden.
-      if (
-        update.docChanged ||
-        update.selectionSet ||
-        syntaxTree(update.startState) !== syntaxTree(update.state)
-      ) {
-        this.decorations = buildDecorations(update.view);
-      }
-    }
-  },
-  {
-    decorations: (plugin) => plugin.decorations,
-  },
-);
+// IME-safe rebuilding is handled by decorationPlugin (see its comment).
+export const syntaxReveal = decorationPlugin({
+  build: buildDecorations,
+  // A new syntax tree (e.g. after a background parse of a long
+  // document) also changes which nodes exist to be styled or hidden.
+  shouldRebuild: (update) =>
+    update.docChanged ||
+    update.selectionSet ||
+    syntaxTree(update.startState) !== syntaxTree(update.state),
+});

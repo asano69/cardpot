@@ -1,15 +1,14 @@
 import {
   EditorView,
-  ViewPlugin,
   Decoration,
   WidgetType,
   type DecorationSet,
-  type ViewUpdate,
 } from "@codemirror/view";
 import type { EditorState } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
 import { Image, LinkedImage, StrongImage } from "../../parser/cardpot";
 import { decideBracketNodeType } from "../../parser/cardpot/rules/bracket";
+import { decorationPlugin } from "./decorationPlugin";
 
 // Scrapbox distinguishes a plain image reference ("[url]") from its
 // magnified "strong" form ("[[url]]"): the plain form is capped in
@@ -117,28 +116,13 @@ function buildDecorations(view: EditorView): DecorationSet {
 // subject to CodeMirror's "block decorations may not come from a
 // plugin" restriction. Recomputing on selectionSet as well as
 // docChanged is what drives the caret-enters-reveals-raw-text
-// behavior -- mirrors syntaxReveal.ts's own update() exactly.
-export const imageWidget = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet;
-
-    constructor(view: EditorView) {
-      this.decorations = buildDecorations(view);
-    }
-
-    update(update: ViewUpdate) {
-      // A new syntax tree (e.g. after a background parse of a long
-      // document) can add Image nodes that need their widget.
-      if (
-        update.docChanged ||
-        update.selectionSet ||
-        syntaxTree(update.startState) !== syntaxTree(update.state)
-      ) {
-        this.decorations = buildDecorations(update.view);
-      }
-    }
-  },
-  {
-    decorations: (plugin) => plugin.decorations,
-  },
-);
+// behavior -- mirrors syntaxReveal.ts's own triggers exactly.
+export const imageWidget = decorationPlugin({
+  build: buildDecorations,
+  // A new syntax tree (e.g. after a background parse of a long
+  // document) can add Image nodes that need their widget.
+  shouldRebuild: (update) =>
+    update.docChanged ||
+    update.selectionSet ||
+    syntaxTree(update.startState) !== syntaxTree(update.state),
+});
