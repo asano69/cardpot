@@ -3,6 +3,7 @@ package serve
 import (
 	"net/http"
 
+	"github.com/asano69/cardpot/internal/datalog"
 	"github.com/asano69/cardpot/internal/realtime"
 	"github.com/asano69/cardpot/internal/static"
 	"github.com/asano69/cardpot/internal/version"
@@ -66,6 +67,14 @@ func registerRoutes(e *core.ServeEvent) error {
 	pages := e.Router.Group("/api/pages")
 	pages.Bind(apis.RequireSuperuserAuth())
 	pages.GET("/{pot}/{slug}/links1hop", links1HopHandler)
+
+	// Test stage: card_links is loaded into Mangle once at startup and is not
+	// refreshed afterwards (restart the server to pick up new links).
+	engine, err := datalog.Load(e.App)
+	if err != nil {
+		return err
+	}
+	pages.GET("/{pot}/{slug}/links2hop", links2HopHandler(engine))
 	// Checkpoint-based pull for the frontend's Dexie replication (see
 	// replication.go). {potId} is a pot's id, unlike {pot} above.
 	pages.GET("/{potId}/cards/pull", pullCardsHandler)

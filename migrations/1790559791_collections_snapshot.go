@@ -1372,7 +1372,7 @@ func init() {
 				"indexes": [
 					"CREATE INDEX ` + "`" + `idx_xpwo6k1rx9` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (` + "`" + `source` + "`" + `)",
 					"CREATE INDEX ` + "`" + `idx_vqvthaafz5` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (\n  ` + "`" + `target_title` + "`" + `,\n  ` + "`" + `target_pot` + "`" + `\n)",
-					"CREATE UNIQUE INDEX ` + "`" + `idx_4alpksbb3u` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (\n  ` + "`" + `target_pot` + "`" + `,\n  ` + "`" + `target_titleLc` + "`" + `\n)"
+					"CREATE INDEX ` + "`" + `idx_4alpksbb3u` + "`" + ` ON ` + "`" + `card_links` + "`" + ` (\n  ` + "`" + `target_pot` + "`" + `,\n  ` + "`" + `target_titleLc` + "`" + `\n)"
 				],
 				"listRule": null,
 				"name": "card_links",
