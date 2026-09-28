@@ -221,7 +221,8 @@ export async function loadNextCardsPage(potId: string): Promise<void> {
   // lines up with the window (e.g. cards were reordered elsewhere).
   // Treat the window as complete so scrolling cannot request the same
   // page forever; a reload fixes it.
-  const total = added === 0 ? windows[potId].ids.length : await countCards(potId);
+  const total =
+    added === 0 ? windows[potId].ids.length : await countCards(potId);
   if (!windows[potId]) return; // pot was released while counting
   setWindows(potId, { total, loaded: true, loading: false });
 }

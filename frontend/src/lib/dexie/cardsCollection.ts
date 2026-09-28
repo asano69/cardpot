@@ -159,7 +159,10 @@ export async function writeCache(
   await db.cards.bulkPut(records.map(toCached));
 }
 
-export async function deleteFromCache(potId: string, id: string): Promise<void> {
+export async function deleteFromCache(
+  potId: string,
+  id: string,
+): Promise<void> {
   await db.cards.delete(id);
 }
 

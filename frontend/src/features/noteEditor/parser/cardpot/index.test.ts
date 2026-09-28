@@ -90,7 +90,9 @@ describe("Cardpot Lezer syntax", () => {
     // Scrapbox-compatible trick: appending ".png" (e.g. "&s=10.png" or
     // "#.png") forces an extensionless URL to be treated as an image.
     expect(
-      tree("[https://example.com/images?q=abc&s=10.png] [https://example.com/img#.png]"),
+      tree(
+        "[https://example.com/images?q=abc&s=10.png] [https://example.com/img#.png]",
+      ),
     ).toBe("Document(Paragraph(Image,Image))");
     // An extension in the middle of the query is not a trailing one.
     expect(tree("[https://example.com/page?file=a.png&x=1]")).toBe(

@@ -11,11 +11,9 @@ function record(id: string, updated: string): CardRecord {
 
 describe("pullAll", () => {
   it("stops after a single short page and advances the checkpoint to its last record", async () => {
-    const send = vi
-      .spyOn(pb, "send")
-      .mockResolvedValueOnce({
-        records: [record("a", "t1"), record("b", "t2")],
-      });
+    const send = vi.spyOn(pb, "send").mockResolvedValueOnce({
+      records: [record("a", "t1"), record("b", "t2")],
+    });
 
     const { records, checkpoint } = await pullAll("pot1", null);
 

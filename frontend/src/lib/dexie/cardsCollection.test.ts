@@ -42,15 +42,16 @@ describe("Dexie cards cache", () => {
 
     expect(await countCards("pot-1")).toBe(2);
     // Descending position -- "b" (2000) sorts before "a" (1000).
-    expect(
-      (await queryCardsPage("pot-1", 0, 10)).map((c) => c.id),
-    ).toEqual(["b", "a"]);
+    expect((await queryCardsPage("pot-1", 0, 10)).map((c) => c.id)).toEqual([
+      "b",
+      "a",
+    ]);
 
     await deleteFromCache("pot-1", "a");
     expect(await countCards("pot-1")).toBe(1);
-    expect(
-      (await queryCardsPage("pot-1", 0, 10)).map((c) => c.id),
-    ).toEqual(["b"]);
+    expect((await queryCardsPage("pot-1", 0, 10)).map((c) => c.id)).toEqual([
+      "b",
+    ]);
   });
 
   it("sorts pinned cards before unpinned ones regardless of position", async () => {
@@ -59,9 +60,10 @@ describe("Dexie cards cache", () => {
       card("y", "pot-2", 100, true),
     ]);
 
-    expect(
-      (await queryCardsPage("pot-2", 0, 10)).map((c) => c.id),
-    ).toEqual(["y", "x"]);
+    expect((await queryCardsPage("pot-2", 0, 10)).map((c) => c.id)).toEqual([
+      "y",
+      "x",
+    ]);
   });
 
   it("pages across the pinned/unpinned index-range boundary without gaps or duplicates", async () => {

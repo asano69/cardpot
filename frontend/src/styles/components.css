@@ -85,7 +85,10 @@
     inset: 0;
     z-index: 0;
     opacity: 0;
-    background-color: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.06));
+    background-color: light-dark(
+      rgba(0, 0, 0, 0.04),
+      rgba(255, 255, 255, 0.06)
+    );
     transition: opacity 0.1s;
     pointer-events: none;
   }
@@ -148,6 +151,54 @@
     column-width: 10em;
     overflow: hidden;
     color: light-dark(#808080, #c4c4c4);
+  }
+
+  /* Notation inside a card's description (see
+   * features/cardDescription). Links and hashtags share one color;
+   * only external links are underlined. Named "grid-*" so they stay
+   * separate from the note editor's own "cm-*" classes. */
+  .card-grid-item .description .grid-wikilink,
+  .card-grid-item .description .grid-external-link,
+  .card-grid-item .description .grid-hashtag {
+    color: light-dark(#0969da, #58a6ff);
+  }
+
+  .card-grid-item .description .grid-external-link {
+    text-decoration: underline;
+  }
+
+  .card-grid-item .description .grid-inline-code {
+    font-family: var(--font-mono);
+    background-color: light-dark(
+      rgba(175, 184, 193, 0.2),
+      rgba(110, 118, 129, 0.4)
+    );
+    border-radius: 3px;
+    padding: 0 0.2em;
+  }
+
+  /* Notation inside a card's description (see
+   * features/cardDescription). Links and hashtags share one color;
+   * only external links are underlined. Named "grid-*" so they stay
+   * separate from the note editor's own "cm-*" classes. */
+  .card-grid-item .description .grid-wikilink,
+  .card-grid-item .description .grid-external-link,
+  .card-grid-item .description .grid-hashtag {
+    color: light-dark(#0969da, #58a6ff);
+  }
+
+  .card-grid-item .description .grid-external-link {
+    text-decoration: underline;
+  }
+
+  .card-grid-item .description .grid-inline-code {
+    font-family: var(--font-mono);
+    background-color: light-dark(
+      rgba(175, 184, 193, 0.2),
+      rgba(110, 118, 129, 0.4)
+    );
+    border-radius: 3px;
+    padding: 0 0.2em;
   }
 
   /* Cover-fit preview for a card whose document contains an image

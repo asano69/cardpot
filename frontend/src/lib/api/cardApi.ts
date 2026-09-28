@@ -64,15 +64,13 @@ export async function fetchCardBySlug(
   const candidateTitleLc = slug.toLowerCase();
   let record: CardRecord;
   try {
-    record = await pb
-      .collection("cards")
-      .getFirstListItem<CardRecord>(
-        pb.filter('pot = {:pot} && titleLc = {:titleLc} && deleted = ""', {
-          pot: potId,
-          titleLc: candidateTitleLc,
-        }),
-        { requestKey: null },
-      );
+    record = await pb.collection("cards").getFirstListItem<CardRecord>(
+      pb.filter('pot = {:pot} && titleLc = {:titleLc} && deleted = ""', {
+        pot: potId,
+        titleLc: candidateTitleLc,
+      }),
+      { requestKey: null },
+    );
   } catch (err) {
     if (err instanceof ClientResponseError && err.status === 404) {
       return undefined;

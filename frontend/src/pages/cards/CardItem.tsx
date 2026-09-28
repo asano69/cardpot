@@ -5,6 +5,7 @@ import { registerCardElement } from "@/lib/stores/cardsStore";
 import { titleToSegment } from "@/lib/models/slugify";
 import { deriveCardGridTitle, type CardRecord } from "@/lib/models/card";
 import { ripple } from "@/lib/directives/ripple";
+import { CardDescription } from "@/features/cardDescription";
 
 export interface CardItemProps {
   card: CardRecord;
@@ -76,7 +77,11 @@ export default function CardItem(props: CardItemProps) {
               room for both in a card this small. */}
           <Show
             when={props.card.image}
-            fallback={<div class="description">{props.card.description}</div>}
+            fallback={
+              <div class="description">
+                <CardDescription text={props.card.description} />
+              </div>
+            }
           >
             <div
               class="thumbnail m-1.5"
