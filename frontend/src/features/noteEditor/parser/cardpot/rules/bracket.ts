@@ -109,17 +109,22 @@ function matchingBracket(cx: InlineContext, from: number): number {
   return -1;
 }
 
+// `openEnd`/`closeStart` let a mark cover more than its bracket: a
+// labelled ExternalLink stretches the mark on the URL's side over the
+// URL itself, so syntaxReveal hides the URL and leaves only the label.
 function marks(
   cx: InlineContext,
   node: string,
   from: number,
   to: number,
   children = [],
+  openEnd = from + 1,
+  closeStart = to - 1,
 ) {
   return cx.elt(node, from, to, [
-    cx.elt(`${node}Mark`, from, from + 1),
+    cx.elt(`${node}Mark`, from, openEnd),
     ...children,
-    cx.elt(`${node}Mark`, to - 1, to),
+    cx.elt(`${node}Mark`, closeStart, to),
   ]);
 }
 
@@ -145,17 +150,22 @@ function parseSingleBracket(cx: InlineContext, pos: number): number {
     return cx.addElement(cx.elt(decision.kind, pos, to));
   }
   const label = decision.label;
-  const children =
-    label === undefined
-      ? []
-      : cx.parser.parseInline(
-          label,
-          contentFrom +
-            (content.startsWith(decision.href!)
-              ? decision.href!.length + 1
-              : 0),
-        );
-  return cx.addElement(marks(cx, "ExternalLink", pos, to, children));
+  let children = [];
+  let openEnd = pos + 1;
+  let closeStart = end;
+  if (label !== undefined) {
+    const urlFirst = content.startsWith(decision.href!);
+    const labelFrom = urlFirst
+      ? contentFrom + decision.href!.length + 1
+      : contentFrom;
+    children = cx.parser.parseInline(label, labelFrom);
+    // The mark on the URL's side also covers the URL and its space.
+    if (urlFirst) openEnd = labelFrom;
+    else closeStart = labelFrom + label.length;
+  }
+  return cx.addElement(
+    marks(cx, "ExternalLink", pos, to, children, openEnd, closeStart),
+  );
 }
 
 function parseStrong(cx: InlineContext, pos: number): number {

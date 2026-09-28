@@ -95,12 +95,12 @@ const cardpotParser = parser.configure({
       Italic: "cm-italic",
       Code: "cm-inline-code",
       WikiLink: "cm-wikilink",
-      ExternalLink: "cm-wikilink",
+      ExternalLink: "cm-wikilink cm-external-link",
       ProjectLink: "cm-wikilink",
       Strong: "cm-bold",
       HashTag: "cm-hashtag",
       // No marks, so nothing is ever hidden: this only styles the URL.
-      BareUrl: "cm-wikilink",
+      BareUrl: "cm-wikilink cm-external-link",
       Blank: "cm-blank",
       // Whole-line node, not a delimiter pair: only the leading ">"
       // is an isMark child (see rules/quote.ts), so syntaxReveal

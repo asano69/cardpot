@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { cardpotSyntaxLanguage, Indent, isIndent } from ".";
+import {
+  cardpotSyntaxLanguage,
+  ExternalLinkMark,
+  Indent,
+  isIndent,
+} from ".";
 
 // The first line of every document is its title (see rules/title.ts), so most
 // tests below describe body notation only. These helpers place a throwaway
@@ -46,6 +51,37 @@ describe("Cardpot Lezer syntax", () => {
       "Document(Paragraph(HashTag,HashTag,HashTag))",
     );
     expect(tree("# →#notTag←")).toBe("Document(Paragraph)");
+  });
+
+  it("makes the mark on the URL's side cover the URL of a labelled link", () => {
+    const markRanges = (input: string) => {
+      const ranges: { from: number; to: number }[] = [];
+      cardpotSyntaxLanguage.parser.parse(TITLE_LINE + input).iterate({
+        enter(node) {
+          if (node.type === ExternalLinkMark) {
+            ranges.push({
+              from: node.from - TITLE_LINE.length,
+              to: node.to - TITLE_LINE.length,
+            });
+          }
+        },
+      });
+      return ranges;
+    };
+    // Only the label stays outside the marks.
+    expect(markRanges("[aaa https://e.com]")).toEqual([
+      { from: 0, to: 1 },
+      { from: 4, to: 19 },
+    ]);
+    expect(markRanges("[https://e.com aaa]")).toEqual([
+      { from: 0, to: 15 },
+      { from: 18, to: 19 },
+    ]);
+    // Without a label the URL itself is the visible text.
+    expect(markRanges("[https://e.com]")).toEqual([
+      { from: 0, to: 1 },
+      { from: 14, to: 15 },
+    ]);
   });
 
   it("parses a URL written directly in text", () => {

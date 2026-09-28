@@ -153,6 +153,11 @@ export const editorTheme = EditorView.theme({
     color: "light-dark(#0969da, #58a6ff)",
     cursor: "pointer",
   },
+  // Added on top of .cm-wikilink for external URLs (labelled, bracketed
+  // and bare), so they read differently from internal links.
+  ".cm-external-link": {
+    textDecoration: "underline",
+  },
 
   // HashTag and Blank are always visible syntax nodes. Their colors make the
   // tokens scannable without opting them into syntaxReveal's hidden-mark flow.
