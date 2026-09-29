@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -123,6 +124,127 @@ func TestFindCardBySlug_IgnoresDeletedCard(t *testing.T) {
 
 	if got, err := findCardBySlug(app, pot.Id, "Hello"); err != nil || got != nil {
 		t.Errorf("findCardBySlug = (%v, %v), want (nil, nil)", got, err)
+	}
+}
+
+func linkedTitles(cards []linkedCard) []string {
+	titles := make([]string, len(cards))
+	for i, c := range cards {
+		titles[i] = c.Title
+	}
+	return titles
+}
+
+func TestLinks1Hop_MergesOutgoingAndIncoming(t *testing.T) {
+	app := newLinksTestApp(t)
+	pot := createPot(t, app, "pot1")
+
+	center := createLinksTestCard(t, app, pot.Id, "Center", "center desc")
+	out := createLinksTestCard(t, app, pot.Id, "OutTarget", "out desc")
+	in := createLinksTestCard(t, app, pot.Id, "InSource", "in desc")
+
+	// Center links out to OutTarget and to a page that doesn't exist yet.
+	createLink(t, app, center.Id, pot.Id, "OutTarget")
+	createLink(t, app, center.Id, pot.Id, "Ghost")
+	// InSource links in to Center; OutTarget has a link of its own.
+	createLink(t, app, in.Id, pot.Id, "Center")
+	createLink(t, app, out.Id, pot.Id, "Other")
+
+	got, err := links1Hop(app, center)
+	if err != nil {
+		t.Fatalf("links1Hop: %v", err)
+	}
+
+	if want := []string{"InSource", "OutTarget"}; !slices.Equal(linkedTitles(got), want) {
+		t.Fatalf("titles = %v, want %v (Ghost must be excluded)", linkedTitles(got), want)
+	}
+	if got[1].Description != "out desc" || !slices.Equal(got[1].TargetTitleLc, []string{"other"}) {
+		t.Errorf("OutTarget = %+v, want its description and its own link target", got[1])
+	}
+	if got[0].TargetTitleLc == nil {
+		t.Error("TargetTitleLc must be an empty list, not nil")
+	}
+}
+
+func TestLinks1Hop_ExcludesDeletedCards(t *testing.T) {
+	app := newLinksTestApp(t)
+	pot := createPot(t, app, "pot1")
+
+	center := createLinksTestCard(t, app, pot.Id, "Center", "")
+	outTarget := createLinksTestCard(t, app, pot.Id, "OutTarget", "")
+	inSource := createLinksTestCard(t, app, pot.Id, "InSource", "")
+	createLink(t, app, center.Id, pot.Id, "OutTarget")
+	createLink(t, app, inSource.Id, pot.Id, "Center")
+	softDelete(t, app, outTarget)
+	softDelete(t, app, inSource)
+
+	got, err := links1Hop(app, center)
+	if err != nil {
+		t.Fatalf("links1Hop: %v", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("got %d linked cards, want 0 (both are deleted): %v", len(got), got)
+	}
+}
+
+func TestLinks1Hop_ExcludesSelfAndCardsOfOtherPots(t *testing.T) {
+	app := newLinksTestApp(t)
+	pot := createPot(t, app, "pot1")
+	otherPot := createPot(t, app, "pot2")
+
+	center := createLinksTestCard(t, app, pot.Id, "Center", "")
+	createLinksTestCard(t, app, otherPot.Id, "Same", "")
+	createLink(t, app, center.Id, pot.Id, "Center")
+	createLink(t, app, center.Id, pot.Id, "Same") // "Same" exists only in pot2
+
+	got, err := links1Hop(app, center)
+	if err != nil {
+		t.Fatalf("links1Hop: %v", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("got %d linked cards, want 0: %v", len(got), got)
+	}
+}
+
+func TestLinks2Hop_SharedTarget(t *testing.T) {
+	app := newLinksTestApp(t)
+	pot := createPot(t, app, "pot1")
+	otherPot := createPot(t, app, "pot2")
+
+	a := createLinksTestCard(t, app, pot.Id, "A", "")
+	b := createLinksTestCard(t, app, pot.Id, "B", "")
+	c := createLinksTestCard(t, app, pot.Id, "C", "")
+	d := createLinksTestCard(t, app, pot.Id, "D", "")
+	e := createLinksTestCard(t, app, otherPot.Id, "E", "")
+
+	// X does not exist as a card: sharing the target is enough.
+	createLink(t, app, a.Id, pot.Id, "X")
+	createLink(t, app, b.Id, pot.Id, "X")
+	createLink(t, app, c.Id, pot.Id, "Y")      // different target
+	createLink(t, app, d.Id, pot.Id, "X")      // deleted below
+	createLink(t, app, e.Id, otherPot.Id, "X") // same title, other pot
+	softDelete(t, app, d)
+
+	got, err := links2Hop(app, a)
+	if err != nil {
+		t.Fatalf("links2Hop: %v", err)
+	}
+	if want := []string{"B"}; !slices.Equal(linkedTitles(got), want) {
+		t.Errorf("titles = %v, want %v", linkedTitles(got), want)
+	}
+}
+
+func TestLinks2Hop_NoLinksMeansNoRelatedCards(t *testing.T) {
+	app := newLinksTestApp(t)
+	pot := createPot(t, app, "pot1")
+	a := createLinksTestCard(t, app, pot.Id, "A", "")
+
+	got, err := links2Hop(app, a)
+	if err != nil {
+		t.Fatalf("links2Hop: %v", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("got %d linked cards, want 0: %v", len(got), got)
 	}
 }
 

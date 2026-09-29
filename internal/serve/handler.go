@@ -3,7 +3,6 @@ package serve
 import (
 	"net/http"
 
-	"github.com/asano69/cardpot/internal/datalog"
 	"github.com/asano69/cardpot/internal/realtime"
 	"github.com/asano69/cardpot/internal/static"
 	"github.com/asano69/cardpot/internal/version"
@@ -66,16 +65,8 @@ func registerRoutes(e *core.ServeEvent) error {
 	// collections themselves do.
 	pages := e.Router.Group("/api/pages")
 	pages.Bind(apis.RequireSuperuserAuth())
-	// Test stage: card_links is loaded into Mangle once at startup and is not
-	// refreshed afterwards (restart the server to pick up new links).
-	engine, err := datalog.Load(e.App)
-	if err != nil {
-		return err
-	}
-	// Uses the same engine, so it has the same freshness limit as above.
-	admin.GET("/cards/{id}/related", cardQueryHandler(engine.Query))
-	pages.GET("/{pot}/{slug}/links1hop", relatedCardsHandler("links1hop", engine.Links1Hop))
-	pages.GET("/{pot}/{slug}/links2hop", relatedCardsHandler("links2hop", engine.Links2Hop))
+	pages.GET("/{pot}/{slug}/links1hop", relatedCardsHandler("links1hop", links1Hop))
+	pages.GET("/{pot}/{slug}/links2hop", relatedCardsHandler("links2hop", links2Hop))
 	// Checkpoint-based pull for the frontend's Dexie replication (see
 	// replication.go). {potId} is a pot's id, unlike {pot} above.
 	pages.GET("/{potId}/cards/pull", pullCardsHandler)
