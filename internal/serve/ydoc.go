@@ -30,6 +30,7 @@ package serve
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -38,6 +39,7 @@ import (
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/types"
 	"github.com/reearth/ygo/crdt"
 	yjsws "github.com/reearth/ygo/provider/websocket"
 
@@ -272,14 +274,30 @@ func (p *ydocPersistence) updatePreview(room, text string) error {
 		return nil // card may have been deleted concurrently -- skip
 	}
 
-	description := buildPreview(text)
+	description, err := json.Marshal(descriptionLines(text))
+	if err != nil {
+		return err
+	}
 	image := parser.Parse(text).FirstImageSrc()
-	if record.GetString("description") == description && record.GetString("image") == image {
+	// GetString on a JSON field returns its raw JSON text, so it is compared
+	// with the JSON text that is about to be stored.
+	if record.GetString("description") == string(description) && record.GetString("image") == image {
 		return nil // unchanged -- avoid a no-op write and its "updated" bump
 	}
-	record.Set("description", description)
+	record.Set("description", types.JSONRaw(description))
 	record.Set("image", image)
 	return p.app.Save(record)
+}
+
+// descriptionLines is the value of a card's "description" JSON field: the
+// preview text split into lines. An empty preview is an empty list (never
+// nil, which would be stored as JSON null).
+func descriptionLines(text string) []string {
+	preview := buildPreview(text)
+	if preview == "" {
+		return []string{}
+	}
+	return strings.Split(preview, "\n")
 }
 
 // descriptionMaxRunes caps how much text buildPreview keeps, counted

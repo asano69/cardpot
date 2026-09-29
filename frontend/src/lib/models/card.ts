@@ -45,7 +45,9 @@ export function asCardTitle(title: string): CardTitle {
 export interface CardRecord {
   id: string;
   title: CardTitle;
-  description: string;
+  // The preview text, one entry per line (see descriptionLines in
+  // internal/serve/ydoc.go). Null for a card that has none yet.
+  description: string[] | null;
   image: string;
   pot: string;
   position: number;

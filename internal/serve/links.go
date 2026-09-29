@@ -14,6 +14,7 @@ import (
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/types"
 
 	"github.com/asano69/cardpot/internal/slug"
 )
@@ -24,7 +25,9 @@ import (
 type linkedCard struct {
 	Title         string   `json:"title"`
 	TitleLc       string   `json:"titleLc"`
-	Description   string   `json:"description"`
+	// Raw JSON as stored in the "description" field (a list of lines), so it
+	// reaches the client exactly like the cards collection's own responses.
+	Description   types.JSONRaw `json:"description"`
 	Image         string   `json:"image"`
 	Pin           bool     `json:"pin"`
 	TargetTitleLc []string `json:"target_titleLc"`
@@ -175,7 +178,7 @@ func relatedCards(app core.App, card *core.Record, condition string) ([]linkedCa
 		result[i] = linkedCard{
 			Title:         record.GetString("title"),
 			TitleLc:       record.GetString("titleLc"),
-			Description:   record.GetString("description"),
+			Description:   types.JSONRaw(record.GetString("description")),
 			Image:         record.GetString("image"),
 			Pin:           record.GetBool("pin"),
 			TargetTitleLc: linkTargets,

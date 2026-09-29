@@ -31,7 +31,7 @@ func newLinksTestApp(t *testing.T) core.App {
 		&core.TextField{Name: "pot"},
 		&core.TextField{Name: "title"},
 		&core.TextField{Name: "titleLc"},
-		&core.TextField{Name: "description"},
+		&core.JSONField{Name: "description"},
 		&core.DateField{Name: "deleted"},
 	)
 	if err := app.Save(cards); err != nil {
@@ -76,13 +76,15 @@ func createLinksTestCard(t *testing.T, app core.App, pot, title, description str
 	record.Set("pot", pot)
 	record.Set("title", title)
 	record.Set("titleLc", slug.ToLowerKey(title))
-	record.Set("description", description)
+	// Stored the same way production stores it (see updatePreview).
+	record.Set("description", descriptionLines("T\n"+description))
 	if err := app.Save(record); err != nil {
 		t.Fatalf("save card: %v", err)
 	}
 	return record
 }
 
+func createLink(
 func createLink(t *testing.T, app core.App, source, targetPot, targetTitle string) {
 	t.Helper()
 	collection, err := app.FindCollectionByNameOrId("card_links")
@@ -158,7 +160,7 @@ func TestLinks1Hop_MergesOutgoingAndIncoming(t *testing.T) {
 	if want := []string{"InSource", "OutTarget"}; !slices.Equal(linkedTitles(got), want) {
 		t.Fatalf("titles = %v, want %v (Ghost must be excluded)", linkedTitles(got), want)
 	}
-	if got[1].Description != "out desc" || !slices.Equal(got[1].TargetTitleLc, []string{"other"}) {
+	if string(got[1].Description) != `["out desc"]` || !slices.Equal(got[1].TargetTitleLc, []string{"other"}) {
 		t.Errorf("OutTarget = %+v, want its description and its own link target", got[1])
 	}
 	if got[0].TargetTitleLc == nil {

@@ -66,7 +66,9 @@ export function CardItemView(props: CardItemViewProps) {
             when={props.card.image}
             fallback={
               <div class="description">
-                <CardDescription text={props.card.description} />
+                <CardDescription
+                  text={(props.card.description ?? []).join("\n")}
+                />
               </div>
             }
           >
