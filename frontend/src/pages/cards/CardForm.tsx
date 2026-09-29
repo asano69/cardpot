@@ -56,7 +56,10 @@ export default function CardForm() {
   // (keyed Show below) -- never stale across a card switch.
   const [contentSnapshot, setContentSnapshot] = createSignal<() => string>();
   const [queryOpen, setQueryOpen] = createSignal(false);
-  let urlSegment = params.cardSlug ?? "";
+  // The slug (decoded) of the card the editor currently reflects. Updated
+  // whenever a lookup settles or the address bar is rewritten, so it never
+  // drifts from what is actually open.
+  let urlSegment = params.cardSlug ? segmentToSlug(params.cardSlug) : "";
   // Identifies the latest slug lookup, so a slow response for a card the
   // user has already navigated away from is dropped.
   let openRequest = 0;
@@ -84,7 +87,11 @@ export default function CardForm() {
     // never matched for non-ASCII titles, so this guard silently fell
     // through on every keystroke instead of short-circuiting.
     const slug = segmentToSlug(params.cardSlug);
-    if (slug === urlSegment && cardId()) return;
+    if (slug === urlSegment && cardId()) {
+      // Back to the open card: cancel any lookup still in flight for another card.
+      openRequest++;
+      return;
+    }
     setDraftYdoc(undefined);
     setFocusLineOnOpen(undefined);
     // The card is looked up on the server, not in the store, so nothing
@@ -94,6 +101,7 @@ export default function CardForm() {
     openCardBySlug(potId, slug)
       .then((record) => {
         if (request !== openRequest) return;
+        urlSegment = slug;
         if (record) {
           setCardId(record.id);
           setDraft(undefined);
@@ -104,6 +112,10 @@ export default function CardForm() {
       })
       .catch((err) => {
         console.error("[card-form] failed to open card:", err);
+        if (request !== openRequest) return;
+        // Keep the address bar in step with what the editor actually shows.
+        const openTitle = cardsById[cardId() ?? ""]?.title;
+        if (openTitle) replaceUrl(titleToSegment(openTitle));
       });
   });
 
@@ -116,8 +128,7 @@ export default function CardForm() {
   // Router's signals (and this component's own reactivity) stay untouched;
   // only what's shown in the address bar changes.
   const replaceUrl = (segment: string) => {
-    if (segment === urlSegment) return;
-    urlSegment = segment;
+    urlSegment = segmentToSlug(segment);
     window.history.replaceState(
       window.history.state,
       "",
