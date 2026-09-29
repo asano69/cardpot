@@ -60,6 +60,14 @@ export interface CardRecord {
   updated: string;
 }
 
+// The fields a card grid item displays. Cards that come from the links1hop /
+// links2hop routes carry only these, so the grid view accepts this subset
+// instead of a full CardRecord.
+export type CardGridCard = Pick<
+  CardRecord,
+  "title" | "description" | "image" | "pin"
+>;
+
 // The title shown for a card in CardList's grid (see
 // pages/cards/CardItem.tsx). Branded so call sites can't
 // accidentally pass a card's genuine CardTitle directly where the
@@ -86,6 +94,8 @@ export function collapseGridTitleWhitespace(title: string): string {
 
 // Derives the grid title for `card`: its stored title with ASCII
 // whitespace runs collapsed (see collapseGridTitleWhitespace above).
-export function deriveCardGridTitle(card: CardRecord): CardGridTitle {
+export function deriveCardGridTitle(
+  card: Pick<CardRecord, "title">,
+): CardGridTitle {
   return collapseGridTitleWhitespace(card.title) as CardGridTitle;
 }

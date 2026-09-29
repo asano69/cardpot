@@ -4,12 +4,16 @@ import { A } from "@solidjs/router";
 import { useSortable } from "@dnd-kit/solid/sortable";
 import { registerCardElement } from "@/lib/stores/cardsStore";
 import { titleToSegment } from "@/lib/models/slugify";
-import { deriveCardGridTitle, type CardRecord } from "@/lib/models/card";
+import {
+  deriveCardGridTitle,
+  type CardGridCard,
+  type CardRecord,
+} from "@/lib/models/card";
 import { ripple } from "@/lib/directives/ripple";
 import { CardDescription } from "@/features/cardDescription";
 
 export interface CardItemViewProps {
-  card: CardRecord;
+  card: CardGridCard;
   // The parent pot's slug, used to build this card's URL (see
   // lib/cardSlug.ts). Cards only store their parent pot's
   // PocketBase id (see CardRecord's "pot" field), not its slug, so

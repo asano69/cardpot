@@ -18,11 +18,15 @@ import (
 	"github.com/asano69/cardpot/internal/slug"
 )
 
-// linkedCard is one entry in the links1hop and links2hop responses.
+// linkedCard is one entry in the links1hop and links2hop responses. It holds
+// everything the frontend's card grid needs to draw a card, so both routes
+// share this one shape.
 type linkedCard struct {
 	Title         string   `json:"title"`
 	TitleLc       string   `json:"titleLc"`
 	Description   string   `json:"description"`
+	Image         string   `json:"image"`
+	Pin           bool     `json:"pin"`
 	TargetTitleLc []string `json:"target_titleLc"`
 }
 
@@ -172,6 +176,8 @@ func relatedCards(app core.App, card *core.Record, condition string) ([]linkedCa
 			Title:         record.GetString("title"),
 			TitleLc:       record.GetString("titleLc"),
 			Description:   record.GetString("description"),
+			Image:         record.GetString("image"),
+			Pin:           record.GetBool("pin"),
 			TargetTitleLc: linkTargets,
 		}
 	}

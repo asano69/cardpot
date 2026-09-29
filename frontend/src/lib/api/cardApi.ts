@@ -1,7 +1,11 @@
 import { ClientResponseError } from "pocketbase";
 import pb from "./pb";
-import type { CardRecord, TitleCandidate } from "../models/card";
-import { titleToSlug } from "../models/slugify";
+import type {
+  CardGridCard,
+  CardRecord,
+  TitleCandidate,
+} from "../models/card";
+import { titleToSegment, titleToSlug } from "../models/slugify";
 
 // Response shape shared by createCard/updateCardTitle: the saved card,
 // plus a merge-alert target computed server-side (see findMergeTarget
@@ -90,6 +94,22 @@ export async function fetchRelatedCards(cardId: string): Promise<CardRecord[]> {
     { method: "GET", requestKey: null },
   );
   return res.cards;
+}
+
+// Fetches the live cards one (hop 1) or two (hop 2) wiki-link hops away from
+// the card titled `title` (see internal/serve/links.go). The pot is addressed
+// by its name and the card by the slug derived from its title.
+export async function fetchLinkedCards(
+  potName: string,
+  title: string,
+  hop: 1 | 2,
+): Promise<CardGridCard[]> {
+  const key = `links${hop}hop`;
+  const res = await pb.send<Record<string, CardGridCard[]>>(
+    `/api/pages/${potName}/${titleToSegment(title)}/${key}`,
+    { method: "GET", requestKey: null },
+  );
+  return res[key];
 }
 
 // Updates a card's own fields directly. The title is deliberately not
