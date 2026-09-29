@@ -80,6 +80,18 @@ export async function fetchCardBySlug(
   return titleToSlug(record.title) === slug ? record : undefined;
 }
 
+// Fetches the cards matched by the datalog query saved in a card's "query"
+// field (see internal/serve/links_datalog.go's cardQueryHandler). Rejects
+// with the server's message when the query is invalid. requestKey: null
+// keeps a refetch from auto-cancelling an earlier in-flight request.
+export async function fetchRelatedCards(cardId: string): Promise<CardRecord[]> {
+  const res = await pb.send<{ cards: CardRecord[] }>(
+    `/api/admin/cards/${cardId}/related`,
+    { method: "GET", requestKey: null },
+  );
+  return res.cards;
+}
+
 // Updates a card's own fields directly. The title is deliberately not
 // in this list: it only ever changes via updateCardTitle above.
 export async function updateCard(

@@ -8,10 +8,45 @@ import (
 	"errors"
 	"net/http"
 	"sort"
+	"strings"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
+
+// cardQueryHandler serves GET /api/admin/cards/{id}/related: it runs the
+// datalog query saved in the card's "query" field and answers with the live
+// cards it returns, highest position first (the order of the card grid). A
+// card without a query has no related cards.
+func cardQueryHandler(run func(text string) ([]string, error)) func(*core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		card, err := e.App.FindRecordById("cards", e.Request.PathValue("id"))
+		if err != nil {
+			return e.NotFoundError("card not found", err)
+		}
+
+		cards := []*core.Record{}
+		if text := strings.TrimSpace(card.GetString("query")); text != "" {
+			ids, err := run(text)
+			if err != nil {
+				return e.BadRequestError("the card's query failed: "+err.Error(), err)
+			}
+			found, err := e.App.FindRecordsByIds("cards", ids)
+			if err != nil {
+				return e.InternalServerError("find related cards", err)
+			}
+			for _, related := range found {
+				if !isDeleted(related) {
+					cards = append(cards, related)
+				}
+			}
+			sort.Slice(cards, func(i, j int) bool {
+				return cards[i].GetFloat("position") > cards[j].GetFloat("position")
+			})
+		}
+		return e.JSON(http.StatusOK, map[string]any{"cards": cards})
+	}
+}
 
 // relatedCardsHandler answers with the cards whose ids query returns for the
 // requested card, under the JSON key "key".

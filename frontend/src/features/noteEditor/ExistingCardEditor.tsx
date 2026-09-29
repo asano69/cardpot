@@ -6,6 +6,7 @@ import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 import { IndexeddbPersistence } from "y-indexeddb";
 import NoteEditor from "./index";
+import RelatedCards from "@/pages/cards/RelatedCards";
 import type { TitleCandidate } from "@/lib/models/card";
 
 export interface ExistingCardEditorProps {
@@ -74,6 +75,8 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
       onConfirmedTitle={confirm}
       existingTitle={props.existingTitle}
       focusLine={props.focusLine}
-    />
+    >
+      <RelatedCards cardId={props.cardId} potSlug={props.potSlug()} />
+    </NoteEditor>
   );
 }

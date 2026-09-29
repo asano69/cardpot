@@ -72,6 +72,8 @@ func registerRoutes(e *core.ServeEvent) error {
 	if err != nil {
 		return err
 	}
+	// Uses the same engine, so it has the same freshness limit as above.
+	admin.GET("/cards/{id}/related", cardQueryHandler(engine.Query))
 	pages.GET("/{pot}/{slug}/links1hop", relatedCardsHandler("links1hop", engine.Links1Hop))
 	pages.GET("/{pot}/{slug}/links2hop", relatedCardsHandler("links2hop", engine.Links2Hop))
 	// Checkpoint-based pull for the frontend's Dexie replication (see

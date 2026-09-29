@@ -2,7 +2,7 @@
    The editor is created once per mount: props are read during setup, and
    mountEditor is a ref callback, which the rule mistakes for a plain
    function used in JSX. */
-import { onCleanup } from "solid-js";
+import { onCleanup, type JSX } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, drawSelection } from "@codemirror/view";
@@ -49,6 +49,9 @@ export interface NoteEditorProps {
   // right into the body instead of leaving the caret wherever it was.
   focusLine?: number;
   onConfirmedTitle: (candidate: TitleCandidate) => void;
+  // Rendered below the editor, in the related-page-list section. The
+  // caller decides what goes there, so the editor needs no card id.
+  children?: JSX.Element;
 }
 
 // Rendering-only CodeMirror adapter. The caller owns the Y.Doc and every
@@ -241,11 +244,12 @@ export default function NoteEditor(props: NoteEditorProps) {
           mirrors Cosense's own .related-page-list (see
           styles/components.css), including its class names, since
           this will eventually host the backlinks panel described in
-          docs/wikilink-backlink-design.md. Empty for now -- both the
-          toolbar and the link list are unimplemented. */}
+          docs/wikilink-backlink-design.md. The toolbar is still
+          unimplemented; the links container shows whatever children the
+          caller passes. */}
       <section class="related-page-list">
         <div class="toolbar" />
-        <div class="links-container" />
+        <div class="links-container">{props.children}</div>
       </section>
     </>
   );

@@ -1,3 +1,4 @@
+// frontend/src/pages/cards/CardItem.tsx
 import { onCleanup, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { useSortable } from "@dnd-kit/solid/sortable";
@@ -7,57 +8,37 @@ import { deriveCardGridTitle, type CardRecord } from "@/lib/models/card";
 import { ripple } from "@/lib/directives/ripple";
 import { CardDescription } from "@/features/cardDescription";
 
-export interface CardItemProps {
+export interface CardItemViewProps {
   card: CardRecord;
-  // This card's position in the currently rendered grid order. Fed to
-  // useSortable below so dnd-kit can report initialIndex/index on drop
-  // (see CardList.tsx's handleDragEnd).
-  index: number;
   // The parent pot's slug, used to build this card's URL (see
   // lib/cardSlug.ts). Cards only store their parent pot's
   // PocketBase id (see CardRecord's "pot" field), not its slug, so
   // the slug is passed down from CardList instead.
   potSlug: string;
+  // Ref callback for the <li>, so a wrapper can make it sortable.
+  ref?: (el: HTMLLIElement) => void;
+  // Fades the card while it is being dragged.
+  dragging?: boolean;
 }
 
-// A single card in CardList's card grid, styled to match Cosense's
+// The look of a single card in a card grid, styled to match Cosense's
 // own page-list card (see .card-grid-item in styles/components.css).
-// Both the title and the description text are precomputed server-side (see
-// internal/serve/ydoc.go's buildTitleAndPreview) from the card's live
-// Yjs body, not parsed here.
-export default function CardItem(props: CardItemProps) {
-  // Makes this card draggable and a drop target within the grid.
-  // Getter syntax (not a plain destructure) is required so the hook
-  // re-reads id/index reactively instead of only once at setup -- see
-  // dnd-kit's Solid docs.
-  const { ref, isDragging } = useSortable({
-    get id() {
-      return props.card.id;
-    },
-    get index() {
-      return props.index;
-    },
-  });
-
-  // Registers this card's element so a reorder -- local or from
-  // another user -- can animate it into its new grid slot instead of
-  // snapping there instantly (see withCardsFlip in lib/cardFlip.ts).
-  const setRef = (el: HTMLLIElement) => {
-    ref(el);
-    onCleanup(registerCardElement(props.card.id, el));
-  };
-
+// Has no drag behavior of its own, so it also works outside a
+// DragDropProvider (see RelatedCards). Both the title and the description
+// text are precomputed server-side (see internal/serve/ydoc.go's
+// buildTitleAndPreview) from the card's live Yjs body, not parsed here.
+export function CardItemView(props: CardItemViewProps) {
   return (
     // The <li> carries the grid item's aspect-ratio; the whole card
     // links to its edit page (CardForm doubles as both the create and
     // edit form) instead of only some inner element, so clicking
     // anywhere on the card opens it.
     <li
-      // setRef is a ref callback, not a reactive value.
+      // ref is a callback supplied by the wrapper, not a reactive value.
       // eslint-disable-next-line solid/reactivity
-      ref={setRef}
+      ref={props.ref}
       class="card-grid-item"
-      classList={{ "opacity-40": isDragging() }}
+      classList={{ "opacity-40": props.dragging }}
     >
       <A
         ref={ripple}
@@ -102,5 +83,47 @@ export default function CardItem(props: CardItemProps) {
         <div class="hover" aria-hidden="true" />
       </A>
     </li>
+  );
+}
+
+export interface CardItemProps {
+  card: CardRecord;
+  // This card's position in the currently rendered grid order. Fed to
+  // useSortable below so dnd-kit can report initialIndex/index on drop
+  // (see CardList.tsx's handleDragEnd).
+  index: number;
+  potSlug: string;
+}
+
+// A card in CardList's sortable grid: CardItemView plus drag-and-drop.
+export default function CardItem(props: CardItemProps) {
+  // Makes this card draggable and a drop target within the grid.
+  // Getter syntax (not a plain destructure) is required so the hook
+  // re-reads id/index reactively instead of only once at setup -- see
+  // dnd-kit's Solid docs.
+  const { ref, isDragging } = useSortable({
+    get id() {
+      return props.card.id;
+    },
+    get index() {
+      return props.index;
+    },
+  });
+
+  // Registers this card's element so a reorder -- local or from
+  // another user -- can animate it into its new grid slot instead of
+  // snapping there instantly (see withCardsFlip in lib/cardFlip.ts).
+  const setRef = (el: HTMLLIElement) => {
+    ref(el);
+    onCleanup(registerCardElement(props.card.id, el));
+  };
+
+  return (
+    <CardItemView
+      card={props.card}
+      potSlug={props.potSlug}
+      ref={setRef}
+      dragging={isDragging()}
+    />
   );
 }

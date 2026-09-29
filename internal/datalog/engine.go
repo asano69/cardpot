@@ -4,6 +4,7 @@ package datalog
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -82,25 +83,47 @@ func (e *Engine) Links1Hop(cardID string) ([]string, error) {
 
 // related returns B for every fact pred(cardID, B).
 func (e *Engine) related(pred, cardID string) ([]string, error) {
+	// Built as text and parsed, the same way datalog-poc does. Card ids are
+	// [a-z0-9]{15}, so quoting them with %q cannot break the query.
+	return e.Query(fmt.Sprintf("%s(%q, B)", pred, cardID))
+}
+
+// Query evaluates a single-atom query such as `links1hop("abc", B)` and
+// returns, for every result, the value of the query's first variable
+// argument. The result values are expected to be card ids.
+func (e *Engine) Query(text string) ([]string, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	// Built as text and parsed, the same way datalog-poc does. Card ids are
-	// [a-z0-9]{15}, so quoting them with %q cannot break the query.
-	query, err := e.interp.ParseQuery(fmt.Sprintf("%s(%q, B)", pred, cardID))
+	query, err := e.interp.ParseQuery(text)
 	if err != nil {
-		return nil, fmt.Errorf("parse %s query: %w", pred, err)
+		return nil, fmt.Errorf("parse query: %w", err)
 	}
+	varIndex := -1
+	for i, arg := range query.Args {
+		if _, ok := arg.(ast.Variable); ok {
+			varIndex = i
+			break
+		}
+	}
+	if varIndex < 0 {
+		return nil, errors.New(`query needs a variable argument, e.g. links1hop("<card id>", B)`)
+	}
+
 	facts, err := e.interp.Query(query)
 	if err != nil {
-		return nil, fmt.Errorf("query %s: %w", pred, err)
+		return nil, fmt.Errorf("run query: %w", err)
 	}
-	slog.Info("datalog: "+pred+" query", "card", cardID, "results", len(facts))
+	slog.Info("datalog: query", "query", text, "results", len(facts))
 	ids := make([]string, 0, len(facts))
 	for _, fact := range facts {
-		id, err := fact.Args[1].(ast.Constant).StringValue()
+		constant, ok := fact.Args[varIndex].(ast.Constant)
+		if !ok {
+			return nil, errors.New("query result is not a constant")
+		}
+		id, err := constant.StringValue()
 		if err != nil {
-			return nil, fmt.Errorf("read %s result: %w", pred, err)
+			return nil, fmt.Errorf("read query result: %w", err)
 		}
 		ids = append(ids, id)
 	}
