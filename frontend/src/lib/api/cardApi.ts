@@ -84,7 +84,7 @@ export async function fetchCardBySlug(
 // in this list: it only ever changes via updateCardTitle above.
 export async function updateCard(
   id: string,
-  changes: Partial<Pick<CardRecord, "pin" | "position" | "deleted">>,
+  changes: Partial<Pick<CardRecord, "pin" | "position" | "deleted" | "query">>,
 ): Promise<CardRecord> {
   return await pb.collection("cards").update<CardRecord>(id, changes);
 }

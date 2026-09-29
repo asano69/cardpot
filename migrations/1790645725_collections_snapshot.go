@@ -1049,6 +1049,21 @@ func init() {
 						"required": false,
 						"system": false,
 						"type": "date"
+					},
+					{
+						"autogeneratePattern": "",
+						"help": "",
+						"hidden": false,
+						"id": "text616412651",
+						"max": 0,
+						"min": 0,
+						"name": "query",
+						"pattern": "",
+						"presentable": false,
+						"primaryKey": false,
+						"required": false,
+						"system": false,
+						"type": "text"
 					}
 				],
 				"id": "pbc_2527524235",

@@ -24,6 +24,7 @@ export { default as CirclePlus } from "lucide-solid/icons/circle-plus";
 export { default as CircleCheckBig } from "lucide-solid/icons/circle-check-big";
 export { default as Circle } from "lucide-solid/icons/circle";
 export { default as Trash2 } from "lucide-solid/icons/trash-2";
+export { default as Funnel } from "lucide-solid/icons/funnel";
 export { default as Pin } from "lucide-solid/icons/pin";
 export { default as PinOff } from "lucide-solid/icons/pin-off";
 export { default as GripVertical } from "lucide-solid/icons/grip-vertical";

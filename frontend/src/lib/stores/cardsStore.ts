@@ -467,6 +467,12 @@ export async function setCardPinned(
   mergeCards([await updateCard(id, changes)]);
 }
 
+// Saves a card's datalog query text. Rejects on failure, leaving the
+// store unchanged.
+export async function setCardQuery(id: string, query: string): Promise<void> {
+  mergeCards([await updateCard(id, { query })]);
+}
+
 // Soft-deletes a card and drops it from the store right away, instead of
 // waiting for the realtime echo of the update.
 export async function removeCard(id: string): Promise<void> {

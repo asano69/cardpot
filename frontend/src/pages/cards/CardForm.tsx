@@ -7,12 +7,14 @@ import ExistingCardEditor from "@/features/noteEditor/ExistingCardEditor";
 import { getSyntaxTreeJson } from "@/features/noteEditor/debug";
 import Loading from "@/components/Loading";
 import ActionsMenu from "@/components/menus/ActionsMenu";
-import { Trash2, Pin, PinOff, Wrench } from "@/lib/icons";
+import QueryDialog from "@/components/dialogs/QueryDialog";
+import { Trash2, Pin, PinOff, Wrench, Funnel } from "@/lib/icons";
 import {
   cardsById,
   openCardBySlug,
   removeCard,
   setCardPinned,
+  setCardQuery,
 } from "@/lib/stores/cardsStore";
 import {
   titleToSegment,
@@ -53,6 +55,7 @@ export default function CardForm() {
   // on every card open, since ExistingCardEditor remounts per card
   // (keyed Show below) -- never stale across a card switch.
   const [contentSnapshot, setContentSnapshot] = createSignal<() => string>();
+  const [queryOpen, setQueryOpen] = createSignal(false);
   let urlSegment = params.cardSlug ?? "";
   // Identifies the latest slug lookup, so a slow response for a card the
   // user has already navigated away from is dropped.
@@ -195,6 +198,12 @@ export default function CardForm() {
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
+  const query = () => cardsById[cardId() ?? ""]?.query ?? "";
+  const saveQuery = async (value: string) => {
+    const id = cardId();
+    if (id) await setCardQuery(id, value);
+  };
+
   const pinned = () => cardsById[cardId() ?? ""]?.pin ?? false;
   const togglePin = async () => {
     const id = cardId();
@@ -304,6 +313,15 @@ export default function CardForm() {
           >
             <Trash2 size={20} />
           </button>
+          <button
+            type="button"
+            aria-label="Edit query"
+            class="tool-btn"
+            disabled={!cardId()}
+            onClick={() => setQueryOpen(true)}
+          >
+            <Funnel size={20} />
+          </button>
           {/* Debug-only dropdown: exports either the card's raw Yjs
               text (handleShowRawText) or its parsed syntax tree
               (handleDumpSyntaxTree) as a blob in a new tab, replacing
@@ -324,6 +342,12 @@ export default function CardForm() {
                 onSelect: handleDumpSyntaxTree,
               },
             ]}
+          />
+          <QueryDialog
+            open={queryOpen()}
+            onOpenChange={setQueryOpen}
+            initialValue={query()}
+            onSubmit={saveQuery}
           />
         </div>
       </div>

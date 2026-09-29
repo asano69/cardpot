@@ -50,6 +50,9 @@ export interface CardRecord {
   pot: string;
   position: number;
   pin: boolean;
+  // Datalog query text (not evaluated yet). Optional because cards cached
+  // in Dexie before this field existed do not have it.
+  query?: string;
   // Soft-delete timestamp; an empty string while the card is live. The
   // frontend never lists or opens a card that has one.
   deleted: string;
