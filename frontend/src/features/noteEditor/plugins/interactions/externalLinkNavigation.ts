@@ -16,7 +16,7 @@ import { decideBracketNodeType } from "../../parser/cardpot/rules/bracket";
 // this handler.
 // Shared with wikiLinkNavigation.ts -- both node types render through
 // the same revealStyle class (see parser/cardpot/index.ts).
-const EXTERNAL_LINK_CLASS = "cm-wikilink";
+const EXTERNAL_LINK_CLASS = "page-link";
 
 export function externalLinkNavigation() {
   return EditorView.domEventHandlers({

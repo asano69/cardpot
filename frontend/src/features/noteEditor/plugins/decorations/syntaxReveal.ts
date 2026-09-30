@@ -23,14 +23,13 @@ function strongLevel(view: EditorView, bold: SyntaxNodeRef): number {
   return Math.min(Math.max(stars, 1), MAX_STRONG_LEVEL);
 }
 
-// The mark decoration styling a revealable node's whole range. Bold becomes a
-// <strong> element carrying its level class; every other node just gets its
-// revealStyle class.
+// The mark decoration styling a revealable node's whole range. Bold also
+// carries "level level-N" (like Cosense's "deco-* level level-2"); every
+// other node just gets its revealStyle class.
 function revealMark(view: EditorView, node: SyntaxNodeRef, styleClass: string) {
   if (node.type !== Bold) return Decoration.mark({ class: styleClass });
   return Decoration.mark({
-    tagName: "strong",
-    class: `${styleClass} level-${strongLevel(view, node)}`,
+    class: `${styleClass} level level-${strongLevel(view, node)}`,
   });
 }
 

@@ -28,7 +28,7 @@ function buildDecorations(view: EditorView): DecorationSet {
       for (let n = startLine; n <= endLine; n++) {
         const line = view.state.doc.line(n);
         decorations.push(
-          Decoration.line({ class: "cm-code-block-line" }).range(line.from),
+          Decoration.line({ class: "code-block" }).range(line.from),
         );
       }
     },

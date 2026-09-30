@@ -16,7 +16,7 @@ import { titleToSegment } from "@/lib/models/slugify";
 // index.ts's revealStyle.add config). Used below to confirm a click
 // actually landed on the visible link text, not just on a document
 // position that happens to fall inside the node's range.
-const WIKILINK_CLASS = "cm-wikilink";
+const WIKILINK_CLASS = "page-link";
 
 export function wikiLinkNavigation(
   potSlug: () => string,

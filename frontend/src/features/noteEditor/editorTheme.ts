@@ -40,7 +40,7 @@ export const editorTheme = EditorView.theme({
     // comment for the full rationale.
     wordBreak: "break-all",
   },
-  ".cm-line.cm-title-line": {
+  ".cm-line.line-title": {
     fontFamily: "var(--font-editor)",
     fontSize: "1.73rem",
     color: "var(--color-line-title)",
@@ -64,10 +64,10 @@ export const editorTheme = EditorView.theme({
   },
   // A code line hangs its wrapped rows with a transparent border
   // instead of a margin: the border sits inside the line box, so the
-  // line's background (see ".cm-line.cm-code-block-line" below) still
+  // line's background (see ".cm-line.code-block" below) still
   // fills it, while a margin would leave a gap. The negative
   // text-indent above still cancels it for the first row.
-  ".cm-line.indent.cm-code-block-line": {
+  ".cm-line.indent.code-block": {
     marginLeft: "0",
     borderLeft: "var(--indent-width, 0px) solid transparent",
   },
@@ -101,33 +101,36 @@ export const editorTheme = EditorView.theme({
     backgroundColor: "var(--color-line-text)",
   },
 
-  ".cm-bold": {
+  // "[[x]]" (Strong node).
+  ".strong": {
     fontWeight: "bold",
   },
 
   // Bold notation ("[* x]", "[** x]", ...): the number of asterisks picks
   // the level class (see syntaxReveal.ts's strongLevel). Level 1 is plain
-  // bold; higher levels also grow the font and the line height.
-  strong: {
+  // bold; higher levels also grow the font and the line height. The "*" in
+  // the class name is escaped for the CSS selector.
+  ".deco-\\*": {
     fontWeight: "bold",
   },
-  "strong.level-2": { fontSize: "1.2em", lineHeight: "28px" },
-  "strong.level-3": { fontSize: "1.44em", lineHeight: "35px" },
-  "strong.level-4": { fontSize: "1.73em", lineHeight: "42px" },
-  "strong.level-5": { fontSize: "2.07em", lineHeight: "49px" },
-  "strong.level-6": { fontSize: "2.49em", lineHeight: "56px" },
-  "strong.level-7": { fontSize: "3em", lineHeight: "63px" },
-  "strong.level-8": { fontSize: "3.58em", lineHeight: "77px" },
-  "strong.level-9": { fontSize: "4.3em", lineHeight: "91px" },
-  "strong.level-10": { fontSize: "5.16em", lineHeight: "105px" },
+  ".deco-\\*.level-2": { fontSize: "1.2em", lineHeight: "28px" },
+  ".deco-\\*.level-3": { fontSize: "1.44em", lineHeight: "35px" },
+  ".deco-\\*.level-4": { fontSize: "1.73em", lineHeight: "42px" },
+  ".deco-\\*.level-5": { fontSize: "2.07em", lineHeight: "49px" },
+  ".deco-\\*.level-6": { fontSize: "2.49em", lineHeight: "56px" },
+  ".deco-\\*.level-7": { fontSize: "3em", lineHeight: "63px" },
+  ".deco-\\*.level-8": { fontSize: "3.58em", lineHeight: "77px" },
+  ".deco-\\*.level-9": { fontSize: "4.3em", lineHeight: "91px" },
+  ".deco-\\*.level-10": { fontSize: "5.16em", lineHeight: "105px" },
 
-  ".cm-italic": {
+  // Italic notation ("[/ x]"); "/" is escaped for the CSS selector.
+  ".deco-\\/": {
     fontStyle: "italic",
   },
 
   // Inline code span (see parser/cardpot's Code node): a monospace
   // font plus GitHub's own subtle code-background tint.
-  ".cm-inline-code": {
+  ".code.highlight": {
     fontFamily: "var(--font-mono)",
     backgroundColor:
       "light-dark(rgba(175, 184, 193, 0.2), rgba(110, 118, 129, 0.4))",
@@ -139,7 +142,7 @@ export const editorTheme = EditorView.theme({
   // spans gets this class via Decoration.line, which fills the
   // line's full width -- including blank lines and the gap past the
   // last character -- unlike an inline Decoration.mark.
-  ".cm-line.cm-code-block-line": {
+  ".cm-line.code-block": {
     fontFamily: "var(--font-mono)",
     backgroundColor:
       "light-dark(rgba(175, 184, 193, 0.2), rgba(110, 118, 129, 0.4))",
@@ -149,7 +152,7 @@ export const editorTheme = EditorView.theme({
   // wikiLinkNavigation.ts): styled like the old ProseMirror editor's
   // autolinks (see components.css's ".ProseMirror a") so it reads as
   // clickable.
-  ".cm-wikilink": {
+  ".page-link": {
     color: "light-dark(#0969da, #58a6ff)",
     cursor: "pointer",
   },
@@ -159,13 +162,10 @@ export const editorTheme = EditorView.theme({
     textDecoration: "underline",
   },
 
-  // HashTag and Blank are always visible syntax nodes. Their colors make the
-  // tokens scannable without opting them into syntaxReveal's hidden-mark flow.
-  ".cm-hashtag": {
-    color: "light-dark(#8250df, #d2a8ff)",
-    cursor: "pointer",
-  },
-  ".cm-blank": {
+  // HashTag shares ".page-link" above. Blank is an always visible syntax
+  // node: its background makes it scannable without opting it into
+  // syntaxReveal's hidden-mark flow.
+  ".blank": {
     backgroundColor:
       "light-dark(rgba(234, 179, 8, 0.18), rgba(250, 204, 21, 0.24))",
     borderRadius: "3px",
@@ -177,7 +177,7 @@ export const editorTheme = EditorView.theme({
   // is a plain Decoration.mark over the whole line's range, not a
   // full-width line decoration like codeBlockLines.ts's code-block
   // background).
-  ".cm-quote": {
+  ".quote": {
     fontStyle: "italic",
     color: "var(--color-line-text)",
   },

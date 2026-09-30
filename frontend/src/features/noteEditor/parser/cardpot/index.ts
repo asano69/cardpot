@@ -89,31 +89,33 @@ const cardpotParser = parser.configure({
   ],
   props: [
     revealStyle.add({
-      // Rendered as a <strong> element with a level class (see
-      // syntaxReveal.ts), so this class only marks the node as revealable.
-      Bold: "cm-strong",
-      Italic: "cm-italic",
-      Code: "cm-inline-code",
-      WikiLink: "cm-wikilink",
-      ExternalLink: "cm-wikilink cm-external-link",
-      ProjectLink: "cm-wikilink",
-      Strong: "cm-bold",
-      HashTag: "cm-hashtag",
+      // Bold also gets "level level-N" appended (see syntaxReveal.ts), so
+      // this class only marks the node as revealable. Class names follow
+      // Cosense's own DOM: "deco-*" is "[* x]", "deco-/" is "[/ x]" and
+      // "strong" is "[[x]]".
+      Bold: "deco-*",
+      Italic: "deco-/",
+      Code: "code highlight",
+      WikiLink: "page-link",
+      ExternalLink: "page-link cm-external-link",
+      ProjectLink: "page-link",
+      Strong: "strong",
+      HashTag: "page-link",
       // No marks, so nothing is ever hidden: this only styles the URL.
-      BareUrl: "cm-wikilink cm-external-link",
-      Blank: "cm-blank",
+      BareUrl: "page-link cm-external-link",
+      Blank: "blank",
       // Whole-line node, not a delimiter pair: only the leading ">"
       // is an isMark child (see rules/quote.ts), so syntaxReveal
       // hides just that prefix while the cursor is elsewhere on the
       // line -- the same live-preview behavior as every other
       // revealable node here.
-      Quote: "cm-quote",
+      Quote: "quote",
       // Image/LinkedImage have no mark children of their own (see
       // rules/bracket.ts), so this class only ever shows while the
       // cursor is actively editing the raw "[url]" text -- see the
       // hideContent registration below for what happens otherwise.
-      Image: "cm-image-syntax",
-      LinkedImage: "cm-image-syntax",
+      Image: "image",
+      LinkedImage: "image",
     }),
     isMark.add({
       BoldMark: true,

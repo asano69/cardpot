@@ -7,16 +7,17 @@ import {
 } from "@codemirror/view";
 
 // The document's first line doubles as the card's title (see
-// titleCandidatePlugin.ts), the same way the old ProseMirror editor
+// the same way the old ProseMirror editor
 // forced its first block into an <h1> (see forceFirstHeadingPlugin.ts
 // under prose-mirror.old/). CodeMirror has no per-line "node type" to
 // hang a CSS rule off of, so this tags line 1 with a plain class
-// instead -- see editorTheme.ts's ".cm-line.cm-title-line" rule for
-// the actual title styling (font size, color, margin).
+// instead -- see editorTheme.ts's ".cm-line.line-title" rule for
+// the actual title styling (font size, color, margin). The class name
+// follows Cosense's own title line class.
 function buildDecoration(view: EditorView): DecorationSet {
   const line = view.state.doc.line(1);
   return Decoration.set([
-    Decoration.line({ class: "cm-title-line" }).range(line.from),
+    Decoration.line({ class: "line-title" }).range(line.from),
   ]);
 }
 
@@ -39,7 +40,7 @@ export const editorTheme = EditorView.theme({
   ".cm-scroller": {
     fontFamily: "var(--font-sans)",
   },
-  ".cm-line.cm-title-line": {
+  ".cm-line.line-title": {
     fontFamily: "var(--font-sans)",
     fontSize: "1.73rem",
     color: "var(--color-line-title)",
