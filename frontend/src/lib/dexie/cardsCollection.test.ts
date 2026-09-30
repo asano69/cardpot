@@ -4,14 +4,7 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
 import type { CardRecord } from "../models/card";
-import {
-  countCards,
-  deleteFromCache,
-  queryCardsPage,
-  readCheckpoint,
-  writeCache,
-  writeCheckpoint,
-} from "./cardsCollection";
+import { cardsReplica, countCards, queryCardsPage } from "./cardsCollection";
 
 function card(
   id: string,
@@ -35,7 +28,7 @@ function card(
 
 describe("Dexie cards cache", () => {
   it("writes, pages, counts, and deletes cards", async () => {
-    await writeCache("pot-1", [
+    await cardsReplica.put([
       card("a", "pot-1", 1000),
       card("b", "pot-1", 2000),
     ]);
@@ -47,7 +40,7 @@ describe("Dexie cards cache", () => {
       "a",
     ]);
 
-    await deleteFromCache("pot-1", "a");
+    await cardsReplica.remove("a");
     expect(await countCards("pot-1")).toBe(1);
     expect((await queryCardsPage("pot-1", 0, 10)).map((c) => c.id)).toEqual([
       "b",
@@ -55,7 +48,7 @@ describe("Dexie cards cache", () => {
   });
 
   it("sorts pinned cards before unpinned ones regardless of position", async () => {
-    await writeCache("pot-2", [
+    await cardsReplica.put([
       card("x", "pot-2", 5000, false),
       card("y", "pot-2", 100, true),
     ]);
@@ -78,7 +71,7 @@ describe("Dexie cards cache", () => {
     const unpinned = Array.from({ length: 5 }, (_, i) =>
       card(`unp-${i}`, "pot-3", i, false),
     );
-    await writeCache("pot-3", [...pinned, ...unpinned]);
+    await cardsReplica.put([...pinned, ...unpinned]);
 
     const pageSize = 3;
     const pages: string[][] = [];
@@ -108,27 +101,11 @@ describe("Dexie cards cache", () => {
       card("u1", "pot-4", 100, false),
       card("u2", "pot-4", 200, false),
     ];
-    await writeCache("pot-4", [...pinned, ...unpinned]);
+    await cardsReplica.put([...pinned, ...unpinned]);
 
     // A page starting inside the pinned range and ending inside the
     // unpinned one -- the exact split queryCardsPage must get right.
     const page = await queryCardsPage("pot-4", 1, 2);
     expect(page.map((c) => c.id)).toEqual(["p1", "u2"]);
-  });
-
-  it("persists and overwrites a pot's checkpoint", async () => {
-    expect(await readCheckpoint("pot-3")).toBeNull();
-
-    await writeCheckpoint("pot-3", { updatedAt: "t1", id: "c1" });
-    expect(await readCheckpoint("pot-3")).toEqual({
-      updatedAt: "t1",
-      id: "c1",
-    });
-
-    await writeCheckpoint("pot-3", { updatedAt: "t2", id: "c2" });
-    expect(await readCheckpoint("pot-3")).toEqual({
-      updatedAt: "t2",
-      id: "c2",
-    });
   });
 });

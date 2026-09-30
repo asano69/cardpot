@@ -1,14 +1,21 @@
 import pb from "./pb";
-import type { CardRecord } from "../models/card";
 
-// Stage 1 of docs/signaldb-offline-sync.md: a checkpoint-based pull
-// client for /api/pages/{potId}/cards/pull (see
-// internal/serve/replication.go). Soft-deleted cards are returned like
-// any other changed card -- callers must treat them as delete events,
-// not filter them out (see pullCardsHandler's own comment).
+// Client of the checkpoint-based pull protocol served by
+// /api/pages/{potId}/{collection}/pull (see internal/serve/replication.go),
+// shared by every replicated collection (see internal/replica). Soft-deleted
+// records are returned like any other changed record -- callers must treat
+// them as delete events, not filter them out (see pullHandler's own comment).
 
-// Mirrors internal/serve/replication.go's cardCheckpoint: both fields
-// are needed because several cards can share one "updated" value -- the
+// The fields the protocol relies on, common to every replicated collection.
+// "deleted" is an empty string while the record is live.
+export interface ReplicaRecord {
+  id: string;
+  updated: string;
+  deleted: string;
+}
+
+// Mirrors internal/serve/replication.go's checkpoint: both fields
+// are needed because several records can share one "updated" value -- the
 // id breaks that tie.
 export interface Checkpoint {
   updatedAt: string;
@@ -20,42 +27,43 @@ export interface Checkpoint {
 // means "this was the last one".
 export const PULL_LIMIT = 1000;
 
-interface PullResponse {
-  records: CardRecord[];
+interface PullResponse<T> {
+  records: T[];
 }
 
 // Fetches one page of the pull protocol, starting just after `after`
 // (or from the beginning when null).
-async function pullPage(
+async function pullPage<T>(
+  collection: string,
   potId: string,
   after: Checkpoint | null,
-): Promise<CardRecord[]> {
+): Promise<T[]> {
   const query: Record<string, string | number> = { limit: PULL_LIMIT };
   if (after) {
     query.updatedAt = after.updatedAt;
     query.id = after.id;
   }
-  const res = await pb.send<PullResponse>(`/api/pages/${potId}/cards/pull`, {
-    method: "GET",
-    query,
-  });
+  const res = await pb.send<PullResponse<T>>(
+    `/api/pages/${potId}/${collection}/pull`,
+    { method: "GET", query },
+  );
   return res.records;
 }
 
-// Pulls every card that changed after `after`, paging through the
-// server's checkpoint protocol until a short page signals the end
-// (see pullCardsHandler's own doc comment). Returns every record
-// pulled, plus the checkpoint to resume from next time -- `after`
-// itself when nothing at all was pulled.
-export async function pullAll(
+// Pulls every record of `collection` in a pot that changed after `after`,
+// paging through the server's checkpoint protocol until a short page signals
+// the end. Returns every record pulled, plus the checkpoint to resume from
+// next time -- `after` itself when nothing at all was pulled.
+export async function pullAll<T extends ReplicaRecord>(
+  collection: string,
   potId: string,
   after: Checkpoint | null,
-): Promise<{ records: CardRecord[]; checkpoint: Checkpoint | null }> {
-  const records: CardRecord[] = [];
+): Promise<{ records: T[]; checkpoint: Checkpoint | null }> {
+  const records: T[] = [];
   let checkpoint = after;
 
   for (;;) {
-    const page = await pullPage(potId, checkpoint);
+    const page = await pullPage<T>(collection, potId, checkpoint);
     records.push(...page);
     if (page.length === 0) break;
 

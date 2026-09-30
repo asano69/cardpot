@@ -43,7 +43,7 @@ func newTestHub(app core.App, publishErr error) (*Hub, *[]published) {
 		got = append(got, published{channel, data})
 		return publishErr
 	}}
-	hub.BindCardHooks(app)
+	hub.BindHooks(app)
 	return hub, &got
 }
 
@@ -94,8 +94,8 @@ func TestCardHooks_PublishCreateUpdateDeleteToCardsChannel(t *testing.T) {
 		t.Fatalf("got %d publications, want %d", len(*got), len(want))
 	}
 	for i, p := range *got {
-		if p.channel != CardsChannel {
-			t.Errorf("publication %d channel = %q, want %q", i, p.channel, CardsChannel)
+		if p.channel != "cards" {
+			t.Errorf("publication %d channel = %q, want %q", i, p.channel, "cards")
 		}
 		action, id := decode(t, p)
 		if action != want[i] || id != card.Id {
@@ -109,6 +109,26 @@ func TestCardHooks_PublishFailureDoesNotFailTheSave(t *testing.T) {
 	newTestHub(app, errors.New("boom"))
 
 	saveCard(t, app, "pot1", "A") // fails the test if the save returns an error
+}
+
+func TestHooks_PublishEachCollectionToItsOwnChannel(t *testing.T) {
+	app := newTestApp(t)
+	_, got := newTestHub(app, nil)
+
+	links := core.NewBaseCollection("card_links")
+	links.Fields.Add(&core.TextField{Name: "target_pot"})
+	if err := app.Save(links); err != nil {
+		t.Fatalf("create collection: %v", err)
+	}
+	record := core.NewRecord(links)
+	record.Set("target_pot", "pot1")
+	if err := app.Save(record); err != nil {
+		t.Fatalf("save record: %v", err)
+	}
+
+	if len(*got) != 1 || (*got)[0].channel != "card_links" {
+		t.Errorf("publications = %v, want one on the card_links channel", *got)
+	}
 }
 
 func TestCardHooks_IgnoreOtherCollections(t *testing.T) {

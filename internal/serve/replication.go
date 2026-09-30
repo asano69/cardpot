@@ -1,7 +1,8 @@
-// replication.go implements the pull side of the cards replication
-// protocol that the frontend's Dexie database uses to fill its local
-// copy (see docs/dexie-offline-sync.md). Only reads happen here:
-// writes still go straight through PocketBase's own REST API.
+// replication.go implements the pull side of the replication protocol that
+// the frontend's Dexie database uses to fill its local copy of every
+// collection registered in internal/replica (see docs/dexie-offline-sync.md).
+// Only reads happen here: writes still go straight through PocketBase's own
+// REST API.
 package serve
 
 import (
@@ -13,6 +14,8 @@ import (
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+
+	"github.com/asano69/cardpot/internal/replica"
 )
 
 const (
@@ -24,17 +27,17 @@ const (
 	maxPullLimit = 1000
 )
 
-// cardCheckpoint is the position a pull continues after. Both fields are
-// needed because several cards can share one "updated" value; the id
+// checkpoint is the position a pull continues after. Both fields are
+// needed because several records can share one "updated" value; the id
 // breaks that tie.
-type cardCheckpoint struct {
-	UpdatedAt string // the card's "updated" value, exactly as PocketBase returned it
+type checkpoint struct {
+	UpdatedAt string // the record's "updated" value, exactly as PocketBase returned it
 	ID        string
 }
 
 // parsePullQuery reads the checkpoint and limit of a pull request. A nil
 // checkpoint means "from the beginning".
-func parsePullQuery(q url.Values) (*cardCheckpoint, int, error) {
+func parsePullQuery(q url.Values) (*checkpoint, int, error) {
 	limit := defaultPullLimit
 	if raw := q.Get("limit"); raw != "" {
 		n, err := strconv.Atoi(raw)
@@ -51,36 +54,38 @@ func parsePullQuery(q url.Values) (*cardCheckpoint, int, error) {
 	if updatedAt == "" {
 		return nil, limit, nil
 	}
-	return &cardCheckpoint{UpdatedAt: updatedAt, ID: id}, limit, nil
+	return &checkpoint{UpdatedAt: updatedAt, ID: id}, limit, nil
 }
 
-// pullCards returns the cards of a pot that changed after the checkpoint,
-// oldest first, at most limit of them. Soft-deleted cards are included on
+// pullRecords returns the records of a pot that changed after the checkpoint,
+// oldest first, at most limit of them. Soft-deleted records are included on
 // purpose: the local replica needs them as deletion events.
-func pullCards(app core.App, potID string, after *cardCheckpoint, limit int) ([]*core.Record, error) {
-	filter := "pot = {:pot}"
+func pullRecords(app core.App, c replica.Collection, potID string, after *checkpoint, limit int) ([]*core.Record, error) {
+	filter := c.PotField + " = {:pot}"
 	params := dbx.Params{"pot": potID}
 	if after != nil {
 		filter += " && (updated > {:updatedAt} || (updated = {:updatedAt} && id > {:id}))"
 		params["updatedAt"] = after.UpdatedAt
 		params["id"] = after.ID
 	}
-	return app.FindRecordsByFilter("cards", filter, "updated,id", limit, 0, params)
+	return app.FindRecordsByFilter(c.Name, filter, "updated,id", limit, 0, params)
 }
 
-// pullCardsHandler serves GET /api/pages/{potId}/cards/pull.
-func pullCardsHandler(e *core.RequestEvent) error {
-	after, limit, err := parsePullQuery(e.Request.URL.Query())
-	if err != nil {
-		return e.BadRequestError(err.Error(), nil)
-	}
+// pullHandler serves GET /api/pages/{potId}/<collection>/pull.
+func pullHandler(c replica.Collection) func(*core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		after, limit, err := parsePullQuery(e.Request.URL.Query())
+		if err != nil {
+			return e.BadRequestError(err.Error(), nil)
+		}
 
-	records, err := pullCards(e.App, e.Request.PathValue("potId"), after, limit)
-	if err != nil {
-		return e.InternalServerError("pull cards", err)
+		records, err := pullRecords(e.App, c, e.Request.PathValue("potId"), after, limit)
+		if err != nil {
+			return e.InternalServerError("pull "+c.Name, err)
+		}
+		if records == nil {
+			records = []*core.Record{} // encode "no changes" as [], not null
+		}
+		return e.JSON(http.StatusOK, map[string]any{"records": records})
 	}
-	if records == nil {
-		records = []*core.Record{} // encode "no changes" as [], not null
-	}
-	return e.JSON(http.StatusOK, map[string]any{"records": records})
 }

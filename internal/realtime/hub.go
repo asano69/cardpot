@@ -6,29 +6,29 @@ import (
 
 	"github.com/centrifugal/centrifuge"
 	"github.com/pocketbase/pocketbase/core"
+
+	"github.com/asano69/cardpot/internal/replica"
 )
 
 const (
-	// CardsChannel carries every card event of every pot. The app is small
-	// enough that each client simply receives all of them, and the frontend
-	// store ignores cards it does not hold.
-	CardsChannel = "cards"
-
 	// historySize and historyTTL bound how much a channel remembers for
 	// recovery after a short disconnect. Tune these from real usage.
 	historySize = 1000
 	historyTTL  = 10 * time.Minute
 )
 
-// Hub owns the centrifuge node and publishes card changes to the cards channel.
+// Hub owns the centrifuge node and publishes the changes of every replicated
+// collection (see internal/replica) to the channel named after it. The app is
+// small enough that each client simply receives all events of a channel, and
+// the frontend ignores records it does not hold.
 type Hub struct {
 	node    *centrifuge.Node
 	publish func(channel string, data []byte) error // replaceable in tests
 }
 
 // New creates and starts the hub. Only superusers may connect (see
-// authenticate), and they may only subscribe to the cards channel; clients can
-// never publish, because no OnPublish handler is set.
+// authenticate), and they may only subscribe to the channel of a replicated
+// collection; clients can never publish, because no OnPublish handler is set.
 func New(app core.App) (*Hub, error) {
 	node, err := centrifuge.New(centrifuge.Config{})
 	if err != nil {
@@ -45,7 +45,7 @@ func New(app core.App) (*Hub, error) {
 
 	node.OnConnect(func(client *centrifuge.Client) {
 		client.OnSubscribe(func(e centrifuge.SubscribeEvent, cb centrifuge.SubscribeCallback) {
-			if e.Channel != CardsChannel {
+			if _, ok := replica.Find(e.Channel); !ok {
 				cb(centrifuge.SubscribeReply{}, centrifuge.ErrorPermissionDenied)
 				return
 			}

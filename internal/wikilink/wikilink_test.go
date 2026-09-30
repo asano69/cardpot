@@ -35,6 +35,7 @@ func newTestApp(t *testing.T) core.App {
 		&core.TextField{Name: "target_title"},
 		&core.TextField{Name: "target_titleLc"},
 		&core.TextField{Name: "target_pot"},
+		&core.DateField{Name: "deleted"},
 	)
 	if err := app.Save(links); err != nil {
 		t.Fatalf("create card_links collection: %v", err)
@@ -58,7 +59,7 @@ func createCard(t *testing.T, app core.App) *core.Record {
 
 func linksFrom(t *testing.T, app core.App, source string) []*core.Record {
 	t.Helper()
-	records, err := app.FindRecordsByFilter("card_links", "source = {:source}", "", 0, 0, map[string]any{"source": source})
+	records, err := app.FindRecordsByFilter("card_links", `source = {:source} && deleted = ""`, "", 0, 0, map[string]any{"source": source})
 	if err != nil {
 		t.Fatalf("list card_links: %v", err)
 	}
@@ -162,6 +163,32 @@ func TestSync_AddsAndRemovesLinks(t *testing.T) {
 	mustSync(t, app, a.Id, "A\nno links")
 	if got := linksFrom(t, app, a.Id); len(got) != 0 {
 		t.Errorf("got %d links, want 0", len(got))
+	}
+}
+
+func TestSync_RemovedLinkIsSoftDeleted(t *testing.T) {
+	// A pull can only report a removal to an offline client if the row stays.
+	app := newTestApp(t)
+	a := createCard(t, app)
+
+	mustSync(t, app, a.Id, "A\n[B]")
+	mustSync(t, app, a.Id, "A\nno links")
+
+	all, err := app.FindRecordsByFilter("card_links", "source = {:source}", "", 0, 0, map[string]any{"source": a.Id})
+	if err != nil {
+		t.Fatalf("list card_links: %v", err)
+	}
+	if len(all) != 1 || all[0].GetDateTime("deleted").IsZero() {
+		t.Fatalf("got %d rows, want 1 row marked deleted", len(all))
+	}
+	if got := linksFrom(t, app, a.Id); len(got) != 0 {
+		t.Errorf("got %d live links, want 0", len(got))
+	}
+
+	// Linking again creates a live row next to the deleted one.
+	mustSync(t, app, a.Id, "A\n[B]")
+	if got := linksFrom(t, app, a.Id); len(got) != 1 {
+		t.Errorf("got %d live links, want 1", len(got))
 	}
 }
 

@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { subscribeToCards } from "../api/realtime";
+import { subscribeToCollection, type CollectionEvent } from "../api/realtime";
 import { pullAll } from "../api/replication";
 import { queryCardsPage, countCards } from "../dexie/cardsCollection";
-import type { CardEvent } from "../api/cardApi";
 import type { CardRecord } from "../models/card";
 
 import {
@@ -18,7 +17,7 @@ import {
 // which needs a live server. Tests capture the handlers watchPot passes in
 // and call them directly (see watch below).
 vi.mock("../api/realtime", () => ({
-  subscribeToCards: vi.fn(() => () => {}),
+  subscribeToCollection: vi.fn(() => () => {}),
 }));
 
 // Stubbed so loadNextCardsPage's initial checkpoint sync (see
@@ -30,16 +29,19 @@ vi.mock("../api/replication", () => ({
   pullAll: vi.fn(async () => ({ records: [], checkpoint: null })),
 }));
 
-// The IndexedDB-backed cache (lib/dexie/cardsCollection.ts) needs a real
-// IndexedDB implementation that jsdom does not provide, so it's stubbed out
-// entirely. queryCardsPage/countCards are what loadNextCardsPage now reads
-// from (see nextLocalPage below); writeCache/deleteFromCache stay no-ops,
-// since the tests never need the write side to actually persist anything.
+// The IndexedDB-backed cache (lib/dexie/cardsCollection.ts and
+// checkpoints.ts) needs a real IndexedDB implementation that jsdom does not
+// provide, so it's stubbed out entirely. queryCardsPage/countCards are what
+// loadNextCardsPage now reads from (see nextLocalPage below); the replica's
+// put/remove stay no-ops, since the tests never need the write side to
+// actually persist anything. The generic syncReplica (lib/dexie/replica.ts)
+// stays real, running against these stubs and the mocked pullAll.
 vi.mock("../dexie/cardsCollection", () => ({
   queryCardsPage: vi.fn(async () => []),
   countCards: vi.fn(async () => 0),
-  writeCache: vi.fn(),
-  deleteFromCache: vi.fn(),
+  cardsReplica: { name: "cards", put: vi.fn(), remove: vi.fn() },
+}));
+vi.mock("../dexie/checkpoints", () => ({
   readCheckpoint: vi.fn(async () => null),
   writeCheckpoint: vi.fn(),
 }));
@@ -89,9 +91,9 @@ function nextDiff(records: CardRecord[]) {
 // Starts watching and returns functions that deliver a realtime event, or a
 // "gap detected" signal, to the store the way the realtime module would.
 function watch() {
-  let onEvent: (event: CardEvent) => void = () => {};
+  let onEvent: (event: CollectionEvent<CardRecord>) => void = () => {};
   let onResync: () => void = () => {};
-  vi.mocked(subscribeToCards).mockImplementationOnce((event, resync) => {
+  vi.mocked(subscribeToCollection).mockImplementationOnce((_name, event, resync) => {
     onEvent = event;
     onResync = resync;
     return () => {};

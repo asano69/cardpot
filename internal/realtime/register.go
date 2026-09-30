@@ -11,6 +11,8 @@ import (
 	"github.com/centrifugal/centrifuge"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
+
+	"github.com/asano69/cardpot/internal/replica"
 )
 
 // shutdownTimeout bounds how long Terminate waits for the node to close its
@@ -18,14 +20,14 @@ import (
 const shutdownTimeout = 10 * time.Second
 
 // Register starts the hub, mounts its WebSocket endpoint and publishes every
-// "cards" change to the cards channel. It is meant to be called once
-// from the server's OnServe hook.
+// change of a replicated collection to that collection's channel. It is meant
+// to be called once from the server's OnServe hook.
 func Register(e *core.ServeEvent) error {
 	hub, err := New(e.App)
 	if err != nil {
 		return fmt.Errorf("start realtime hub: %w", err)
 	}
-	hub.BindCardHooks(e.App)
+	hub.BindHooks(e.App)
 
 	e.Router.GET("/connection/websocket",
 		apis.WrapStdHandler(centrifuge.NewWebsocketHandler(hub.node, centrifuge.WebsocketConfig{})))
@@ -54,28 +56,32 @@ func authenticate(app core.App, token string) (userID string, err error) {
 	return record.Id, nil
 }
 
-// BindCardHooks publishes an event for every successful create, update and
-// delete of a "cards" record.
-func (h *Hub) BindCardHooks(app core.App) {
-	app.OnRecordAfterCreateSuccess("cards").BindFunc(h.cardHook("create"))
-	app.OnRecordAfterUpdateSuccess("cards").BindFunc(h.cardHook("update"))
-	app.OnRecordAfterDeleteSuccess("cards").BindFunc(h.cardHook("delete"))
+// BindHooks publishes an event for every successful create, update and
+// delete of a record of a replicated collection.
+func (h *Hub) BindHooks(app core.App) {
+	for _, c := range replica.Collections {
+		app.OnRecordAfterCreateSuccess(c.Name).BindFunc(h.hook("create"))
+		app.OnRecordAfterUpdateSuccess(c.Name).BindFunc(h.hook("update"))
+		app.OnRecordAfterDeleteSuccess(c.Name).BindFunc(h.hook("delete"))
+	}
 }
 
-// cardHook publishes {action, record} -- the same shape PocketBase's own
-// realtime sent -- to the cards channel. A publish failure is only
-// logged: it must never fail the save that already succeeded.
-func (h *Hub) cardHook(action string) func(*core.RecordEvent) error {
+// hook publishes {action, record} -- the same shape PocketBase's own
+// realtime sent -- to the channel named after the record's collection. A
+// publish failure is only logged: it must never fail the save that already
+// succeeded.
+func (h *Hub) hook(action string) func(*core.RecordEvent) error {
 	return func(e *core.RecordEvent) error {
 		if err := e.Next(); err != nil {
 			return err
 		}
 		data, err := json.Marshal(map[string]any{"action": action, "record": e.Record})
 		if err == nil {
-			err = h.publish(CardsChannel, data)
+			err = h.publish(e.Record.Collection().Name, data)
 		}
 		if err != nil {
-			slog.Warn("publish card event", "action", action, "card", e.Record.Id, "error", err)
+			slog.Warn("publish record event", "action", action,
+				"collection", e.Record.Collection().Name, "record", e.Record.Id, "error", err)
 		}
 		return nil
 	}

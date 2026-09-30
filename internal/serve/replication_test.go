@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/pocketbase/pocketbase/core"
+
+	"github.com/asano69/cardpot/internal/replica"
 )
 
 const (
@@ -14,25 +16,36 @@ const (
 	pullT2 = "2026-01-01 00:00:02.000Z"
 )
 
+func mustCollection(t *testing.T, name string) replica.Collection {
+	t.Helper()
+	c, ok := replica.Find(name)
+	if !ok {
+		t.Fatalf("collection %q is not registered in internal/replica", name)
+	}
+	return c
+}
+
 // pullCardID returns a valid 15-character record id that sorts by n.
 func pullCardID(n int) string {
 	return fmt.Sprintf("card%011d", n)
 }
 
-// newPullTestApp extends newLinksTestApp with an "updated" field. A plain
-// text field stands in for the production autodate field, so tests can give
-// several cards exactly the same value.
+// newPullTestApp extends newLinksTestApp with an "updated" field on every
+// replicated collection. A plain text field stands in for the production
+// autodate field, so tests can give several records exactly the same value.
 func newPullTestApp(t *testing.T) core.App {
 	t.Helper()
 	app := newLinksTestApp(t)
 
-	cards, err := app.FindCollectionByNameOrId("cards")
-	if err != nil {
-		t.Fatalf("find cards collection: %v", err)
-	}
-	cards.Fields.Add(&core.TextField{Name: "updated"})
-	if err := app.Save(cards); err != nil {
-		t.Fatalf("extend cards collection: %v", err)
+	for _, name := range []string{"cards", "card_links"} {
+		collection, err := app.FindCollectionByNameOrId(name)
+		if err != nil {
+			t.Fatalf("find %s collection: %v", name, err)
+		}
+		collection.Fields.Add(&core.TextField{Name: "updated"})
+		if err := app.Save(collection); err != nil {
+			t.Fatalf("extend %s collection: %v", name, err)
+		}
 	}
 	return app
 }
@@ -69,11 +82,11 @@ func pullFixture(t *testing.T) core.App {
 	return app
 }
 
-func pulledIDs(t *testing.T, app core.App, after *cardCheckpoint, limit int) []string {
+func pulledIDs(t *testing.T, app core.App, after *checkpoint, limit int) []string {
 	t.Helper()
-	records, err := pullCards(app, "pot1", after, limit)
+	records, err := pullRecords(app, mustCollection(t, "cards"), "pot1", after, limit)
 	if err != nil {
-		t.Fatalf("pullCards: %v", err)
+		t.Fatalf("pullRecords: %v", err)
 	}
 	ids := make([]string, len(records))
 	for i, record := range records {
@@ -82,7 +95,7 @@ func pulledIDs(t *testing.T, app core.App, after *cardCheckpoint, limit int) []s
 	return ids
 }
 
-func TestPullCards_OrdersByUpdatedThenIDAndKeepsDeleted(t *testing.T) {
+func TestPullRecords_OrdersByUpdatedThenIDAndKeepsDeleted(t *testing.T) {
 	app := pullFixture(t)
 
 	got := pulledIDs(t, app, nil, 100)
@@ -92,18 +105,18 @@ func TestPullCards_OrdersByUpdatedThenIDAndKeepsDeleted(t *testing.T) {
 	}
 }
 
-func TestPullCards_ContinuesAfterCheckpoint(t *testing.T) {
+func TestPullRecords_ContinuesAfterCheckpoint(t *testing.T) {
 	app := pullFixture(t)
 
 	cases := []struct {
 		name  string
-		after cardCheckpoint
+		after checkpoint
 		want  []string
 	}{
 		// Cards 1 and 2 share the same "updated": the id decides.
-		{"tie on updated, before the last of the tie", cardCheckpoint{pullT1, pullCardID(1)}, []string{pullCardID(2), pullCardID(3)}},
-		{"tie on updated, at the last of the tie", cardCheckpoint{pullT1, pullCardID(2)}, []string{pullCardID(3)}},
-		{"at the newest card", cardCheckpoint{pullT2, pullCardID(3)}, nil},
+		{"tie on updated, before the last of the tie", checkpoint{pullT1, pullCardID(1)}, []string{pullCardID(2), pullCardID(3)}},
+		{"tie on updated, at the last of the tie", checkpoint{pullT1, pullCardID(2)}, []string{pullCardID(3)}},
+		{"at the newest card", checkpoint{pullT2, pullCardID(3)}, nil},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -114,7 +127,7 @@ func TestPullCards_ContinuesAfterCheckpoint(t *testing.T) {
 	}
 }
 
-func TestPullCards_RespectsLimit(t *testing.T) {
+func TestPullRecords_RespectsLimit(t *testing.T) {
 	app := pullFixture(t)
 
 	got := pulledIDs(t, app, nil, 2)
@@ -124,15 +137,30 @@ func TestPullCards_RespectsLimit(t *testing.T) {
 	}
 }
 
+func TestPullRecords_FiltersByTheCollectionsPotField(t *testing.T) {
+	// card_links belongs to a pot through "target_pot", not "pot".
+	app := newPullTestApp(t)
+	createLink(t, app, "src1", "pot1", "A")
+	createLink(t, app, "src2", "pot2", "B")
+
+	records, err := pullRecords(app, mustCollection(t, "card_links"), "pot1", nil, 100)
+	if err != nil {
+		t.Fatalf("pullRecords: %v", err)
+	}
+	if len(records) != 1 || records[0].GetString("target_title") != "A" {
+		t.Errorf("got %d records, want only the link to A", len(records))
+	}
+}
+
 func TestParsePullQuery(t *testing.T) {
 	valid := []struct {
 		query string
-		after *cardCheckpoint
+		after *checkpoint
 		limit int
 	}{
 		{"", nil, defaultPullLimit},
 		{"limit=5", nil, 5},
-		{"updatedAt=x&id=y&limit=1000", &cardCheckpoint{"x", "y"}, maxPullLimit},
+		{"updatedAt=x&id=y&limit=1000", &checkpoint{"x", "y"}, maxPullLimit},
 	}
 	for _, tt := range valid {
 		q, _ := url.ParseQuery(tt.query)

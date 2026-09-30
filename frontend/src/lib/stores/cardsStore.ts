@@ -2,25 +2,17 @@
    These are imperative store functions called from event handlers and
    async code. Reading the store there is deliberately untracked. */
 import { createStore, produce } from "solid-js/store";
-import {
-  deleteCard,
-  fetchCardBySlug,
-  updateCard,
-  type CardEvent,
-} from "../api/cardApi";
-import { subscribeToCards } from "../api/realtime";
+import { deleteCard, fetchCardBySlug, updateCard } from "../api/cardApi";
+import { subscribeToCollection, type CollectionEvent } from "../api/realtime";
 import type { CardRecord } from "../models/card";
 import { computePosition } from "../position";
 import { withCardsFlip, registerCardElement } from "../cardFlip";
 import {
+  cardsReplica,
   countCards,
-  deleteFromCache,
   queryCardsPage,
-  readCheckpoint,
-  writeCache,
-  writeCheckpoint,
 } from "../dexie/cardsCollection";
-import { pullAll } from "../api/replication";
+import { syncReplica } from "../dexie/replica";
 
 // Re-exported so CardItem only needs to import from this module
 // (cardFlip.ts's registration map is an implementation detail of how
@@ -73,12 +65,12 @@ export function potWindow(potId: string | undefined): PotWindow | undefined {
 // optimistic update lands) makes the card jump/stutter instead of
 // looking smooth -- see moveCard below.
 //
-// Every merge also write-throughs into each record's own pot's
-// IndexedDB cache (see lib/signaldb/cardsCollection.ts), fire-and-
-// forget: that cache is what loadNextCardsPage pages through locally
-// once a pot has synced (see queryCardsPage/countCards there), so
-// keeping it current here is what keeps local pagination in sync with
-// whatever the Solid store above just applied.
+// Every merge also writes through into the IndexedDB replica (see
+// lib/dexie/cardsCollection.ts), fire-and-forget: that cache is what
+// loadNextCardsPage pages through locally once a pot has synced (see
+// queryCardsPage/countCards there), so keeping it current here is what
+// keeps local pagination in sync with whatever the Solid store above just
+// applied.
 export function mergeCards(
   records: CardRecord[],
   options?: { skipFlip?: boolean },
@@ -99,27 +91,7 @@ export function mergeCards(
     withCardsFlip(apply);
   }
 
-  const byPot = new Map<string, CardRecord[]>();
-  for (const record of records) {
-    const list = byPot.get(record.pot) ?? [];
-    list.push(record);
-    byPot.set(record.pot, list);
-  }
-  for (const [potId, list] of byPot) void writeCache(potId, list);
-}
-
-// Applies a batch of pulled records (see lib/api/replication.ts) to
-// potId's SignalDB cache: a soft-deleted record is removed, everything
-// else is upserted. This only touches the cache -- it is not the live
-// UI store (cardsById/windows), which Stage 1 leaves untouched.
-async function applyPulledRecords(
-  potId: string,
-  records: CardRecord[],
-): Promise<void> {
-  const deleted = records.filter((record) => record.deleted);
-  const live = records.filter((record) => !record.deleted);
-  if (live.length) await writeCache(potId, live);
-  for (const record of deleted) await deleteFromCache(potId, record.id);
+  void cardsReplica.put(records);
 }
 
 // Resolves once potId's SignalDB cache has completed its checkpoint
@@ -139,20 +111,6 @@ function ensurePotSynced(potId: string): Promise<void> {
   return promise;
 }
 
-// Pulls every change to potId's SignalDB cache since its stored
-// checkpoint (see lib/api/replication.ts), applies the diff (upsert
-// live records, drop deleted ones -- see applyPulledRecords), and
-// advances the checkpoint. Shared by the initial sync (syncPotReplica)
-// and resyncPot's catch-up sync after a realtime gap -- both just need
-// "the cache is now current", differing only in what they do with it
-// afterward.
-async function pullAndApplyDiff(potId: string): Promise<void> {
-  const after = await readCheckpoint(potId);
-  const { records, checkpoint } = await pullAll(potId, after);
-  await applyPulledRecords(potId, records);
-  if (checkpoint) await writeCheckpoint(potId, checkpoint);
-}
-
 // Brings potId's SignalDB cache fully up to date, resuming from
 // wherever this pot's last pull left off. Awaited by loadNextCardsPage
 // (through ensurePotSynced) before the first page is read from the
@@ -161,7 +119,7 @@ async function pullAndApplyDiff(potId: string): Promise<void> {
 // retry) tries again from the same checkpoint.
 async function syncPotReplica(potId: string): Promise<void> {
   try {
-    await pullAndApplyDiff(potId);
+    await syncReplica(cardsReplica, potId);
   } catch (err) {
     console.error("[cards] failed to sync replica:", err);
   }
@@ -284,7 +242,7 @@ function dropCard(id: string, potId: string | undefined) {
       delete store[id];
     }),
   );
-  if (potId) void deleteFromCache(potId, id);
+  void cardsReplica.remove(id);
 }
 
 // A created card only matters here if its pot's window is loaded;
@@ -292,7 +250,7 @@ function dropCard(id: string, potId: string | undefined) {
 function addCreatedCard(record: CardRecord) {
   if (!windows[record.pot]?.loaded) return;
   setCardsById(record.id, record);
-  void writeCache(record.pot, [record]);
+  void cardsReplica.put([record]);
   setWindows(
     record.pot,
     produce((w) => {
@@ -307,7 +265,7 @@ function addCreatedCard(record: CardRecord) {
 // Applies one realtime event to the store. Wrapped in withCardsFlip so
 // a position change from another user's drag animates smoothly into
 // place instead of every card instantly snapping to its new grid slot.
-function handleCardEvent(e: CardEvent) {
+function handleCardEvent(e: CollectionEvent<CardRecord>) {
   withCardsFlip(() => {
     // A soft-deleted card leaves the store like a removed one, whichever
     // action reports it (deleting sends an "update" carrying `deleted`).
@@ -319,7 +277,7 @@ function handleCardEvent(e: CardEvent) {
       // An update for a card we don't hold is ignored, so the store
       // never grows beyond what the UI actually loaded.
       setCardsById(e.record.id, e.record);
-      void writeCache(e.record.pot, [e.record]);
+      void cardsReplica.put([e.record]);
     }
   });
 }
@@ -328,7 +286,7 @@ function handleCardEvent(e: CardEvent) {
 // when realtime events may have been missed and could not be replayed (see
 // subscribeToCards). Rather than re-fetching pages from the server, this
 // pulls only what changed since the pot's stored checkpoint (see
-// pullAndApplyDiff above), applies that diff to the SignalDB replica, and
+// syncReplica in lib/dexie/replica.ts), applies that diff to the replica, and
 // re-reads the window from it -- the same source loadNextCardsPage already
 // reads from (see queryCardsPage/countCards in
 // lib/signaldb/cardsCollection.ts). The window is re-read in one query
@@ -345,7 +303,7 @@ export async function resyncPot(potId: string): Promise<void> {
   const windowSize = win.ids.length;
 
   try {
-    await pullAndApplyDiff(potId);
+    await syncReplica(cardsReplica, potId);
   } catch (err) {
     console.error("[cards] failed to resync pot:", err);
     return;
@@ -394,7 +352,7 @@ export async function resyncPot(potId: string): Promise<void> {
 // long as the app is open. A gap in the channel's history resyncs every
 // window that is currently loaded.
 export function watchCards(): () => void {
-  return subscribeToCards(handleCardEvent, () => {
+  return subscribeToCollection<CardRecord>("cards", handleCardEvent, () => {
     for (const potId of Object.keys(windows)) void resyncPot(potId);
   });
 }

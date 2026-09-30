@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/asano69/cardpot/internal/realtime"
+	"github.com/asano69/cardpot/internal/replica"
 	"github.com/asano69/cardpot/internal/static"
 	"github.com/asano69/cardpot/internal/version"
 
@@ -68,8 +69,11 @@ func registerRoutes(e *core.ServeEvent) error {
 	pages.GET("/{pot}/{slug}/links1hop", relatedCardsHandler("links1hop", links1Hop))
 	pages.GET("/{pot}/{slug}/links2hop", relatedCardsHandler("links2hop", links2Hop))
 	// Checkpoint-based pull for the frontend's Dexie replication (see
-	// replication.go). {potId} is a pot's id, unlike {pot} above.
-	pages.GET("/{potId}/cards/pull", pullCardsHandler)
+	// replication.go), one route per replicated collection. {potId} is a
+	// pot's id, unlike {pot} above.
+	for _, c := range replica.Collections {
+		pages.GET("/{potId}/"+c.Name+"/pull", pullHandler(c))
+	}
 
 	// Serves the whole Vite build output (index.html, hashed JS/CSS
 	// under assets/, and public/ files like favicon.svg copied to the

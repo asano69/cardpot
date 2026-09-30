@@ -44,6 +44,7 @@ func newLinksTestApp(t *testing.T) core.App {
 		&core.TextField{Name: "target_pot"},
 		&core.TextField{Name: "target_title"},
 		&core.TextField{Name: "target_titleLc"},
+		&core.DateField{Name: "deleted"},
 	)
 	if err := app.Save(links); err != nil {
 		t.Fatalf("create card_links collection: %v", err)
@@ -186,6 +187,28 @@ func TestLinks1Hop_ExcludesDeletedCards(t *testing.T) {
 	}
 	if len(got) != 0 {
 		t.Errorf("got %d linked cards, want 0 (both are deleted): %v", len(got), got)
+	}
+}
+
+func TestLinks1Hop_IgnoresDeletedLinks(t *testing.T) {
+	app := newLinksTestApp(t)
+	pot := createPot(t, app, "pot1")
+
+	center := createLinksTestCard(t, app, pot.Id, "Center", "")
+	createLinksTestCard(t, app, pot.Id, "OutTarget", "")
+	createLink(t, app, center.Id, pot.Id, "OutTarget")
+	link, err := app.FindFirstRecordByFilter("card_links", "source = {:id}", map[string]any{"id": center.Id})
+	if err != nil {
+		t.Fatalf("find link: %v", err)
+	}
+	softDelete(t, app, link)
+
+	got, err := links1Hop(app, center)
+	if err != nil {
+		t.Fatalf("links1Hop: %v", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("got %d linked cards, want 0 (the link is deleted): %v", len(got), got)
 	}
 }
 

@@ -149,11 +149,3 @@ export async function updateCard(
 export async function deleteCard(id: string): Promise<void> {
   await updateCard(id, { deleted: new Date().toISOString() });
 }
-
-// One realtime change to a "cards" record, as published by the server
-// (see internal/realtime) and delivered by lib/api/realtime.ts. `action`
-// is "create", "update" or "delete".
-export interface CardEvent {
-  action: string;
-  record: CardRecord;
-}

@@ -74,7 +74,7 @@ func findCardBySlug(app core.App, potID, targetSlug string) (*core.Record, error
 // source -- its own one-hop-out neighborhood.
 func ownTargetTitleLcs(app core.App, cardID string) ([]string, error) {
 	links, err := app.FindRecordsByFilter(
-		"card_links", "source = {:source}", "", 0, 0,
+		"card_links", "source = {:source} && "+notDeleted, "", 0, 0,
 		dbx.Params{"source": cardID},
 	)
 	if err != nil {
@@ -123,10 +123,10 @@ func links1Hop(app core.App, card *core.Record) ([]linkedCard, error) {
 	return relatedCards(app, card, `cards.id IN (
 		SELECT c.id FROM cards c
 		JOIN card_links l ON l.target_pot = c.pot AND l.target_titleLc = c.titleLc
-		WHERE l.source = {:id}
+		WHERE l.source = {:id} AND l.deleted = ''
 		UNION
 		SELECT source FROM card_links
-		WHERE target_pot = {:pot} AND target_titleLc = {:titleLc}
+		WHERE target_pot = {:pot} AND target_titleLc = {:titleLc} AND deleted = ''
 	)`)
 }
 
@@ -147,7 +147,7 @@ func links2Hop(app core.App, card *core.Record) ([]hopGroup, error) {
 		SELECT l2.source FROM card_links l1
 		JOIN card_links l2
 			ON l2.target_pot = l1.target_pot AND l2.target_titleLc = l1.target_titleLc
-		WHERE l1.source = {:id}
+		WHERE l1.source = {:id} AND l1.deleted = '' AND l2.deleted = ''
 	)`)
 	if err != nil {
 		return nil, err
@@ -155,7 +155,7 @@ func links2Hop(app core.App, card *core.Record) ([]hopGroup, error) {
 
 	// Sync keeps one row per target_titleLc, so no target repeats here.
 	links, err := app.FindRecordsByFilter(
-		"card_links", "source = {:source}", "target_titleLc", 0, 0,
+		"card_links", "source = {:source} && "+notDeleted, "target_titleLc", 0, 0,
 		dbx.Params{"source": card.Id},
 	)
 	if err != nil {
@@ -244,7 +244,7 @@ func targetTitleLcsBySource(app core.App, ids []any) (map[string][]string, error
 	err := app.DB().
 		Select("source", "target_titleLc").
 		From("card_links").
-		Where(dbx.In("source", ids...)).
+		Where(dbx.And(dbx.In("source", ids...), dbx.HashExp{"deleted": ""})).
 		All(&rows)
 	if err != nil {
 		return nil, err

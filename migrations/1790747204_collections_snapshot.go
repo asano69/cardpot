@@ -1377,6 +1377,18 @@ func init() {
 						"presentable": false,
 						"system": false,
 						"type": "autodate"
+					},
+					{
+						"help": "",
+						"hidden": false,
+						"id": "date3946532403",
+						"max": "",
+						"min": "",
+						"name": "deleted",
+						"presentable": false,
+						"required": false,
+						"system": false,
+						"type": "date"
 					}
 				],
 				"id": "pbc_449060851",

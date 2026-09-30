@@ -19,14 +19,17 @@ import (
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/types"
 
 	"github.com/asano69/cardpot/internal/parser"
 	"github.com/asano69/cardpot/internal/slug"
 )
 
 // Sync makes card_links match the wiki links in text for the card cardID:
-// rows for links that disappeared are deleted and rows for new links are
-// created, all in one transaction. When nothing changed, nothing is written.
+// rows for links that disappeared are marked deleted (never removed, so a
+// client that was offline learns about it from its next pull, see
+// internal/replica) and rows for new links are created, all in one
+// transaction. When nothing changed, nothing is written.
 // A card that no longer exists is ignored.
 //
 // Every link is stored, including links to the card itself: whether that is
@@ -45,7 +48,7 @@ func Sync(app core.App, cardID, text string) error {
 	targets := targetTitlesByTitleLc(parser.Parse(text).WikiLinkTitles())
 
 	existing, err := app.FindRecordsByFilter(
-		"card_links", "source = {:source}", "", 0, 0,
+		"card_links", `source = {:source} && deleted = ""`, "", 0, 0,
 		dbx.Params{"source": cardID},
 	)
 	if err != nil {
@@ -63,7 +66,8 @@ func Sync(app core.App, cardID, text string) error {
 	}
 	return app.RunInTransaction(func(tx core.App) error {
 		for _, record := range stale {
-			if err := tx.Delete(record); err != nil {
+			record.Set("deleted", types.NowDateTime())
+			if err := tx.Save(record); err != nil {
 				return err
 			}
 		}
