@@ -41,3 +41,4 @@ export { default as List } from "lucide-solid/icons/list";
 export { default as Settings } from "lucide-solid/icons/settings";
 export { default as Help } from "lucide-solid/icons/life-buoy";
 export { default as About } from "lucide-solid/icons/info";
+export { default as Link } from "lucide-solid/icons/link";

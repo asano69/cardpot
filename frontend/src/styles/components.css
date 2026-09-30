@@ -278,36 +278,76 @@
       margin-bottom: 48px;
     }
 
-    /* The label cell: a tab with an arrow pointing at the cards. */
-    .relation-label {
-      display: flex;
-      align-items: center;
-      min-width: 0;
+    /* The label is one grid cell, the same size as a card. Its arrow is
+     * positioned absolutely, so it sticks out of the cell's right edge
+     * without taking any width from it. */
+    .grid li.relation-label {
+      position: relative;
+      aspect-ratio: 1 / 1.1;
+      clear: left;
     }
 
     .relation-label a {
-      display: block;
-      min-width: 0;
-      padding: 6px 12px;
-      border-radius: 3px;
-      background-color: var(--relation-label-bg, var(--color-card-title-bg));
-      color: var(--relation-label-text, var(--color-text));
-      font-size: 13px;
-      font-weight: bold;
-      text-decoration: none;
-      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+      font-size: 14px;
+      text-align: center;
       overflow: hidden;
       text-overflow: ellipsis;
+      background-color: var(--relation-label-bg, #9babc1);
+      color: var(--relation-label-text, #fff);
+      border-radius: 3px;
+      padding: 8px;
+      word-break: break-word;
+      text-decoration: none;
+    }
+
+    .relation-label .title {
+      max-height: 56px;
+      display: block;
+      overflow: hidden;
+    }
+
+    /* flex: none keeps the icon from being squeezed when the title is long. */
+    .relation-label .kamon {
+      display: block;
+      flex: none;
+      margin: 8px auto;
     }
 
     .relation-label .arrow {
-      flex: none;
+      display: block;
+      position: absolute;
       width: 0;
       height: 0;
-      border-top: 8px solid transparent;
-      border-bottom: 8px solid transparent;
-      border-left: 8px solid
-        var(--relation-label-bg, var(--color-card-title-bg));
+      left: 100%;
+      top: calc(50% - 7px);
+      border-style: solid;
+      border-width: 7px 5px;
+      border-color: rgba(0, 0, 0, 0);
+      border-left-color: var(--relation-label-bg, #9babc1);
+    }
+
+    .relation-label.links a {
+      background-color: var(--relation-label-links-bg, #3d72f5);
+      color: var(--relation-label-links-text, #fff);
+    }
+
+    .relation-label.links .arrow {
+      border-left-color: var(--relation-label-links-bg, #3d72f5);
+    }
+
+    .relation-label.empty-links a {
+      background-color: var(--relation-label-empty-bg, #fd7373);
+      color: var(--relation-label-empty-text, #fff);
+    }
+
+    .relation-label.empty-links .arrow {
+      border-left-color: var(--relation-label-empty-bg, #fd7373);
     }
 
     div.links-2-hop ul.grid:hover .relation-label a {

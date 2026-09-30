@@ -6,6 +6,7 @@ import {
   fetchRelatedCards,
 } from "@/lib/api/cardApi";
 import { cardsById } from "@/lib/stores/cardsStore";
+import { Link } from "@/lib/icons";
 import { titleToSegment } from "@/lib/models/slugify";
 import type { CardGridCard } from "@/lib/models/card";
 import { CardItemView } from "./CardItem";
@@ -30,7 +31,14 @@ interface RelationRowProps {
 // One labelled row: a relation label followed by its cards, all in one grid.
 function RelationRow(props: RelationRowProps) {
   const count = () => `${props.cards.length} pages`;
-  const title = () => <span class="title">{props.label}</span>;
+  // The label's text, with the link icon below it (the "kamon" of the
+  // original design).
+  const labelContent = () => (
+    <>
+      <span class="title">{props.label}</span>
+      <Link class="kamon" size={28} />
+    </>
+  );
 
   return (
     <div class={props.rowClass}>
@@ -38,10 +46,10 @@ function RelationRow(props: RelationRowProps) {
         <li class={`relation-label ${props.labelClass}`}>
           <Show
             when={props.href}
-            fallback={<a title={count()}>{title()}</a>}
+            fallback={<a title={count()}>{labelContent()}</a>}
           >
             <A href={props.href!} title={count()}>
-              {title()}
+              {labelContent()}
             </A>
           </Show>
           <span class="arrow" />
