@@ -37,6 +37,14 @@ export const editorTheme = EditorView.theme({
       backgroundColor: "green",
       opacity: "0.4",
     },
+  // drawSelection() sets the layer's z-index itself, so !important is
+  // needed to stack the selection above the text and its backgrounds.
+  // pointer-events: none keeps clicks reaching the text underneath.
+  ".cm-selectionLayer": {
+    zIndex: "1 !important",
+    pointerEvents: "none",
+  },
+
   ".cm-line": {
     lineHeight: "1.7",
     fontSize: "15px",
