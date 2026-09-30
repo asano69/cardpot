@@ -161,6 +161,8 @@ export const editorTheme = EditorView.theme({
   ".cm-line.code-block.start": {
     backgroundColor: "transparent",
   },
+  // The background must stay translucent: the selection is drawn in a
+  // layer beneath the text, so an opaque background would hide it.
   ".code-block-start": {
     color: "#342d9c",
     fontSize: "0.95em",
