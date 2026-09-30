@@ -14,9 +14,10 @@ import { decideBracketNodeType } from "../../parser/cardpot/rules/bracket";
 // same as WikiLink, moving the cursor into the node's range via the
 // keyboard still reveals its raw markup for editing independently of
 // this handler.
-// Shared with wikiLinkNavigation.ts -- both node types render through
-// the same revealStyle class (see parser/cardpot/index.ts).
-const EXTERNAL_LINK_CLASS = "page-link";
+// The class parser/cardpot/index.ts's revealStyle gives ExternalLink and
+// BareUrl nodes. Internal links use "page-link" instead, so this never
+// matches a WikiLink.
+const EXTERNAL_LINK_CLASS = "link";
 
 export function externalLinkNavigation() {
   return EditorView.domEventHandlers({

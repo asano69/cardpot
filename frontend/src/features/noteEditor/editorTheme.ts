@@ -152,13 +152,13 @@ export const editorTheme = EditorView.theme({
   // wikiLinkNavigation.ts): styled like the old ProseMirror editor's
   // autolinks (see components.css's ".ProseMirror a") so it reads as
   // clickable.
-  ".page-link": {
+  ".page-link, .link": {
     color: "light-dark(#0969da, #58a6ff)",
     cursor: "pointer",
   },
-  // Added on top of .cm-wikilink for external URLs (labelled, bracketed
-  // and bare), so they read differently from internal links.
-  ".cm-external-link": {
+  // External URLs (labelled, bracketed and bare) are underlined so they
+  // read differently from internal links.
+  ".link": {
     textDecoration: "underline",
   },
 

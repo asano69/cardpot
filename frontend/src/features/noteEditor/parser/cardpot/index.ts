@@ -91,18 +91,19 @@ const cardpotParser = parser.configure({
     revealStyle.add({
       // Bold also gets "level level-N" appended (see syntaxReveal.ts), so
       // this class only marks the node as revealable. Class names follow
-      // Cosense's own DOM: "deco-*" is "[* x]", "deco-/" is "[/ x]" and
-      // "strong" is "[[x]]".
+      // Cosense's own DOM: "deco-*" is "[* x]", "deco-/" is "[/ x]",
+      // "strong" is "[[x]]", "page-link" is an internal link and "link" is
+      // an external one.
       Bold: "deco-*",
       Italic: "deco-/",
       Code: "code highlight",
       WikiLink: "page-link",
-      ExternalLink: "page-link cm-external-link",
+      ExternalLink: "link",
       ProjectLink: "page-link",
       Strong: "strong",
       HashTag: "page-link",
       // No marks, so nothing is ever hidden: this only styles the URL.
-      BareUrl: "page-link cm-external-link",
+      BareUrl: "link",
       Blank: "blank",
       // Whole-line node, not a delimiter pair: only the leading ">"
       // is an isMark child (see rules/quote.ts), so syntaxReveal
