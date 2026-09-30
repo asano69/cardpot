@@ -96,20 +96,42 @@ export async function fetchRelatedCards(cardId: string): Promise<CardRecord[]> {
   return res.cards;
 }
 
-// Fetches the live cards one (hop 1) or two (hop 2) wiki-link hops away from
-// the card titled `title` (see internal/serve/links.go). The pot is addressed
-// by its name and the card by the slug derived from its title.
-export async function fetchLinkedCards(
+// A target (headword) the open card links to, with the cards that link to
+// that same target (see hopGroup in internal/serve/links.go).
+export interface LinkGroup {
+  title: string;
+  titleLc: string;
+  cards: CardGridCard[];
+}
+
+// Shared by the two hop fetchers below (see internal/serve/links.go). The pot
+// is addressed by its name and the card by the slug derived from its title.
+async function fetchHop<T>(
   potName: string,
   title: string,
-  hop: 1 | 2,
-): Promise<CardGridCard[]> {
-  const key = `links${hop}hop`;
-  const res = await pb.send<Record<string, CardGridCard[]>>(
+  key: "links1hop" | "links2hop",
+): Promise<T> {
+  const res = await pb.send<Record<string, T>>(
     `/api/pages/${potName}/${titleToSegment(title)}/${key}`,
     { method: "GET", requestKey: null },
   );
   return res[key];
+}
+
+// Fetches the live cards one wiki-link hop away from the card titled `title`.
+export function fetchLinks1Hop(
+  potName: string,
+  title: string,
+): Promise<CardGridCard[]> {
+  return fetchHop<CardGridCard[]>(potName, title, "links1hop");
+}
+
+// Fetches the cards two hops away, grouped by the shared target.
+export function fetchLinks2Hop(
+  potName: string,
+  title: string,
+): Promise<LinkGroup[]> {
+  return fetchHop<LinkGroup[]>(potName, title, "links2hop");
 }
 
 // Updates a card's own fields directly. The title is deliberately not

@@ -10,6 +10,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/pocketbase/dbx"
@@ -86,9 +87,9 @@ func ownTargetTitleLcs(app core.App, cardID string) ([]string, error) {
 	return targets, nil
 }
 
-// relatedCardsHandler answers with the cards that find returns for the
-// requested card, under the JSON key "key".
-func relatedCardsHandler(key string, find func(core.App, *core.Record) ([]linkedCard, error)) func(*core.RequestEvent) error {
+// relatedCardsHandler answers with whatever find returns for the requested
+// card, under the JSON key "key".
+func relatedCardsHandler[T any](key string, find func(core.App, *core.Record) (T, error)) func(*core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		pot, err := e.App.FindFirstRecordByFilter(
 			"pots", "name = {:name}", dbx.Params{"name": e.Request.PathValue("pot")},
@@ -129,15 +130,56 @@ func links1Hop(app core.App, card *core.Record) ([]linkedCard, error) {
 	)`)
 }
 
+// hopGroup is one entry of the links2hop response: a target (headword) that
+// card links to, and the cards that link to that same target.
+type hopGroup struct {
+	Title   string       `json:"title"`
+	TitleLc string       `json:"titleLc"`
+	Cards   []linkedCard `json:"cards"`
+}
+
 // links2Hop returns the live cards of the same pot that link to at least one
-// of the targets card links to (A --> X <-- B). X does not have to exist.
-func links2Hop(app core.App, card *core.Record) ([]linkedCard, error) {
-	return relatedCards(app, card, `cards.id IN (
+// of the targets card links to (A --> X <-- B), grouped by that shared target
+// X. X does not have to exist. A card sharing several targets appears in each
+// of their groups; targets nobody else links to produce no group.
+func links2Hop(app core.App, card *core.Record) ([]hopGroup, error) {
+	cards, err := relatedCards(app, card, `cards.id IN (
 		SELECT l2.source FROM card_links l1
 		JOIN card_links l2
 			ON l2.target_pot = l1.target_pot AND l2.target_titleLc = l1.target_titleLc
 		WHERE l1.source = {:id}
 	)`)
+	if err != nil {
+		return nil, err
+	}
+
+	// Sync keeps one row per target_titleLc, so no target repeats here.
+	links, err := app.FindRecordsByFilter(
+		"card_links", "source = {:source}", "target_titleLc", 0, 0,
+		dbx.Params{"source": card.Id},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	groups := []hopGroup{}
+	for _, link := range links {
+		titleLc := link.GetString("target_titleLc")
+		group := hopGroup{
+			Title:   link.GetString("target_title"),
+			TitleLc: titleLc,
+			Cards:   []linkedCard{},
+		}
+		for _, c := range cards {
+			if slices.Contains(c.TargetTitleLc, titleLc) {
+				group.Cards = append(group.Cards, c)
+			}
+		}
+		if len(group.Cards) > 0 {
+			groups = append(groups, group)
+		}
+	}
+	return groups, nil
 }
 
 // relatedCards loads the live cards of card's pot, other than card itself,

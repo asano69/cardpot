@@ -261,6 +261,65 @@
     overflow: hidden;
     margin-top: 24px;
     min-height: 300px;
+
+    ul.grid {
+      list-style: none;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(146px, 1fr));
+      gap: clamp(8px, 1.5svw, 16px);
+      margin: 0;
+    }
+
+    .links-container {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+      margin-bottom: 48px;
+    }
+
+    /* The label cell: a tab with an arrow pointing at the cards. */
+    .relation-label {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .relation-label a {
+      display: block;
+      min-width: 0;
+      padding: 6px 12px;
+      border-radius: 3px;
+      background-color: var(--relation-label-bg, var(--color-card-title-bg));
+      color: var(--relation-label-text, var(--color-text));
+      font-size: 13px;
+      font-weight: bold;
+      text-decoration: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .relation-label .arrow {
+      flex: none;
+      width: 0;
+      height: 0;
+      border-top: 8px solid transparent;
+      border-bottom: 8px solid transparent;
+      border-left: 8px solid
+        var(--relation-label-bg, var(--color-card-title-bg));
+    }
+
+    div.links-2-hop ul.grid:hover .relation-label a {
+      background-color: var(--relation-label-links-bg, #5e8af7);
+      color: var(--relation-label-links-text, #fff);
+      transition: background-color 0.1s;
+    }
+
+    div.links-2-hop ul.grid:hover .relation-label .arrow {
+      border-left-color: var(--relation-label-links-bg, #5e8af7);
+      transition: border-left-color 0.1s;
+    }
   }
 
   /* Bottom-of-viewport status bar, symmetric with TopBar: TopBar owns

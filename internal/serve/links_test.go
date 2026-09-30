@@ -231,8 +231,41 @@ func TestLinks2Hop_SharedTarget(t *testing.T) {
 	if err != nil {
 		t.Fatalf("links2Hop: %v", err)
 	}
-	if want := []string{"B"}; !slices.Equal(linkedTitles(got), want) {
-		t.Errorf("titles = %v, want %v", linkedTitles(got), want)
+	if len(got) != 1 || got[0].Title != "X" {
+		t.Fatalf("groups = %+v, want one group titled X", got)
+	}
+	if want := []string{"B"}; !slices.Equal(linkedTitles(got[0].Cards), want) {
+		t.Errorf("titles = %v, want %v", linkedTitles(got[0].Cards), want)
+	}
+}
+
+func TestLinks2Hop_GroupsByEachSharedTarget(t *testing.T) {
+	app := newLinksTestApp(t)
+	pot := createPot(t, app, "pot1")
+
+	a := createLinksTestCard(t, app, pot.Id, "A", "")
+	b := createLinksTestCard(t, app, pot.Id, "B", "")
+	c := createLinksTestCard(t, app, pot.Id, "C", "")
+
+	createLink(t, app, a.Id, pot.Id, "X")
+	createLink(t, app, a.Id, pot.Id, "Y")
+	createLink(t, app, a.Id, pot.Id, "Z") // nobody else links to Z
+	createLink(t, app, b.Id, pot.Id, "X")
+	createLink(t, app, b.Id, pot.Id, "Y") // B appears in both groups
+	createLink(t, app, c.Id, pot.Id, "Y")
+
+	got, err := links2Hop(app, a)
+	if err != nil {
+		t.Fatalf("links2Hop: %v", err)
+	}
+	if len(got) != 2 || got[0].Title != "X" || got[1].Title != "Y" {
+		t.Fatalf("groups = %+v, want X and Y only", got)
+	}
+	if want := []string{"B"}; !slices.Equal(linkedTitles(got[0].Cards), want) {
+		t.Errorf("X titles = %v, want %v", linkedTitles(got[0].Cards), want)
+	}
+	if want := []string{"B", "C"}; !slices.Equal(linkedTitles(got[1].Cards), want) {
+		t.Errorf("Y titles = %v, want %v", linkedTitles(got[1].Cards), want)
 	}
 }
 
