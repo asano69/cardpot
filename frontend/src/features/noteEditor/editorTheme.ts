@@ -147,6 +147,17 @@ export const editorTheme = EditorView.theme({
     backgroundColor:
       "light-dark(rgba(175, 184, 193, 0.2), rgba(110, 118, 129, 0.4))",
   },
+  // The declaration line ("code: python") has no full-width background;
+  // only its declaration text is highlighted, via ".code-block-start".
+  ".cm-line.code-block.start": {
+    backgroundColor: "transparent",
+  },
+  ".code-block-start": {
+    color: "#342d9c",
+    fontSize: "0.95em",
+    backgroundColor: "#ffcfc6",
+    padding: "1px 2px",
+  },
 
   // WikiLink node (see parser/cardpot's WikiLink node and
   // wikiLinkNavigation.ts): styled like the old ProseMirror editor's

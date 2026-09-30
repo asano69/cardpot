@@ -6,7 +6,7 @@ import {
   type ViewUpdate,
 } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { CodeBlock } from "../../parser/cardpot";
+import { CodeBlock, CodeBlockMark } from "../../parser/cardpot";
 
 // Full-line background for a `code:` block (see
 // parser/cardpot/rules/codeBlock.ts). A plain Decoration.mark only
@@ -18,17 +18,30 @@ import { CodeBlock } from "../../parser/cardpot";
 // that line's full width regardless of how much text it holds -- the
 // same technique titleLineHighlight.ts and hangingIndent.ts use for
 // their own line-level styling.
+//
+// The declaration line (e.g. "code: python") additionally gets the
+// "start" class, and only its declaration text (the CodeBlockMark, which
+// excludes the leading indent) is wrapped in a "code-block-start" mark, so
+// editorTheme.ts can highlight just that text instead of the whole line.
+const startMark = Decoration.mark({ class: "code-block-start" });
+
 function buildDecorations(view: EditorView): DecorationSet {
   const decorations = [];
   syntaxTree(view.state).iterate({
     enter(node) {
+      if (node.type === CodeBlockMark) {
+        decorations.push(startMark.range(node.from, node.to));
+        return;
+      }
       if (node.type !== CodeBlock) return;
       const startLine = view.state.doc.lineAt(node.from).number;
       const endLine = view.state.doc.lineAt(node.to).number;
       for (let n = startLine; n <= endLine; n++) {
         const line = view.state.doc.line(n);
         decorations.push(
-          Decoration.line({ class: "code-block" }).range(line.from),
+          Decoration.line({
+            class: n === startLine ? "code-block start" : "code-block",
+          }).range(line.from),
         );
       }
     },
