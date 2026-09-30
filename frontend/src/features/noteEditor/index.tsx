@@ -42,12 +42,14 @@ export interface NoteEditorProps {
   initialTitle?: string;
   autofocus?: boolean;
   existingTitle?: string;
-  // Body line to place the caret on when this editor mounts, where 1 is
-  // the first line after the title (document line 1 is always the title
-  // -- see rules/title.ts). Used only for the draft-to-existing-card
-  // transition (see CardForm's focusLineOnOpen), so typing can continue
-  // right into the body instead of leaving the caret wherever it was.
-  focusLine?: number;
+  // Selection to restore (and focus the editor with) when this editor
+  // mounts. Used only for the draft-to-existing-card transition (see
+  // CardForm's focusSelection), so the caret stays exactly where the
+  // user left it in the draft editor that this one replaces.
+  initialSelection?: { anchor: number; head: number };
+  // Called once with the created EditorView, so a caller can read the
+  // live selection later (see DraftCardEditor).
+  onView?: (view: EditorView) => void;
   onConfirmedTitle: (candidate: TitleCandidate) => void;
   // Rendered below the editor, in the related-page-list section. The
   // caller decides what goes there, so the editor needs no card id.
@@ -152,6 +154,7 @@ export default function NoteEditor(props: NoteEditorProps) {
     const view = new EditorView({ state, parent: el });
     // Lets cardpotDebug.dumpTree() in the browser console find this editor.
     const unregisterDebug = registerDebugView(view);
+    props.onView?.(view);
 
     // Seed the document's first line with initialTitle for a
     // brand-new draft opened from a URL slug that matched no existing
@@ -180,17 +183,18 @@ export default function NoteEditor(props: NoteEditorProps) {
       setTimeout(() => view.focus(), 0);
     }
 
-    // Moves the caret into the requested body line (see focusLine's own
-    // comment above) and focuses the editor. Deferred to the next task
-    // for the same reason autofocus is above -- right after mount the
-    // element may not be attached to the document yet. Clamped to the
-    // document's actual line count in case the body is still empty (a
-    // draft confirmed with no body text yet has no line 2 to jump to).
-    if (props.focusLine !== undefined) {
+    // Restores the caret (see initialSelection's own comment above) and
+    // focuses the editor. Deferred to the next task for the same reason
+    // autofocus is above -- right after mount the element may not be
+    // attached to the document yet. Clamped to the document length in
+    // case the content changed in the meantime.
+    if (props.initialSelection) {
       setTimeout(() => {
-        const lineNumber = Math.min(props.focusLine! + 1, view.state.doc.lines);
-        const line = view.state.doc.line(lineNumber);
-        view.dispatch({ selection: { anchor: line.from } });
+        const max = view.state.doc.length;
+        const { anchor, head } = props.initialSelection!;
+        view.dispatch({
+          selection: { anchor: Math.min(anchor, max), head: Math.min(head, max) },
+        });
         view.focus();
       }, 0);
     }

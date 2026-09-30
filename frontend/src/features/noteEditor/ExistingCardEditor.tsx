@@ -20,8 +20,8 @@ export interface ExistingCardEditorProps {
   initialYdoc?: Y.Doc;
   onMergeTarget?: (target: string | null) => void;
   existingTitle?: string;
-  // Forwarded straight to NoteEditor (see its own focusLine comment).
-  focusLine?: number;
+  // Forwarded straight to NoteEditor (see its own initialSelection comment).
+  initialSelection?: { anchor: number; head: number };
   // Called once, synchronously, with a getter for this card's current
   // Yjs text content -- used by CardForm's debug "info" button to
   // export a readable snapshot of the live document. Not reactive:
@@ -74,7 +74,7 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
       potSlug={props.potSlug}
       onConfirmedTitle={confirm}
       existingTitle={props.existingTitle}
-      focusLine={props.focusLine}
+      initialSelection={props.initialSelection}
     >
       <RelatedCards cardId={props.cardId} potSlug={props.potSlug()} />
     </NoteEditor>

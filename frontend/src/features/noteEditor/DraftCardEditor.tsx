@@ -1,5 +1,6 @@
 import { createSignal, onCleanup } from "solid-js";
 import * as Y from "yjs";
+import type { EditorView } from "@codemirror/view";
 import NoteEditor from "./index";
 import { createCard } from "@/lib/api/cardApi";
 import type { TitleCandidate } from "@/lib/models/card";
@@ -9,7 +10,11 @@ export interface DraftCardEditorProps {
   potId: () => string | undefined;
   potSlug: () => string;
   initialTitle?: string;
-  onCreated: (cardId: string, ydoc: Y.Doc) => void;
+  onCreated: (
+    cardId: string,
+    ydoc: Y.Doc,
+    selection: { anchor: number; head: number },
+  ) => void;
   onMergeTarget?: (target: string | null) => void;
 }
 
@@ -31,6 +36,7 @@ export default function DraftCardEditor(props: DraftCardEditorProps) {
   const [saveError, setSaveError] = createSignal(false);
   let creating = false;
   let created = false;
+  let view: EditorView | undefined;
 
   const create = async (candidate: TitleCandidate) => {
     if (creating || created) return;
@@ -43,7 +49,13 @@ export default function DraftCardEditor(props: DraftCardEditorProps) {
       created = true;
       setSaveError(false);
       props.onMergeTarget?.(result.mergeTarget);
-      props.onCreated(result.card.id, ydoc);
+      // Read after the request: the user may have kept typing or moved
+      // the caret while it was in flight.
+      const { anchor, head } = view?.state.selection.main ?? {
+        anchor: 0,
+        head: 0,
+      };
+      props.onCreated(result.card.id, ydoc, { anchor, head });
     } catch (error) {
       console.error("[draft-card-editor] failed to create card:", error);
       setSaveError(true);
@@ -69,6 +81,7 @@ export default function DraftCardEditor(props: DraftCardEditorProps) {
       )}
       <NoteEditor
         ydoc={ydoc}
+        onView={(v) => (view = v)}
         potSlug={props.potSlug}
         initialTitle={props.initialTitle}
         // A draft seeded from a URL slug (a wiki link or the address bar)

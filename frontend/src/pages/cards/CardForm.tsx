@@ -45,11 +45,14 @@ export default function CardForm() {
   const [mergeTarget, setMergeTarget] = createSignal<string | null>(null);
   // Set only right before a draft's title resolves into a real card
   // (see handleCreated below), so the freshly mounted ExistingCardEditor
-  // knows to move the caret into the body instead of leaving it wherever
-  // autofocus/sync left it. Reset to undefined everywhere else cardId is
-  // set from the normal URL-driven effect, so re-opening an existing
-  // card never inherits a stale value from an earlier draft creation.
-  const [focusLineOnOpen, setFocusLineOnOpen] = createSignal<number>();
+  // restores the caret where the draft editor left it. Reset to undefined
+  // everywhere else cardId is set from the normal URL-driven effect, so
+  // re-opening an existing card never inherits a stale value from an
+  // earlier draft creation.
+  const [focusSelection, setFocusSelection] = createSignal<{
+    anchor: number;
+    head: number;
+  }>();
   // Getter for the currently-open card's live Yjs text, handed up by
   // ExistingCardEditor (see its onContentSnapshot prop). Re-registered
   // on every card open, since ExistingCardEditor remounts per card
@@ -73,7 +76,7 @@ export default function CardForm() {
       setCardId(undefined);
       setDraftYdoc(undefined);
       setDraft({});
-      setFocusLineOnOpen(undefined);
+      setFocusSelection(undefined);
       return;
     }
     const potId = pot()?.id;
@@ -93,7 +96,8 @@ export default function CardForm() {
       return;
     }
     setDraftYdoc(undefined);
-    setFocusLineOnOpen(undefined);
+    setFocusSelection(undefined);
+    // The card is looked up
     // The card is looked up on the server, not in the store, so nothing
     // here depends on which cards happen to be loaded. The loading
     // fallback below shows until the lookup settles.
@@ -154,10 +158,13 @@ export default function CardForm() {
     if (rename) replaceUrl(titleToSegment(next.title!));
   });
 
-  const handleCreated = (id: string, ydoc: Y.Doc) => {
-    // Body line 1: right where typing should continue once the title
-    // line is confirmed (see NoteEditor's focusLine).
-    setFocusLineOnOpen(1);
+  const handleCreated = (
+    id: string,
+    ydoc: Y.Doc,
+    selection: { anchor: number; head: number },
+  ) => {
+    // Keep the caret where the user left it in the draft editor.
+    setFocusSelection(selection);
     setDraftYdoc(ydoc);
     // The draft's URL is already committed, so it is safe to replace it now.
     const title = cardsById[id]?.title;
@@ -296,7 +303,7 @@ export default function CardForm() {
                 existingTitle={cardsById[id]?.title}
                 onMergeTarget={setMergeTarget}
                 onContentSnapshot={(fn) => setContentSnapshot(() => fn)}
-                focusLine={focusLineOnOpen()}
+                initialSelection={focusSelection()}
               />
             )}
           </Show>
