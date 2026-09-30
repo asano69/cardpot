@@ -28,6 +28,15 @@ export const editorTheme = EditorView.theme({
   ".cm-content": {
     padding: "0",
   },
+  // Selection color, drawn by drawSelection() (see index.tsx). The
+  // focused selector is needed because CodeMirror's base theme sets
+  // its own (purple) color for the focused state, which would
+  // otherwise win over the plain selector.
+  ".cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground":
+    {
+      backgroundColor: "green",
+      opacity: "0.4",
+    },
   ".cm-line": {
     lineHeight: "1.7",
     fontSize: "15px",
