@@ -10,26 +10,26 @@ function clickHitsClass(target: HTMLElement, className: string): boolean {
 describe("wikiLinkNavigation click targeting", () => {
   it("accepts a click on the rendered link span itself", () => {
     const span = document.createElement("span");
-    span.className = "cm-wikilink";
-    expect(clickHitsClass(span, "cm-wikilink")).toBe(true);
+    span.className = "page-link";
+    expect(clickHitsClass(span, "page-link")).toBe(true);
   });
 
   it("accepts a click on a child of the rendered link span", () => {
     // Nested marks (e.g. Bold wrapping part of a WikiLink) still
     // resolve via closest() walking up to the ancestor span.
     const span = document.createElement("span");
-    span.className = "cm-wikilink";
+    span.className = "page-link";
     const child = document.createElement("span");
     span.appendChild(child);
-    expect(clickHitsClass(child, "cm-wikilink")).toBe(true);
+    expect(clickHitsClass(child, "page-link")).toBe(true);
   });
 
   it("rejects a click on the line but outside any link span", () => {
     // Regression test: this is exactly the "blank space to the right
     // of the link" case -- the click lands on .cm-line itself, which
-    // carries no cm-wikilink ancestor.
+    // carries no page-link ancestor.
     const line = document.createElement("div");
     line.className = "cm-line";
-    expect(clickHitsClass(line, "cm-wikilink")).toBe(false);
+    expect(clickHitsClass(line, "page-link")).toBe(false);
   });
 });
