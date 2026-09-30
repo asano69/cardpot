@@ -71,7 +71,11 @@ export default function DraftCardEditor(props: DraftCardEditorProps) {
         ydoc={ydoc}
         potSlug={props.potSlug}
         initialTitle={props.initialTitle}
-        autofocus
+        // A draft seeded from a URL slug (a wiki link or the address bar)
+        // is a page the user has not chosen to write yet, so nothing is
+        // focused. Only an empty draft (the "add card" button) focuses
+        // the editor, so typing can start immediately.
+        autofocus={!props.initialTitle}
         onConfirmedTitle={create}
       />
     </>

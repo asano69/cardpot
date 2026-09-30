@@ -231,13 +231,17 @@ export default function NoteEditor(props: NoteEditorProps) {
     });
   };
 
-  // Horizontal padding is minimal on narrow screens (phones) since
-  // width is scarce there, but vertical padding stays generous
-  // regardless of screen size.
+  // The page's own look (padding, shadow, radius) lives in
+  // styles/components.css's ".page". A card that has no provider yet is
+  // still a draft with no record behind it, so it is marked
+  // "not-persistent" and drawn faded until its title creates the card.
   return (
     <>
-      <div class="min-w-0 flex-1 px-2 py-10 sm:px-10 bg-field shadow-md">
-        <div ref={mountEditor} class="text-text outline-none" />
+      <div
+        class="page min-w-0 flex-1"
+        classList={{ "not-persistent": !props.provider }}
+      >
+        <div ref={mountEditor} class="editor text-text outline-none" />
       </div>
       {/* Reserves space below the editor so a long note's last line
           never lands flush against the bottom of the viewport --

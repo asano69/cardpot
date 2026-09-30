@@ -230,6 +230,27 @@
     pointer-events: none;
   }
 
+  /* The sheet the note editor sits on (see noteEditor/index.tsx).
+   * Structure and values follow Cosense's own .page. Padding shrinks
+   * on narrow screens (phones), where width is scarce. */
+  .page {
+    background-color: var(--color-field);
+    padding: 42px 49px;
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.16);
+    border-radius: 4px 4px 3px 3px;
+  }
+
+  @media (max-width: 639px) {
+    .page {
+      padding: 42px 8px;
+    }
+  }
+
+  /* A draft has no card record yet (see DraftCardEditor). */
+  .page.not-persistent {
+    opacity: 0.7;
+  }
+
   /* Space reserved below the note editor (see noteEditor/index.tsx),
    * named and sized after Cosense's own .related-page-list. The
    * min-height is what actually guarantees the gap: even a note whose
