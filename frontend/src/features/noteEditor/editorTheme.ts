@@ -153,6 +153,8 @@ export const editorTheme = EditorView.theme({
       "light-dark(rgba(175, 184, 193, 0.2), rgba(110, 118, 129, 0.4))",
     borderRadius: "6px",
     padding: "0.15em 0.35em",
+    fontSize: "0.9em",
+    color: "#342d9c", //--code-color
   },
 
   // `code:` block (see codeBlockLines.ts): every line the block
