@@ -17,22 +17,15 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/types"
 
+	"github.com/asano69/cardpot/internal/api"
 	"github.com/asano69/cardpot/internal/slug"
 )
 
 // linkedCard is one entry in the links1hop and links2hop responses. It holds
 // everything the frontend's card grid needs to draw a card, so both routes
-// share this one shape.
-type linkedCard struct {
-	Title         string   `json:"title"`
-	TitleLc       string   `json:"titleLc"`
-	// Raw JSON as stored in the "description" field (a list of lines), so it
-	// reaches the client exactly like the cards collection's own responses.
-	Description   types.JSONRaw `json:"description"`
-	Image         string   `json:"image"`
-	Pin           bool     `json:"pin"`
-	TargetTitleLc []string `json:"target_titleLc"`
-}
+// share this one shape (defined in internal/api, which also feeds the
+// frontend's generated types).
+type linkedCard = api.LinkedCard
 
 // findCardBySlug looks up the card in pot whose title slugifies (see
 // internal/slug.FromTitle) to targetSlug, using the "cards" collection's
@@ -137,21 +130,13 @@ func links1Hop(app core.App, card *core.Record) ([]linkedCard, error) {
 	return relatedCards(app, card, "cards.id IN ("+oneHopIDs+")")
 }
 
-// hopGroup is one entry of the links2hop response: a target (headword) that
-// card links to, and the cards that link to that same target.
-type hopGroup struct {
-	Title   string       `json:"title"`
-	TitleLc string       `json:"titleLc"`
-	Cards   []linkedCard `json:"cards"`
-}
-
 // links2Hop returns the live cards of the same pot that link to at least one
-// of the targets card links to (A --> X <-- B), grouped by that shared target
-// X. X does not have to exist. A card sharing several targets appears in each
-// of their groups; targets nobody else links to produce no group. Cards that
-// are already one hop away (see oneHopIDs) are excluded, so a card never shows
-// up in both views.
-func links2Hop(app core.App, card *core.Record) ([]hopGroup, error) {
+// of the targets card links to (A --> X <-- B), one row per (shared target X,
+// card). X does not have to exist. A card sharing several targets appears once
+// per target; targets nobody else links to produce no row. Rows are ordered by
+// the position of X in card, then by title. Cards that are already one hop
+// away (see oneHopIDs) are excluded, so a card never shows up in both views.
+func links2Hop(app core.App, card *core.Record) ([]api.Link2HopCard, error) {
 	cards, err := relatedCards(app, card, `cards.id IN (
 		SELECT l2.source FROM card_links l1
 		JOIN card_links l2
@@ -172,24 +157,20 @@ func links2Hop(app core.App, card *core.Record) ([]hopGroup, error) {
 		return nil, err
 	}
 
-	groups := []hopGroup{}
+	rows := []api.Link2HopCard{}
 	for _, link := range links {
 		titleLc := link.GetString("target_titleLc")
-		group := hopGroup{
-			Title:   link.GetString("target_title"),
-			TitleLc: titleLc,
-			Cards:   []linkedCard{},
-		}
 		for _, c := range cards {
 			if slices.Contains(c.TargetTitleLc, titleLc) {
-				group.Cards = append(group.Cards, c)
+				rows = append(rows, api.Link2HopCard{
+					LinkedCard: c,
+					ViaTitle:   link.GetString("target_title"),
+					ViaTitleLc: titleLc,
+				})
 			}
 		}
-		if len(group.Cards) > 0 {
-			groups = append(groups, group)
-		}
 	}
-	return groups, nil
+	return rows, nil
 }
 
 // relatedCards loads the live cards of card's pot, other than card itself,

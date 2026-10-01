@@ -1,10 +1,7 @@
 import { ClientResponseError } from "pocketbase";
 import pb from "./pb";
-import type {
-  CardGridCard,
-  CardRecord,
-  TitleCandidate,
-} from "../models/card";
+import type { CardRecord, TitleCandidate } from "../models/card";
+import type { LinkedCard, Link2HopCard } from "./generated";
 import { titleToSegment, titleToSlug } from "../models/slugify";
 
 // Response shape shared by createCard/updateCardTitle: the saved card,
@@ -96,14 +93,7 @@ export async function fetchRelatedCards(cardId: string): Promise<CardRecord[]> {
   return res.cards;
 }
 
-// A target (headword) the open card links to, with the cards that link to
-// that same target (see hopGroup in internal/serve/links.go).
-export interface LinkGroup {
-  title: string;
-  titleLc: string;
-  cards: CardGridCard[];
-}
-
+// Shared by
 // Shared by the two hop fetchers below (see internal/serve/links.go). The pot
 // is addressed by its name and the card by the slug derived from its title.
 async function fetchHop<T>(
@@ -122,16 +112,17 @@ async function fetchHop<T>(
 export function fetchLinks1Hop(
   potName: string,
   title: string,
-): Promise<CardGridCard[]> {
-  return fetchHop<CardGridCard[]>(potName, title, "links1hop");
+): Promise<LinkedCard[]> {
+  return fetchHop<LinkedCard[]>(potName, title, "links1hop");
 }
 
-// Fetches the cards two hops away, grouped by the shared target.
+// Fetches the cards two hops away: one row per (shared target, card), rows of
+// the same target adjacent (see RelatedCards, which groups them).
 export function fetchLinks2Hop(
   potName: string,
   title: string,
-): Promise<LinkGroup[]> {
-  return fetchHop<LinkGroup[]>(potName, title, "links2hop");
+): Promise<Link2HopCard[]> {
+  return fetchHop<Link2HopCard[]>(potName, title, "links2hop");
 }
 
 // Updates a card's own fields directly. The title is deliberately not

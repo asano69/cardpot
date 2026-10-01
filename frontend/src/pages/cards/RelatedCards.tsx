@@ -1,10 +1,11 @@
-import { createResource, For, Show } from "solid-js";
+import { createMemo, createResource, For, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import {
   fetchLinks1Hop,
   fetchLinks2Hop,
   fetchRelatedCards,
 } from "@/lib/api/cardApi";
+import type { Link2HopCard } from "@/lib/api/generated";
 import { cardsById } from "@/lib/stores/cardsStore";
 import { Link } from "@/lib/icons";
 import { titleToSegment } from "@/lib/models/slugify";
@@ -77,6 +78,25 @@ export default function RelatedCards(props: RelatedCardsProps) {
   const [twoHop] = createResource(title, (t) =>
     fetchLinks2Hop(props.potSlug, t),
   );
+  // The server returns one row per (shared target, card) with the rows of a
+  // target adjacent, so grouping is a single pass over consecutive rows.
+  const twoHopGroups = createMemo(() => {
+    const groups: { title: string; titleLc: string; cards: Link2HopCard[] }[] =
+      [];
+    for (const row of twoHop() ?? []) {
+      const last = groups[groups.length - 1];
+      if (last?.titleLc === row.via_titleLc) {
+        last.cards.push(row);
+      } else {
+        groups.push({
+          title: row.via_title,
+          titleLc: row.via_titleLc,
+          cards: [row],
+        });
+      }
+    }
+    return groups;
+  });
   const [queryCards] = createResource(
     () => [props.cardId, query()] as const,
     ([id]) => fetchRelatedCards(id),
@@ -98,7 +118,7 @@ export default function RelatedCards(props: RelatedCardsProps) {
           potSlug={props.potSlug}
         />
       </Show>
-      <For each={twoHop()}>
+      <For each={twoHopGroups()}>
         {(group) => (
           <RelationRow
             rowClass="links-2-hop"

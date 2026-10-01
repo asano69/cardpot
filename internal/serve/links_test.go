@@ -6,6 +6,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/asano69/cardpot/internal/api"
 	"github.com/asano69/cardpot/internal/slug"
 )
 
@@ -129,6 +130,15 @@ func TestFindCardBySlug_IgnoresDeletedCard(t *testing.T) {
 	if got, err := findCardBySlug(app, pot.Id, "Hello"); err != nil || got != nil {
 		t.Errorf("findCardBySlug = (%v, %v), want (nil, nil)", got, err)
 	}
+}
+
+// hopRows renders links2hop rows as "via/title" for compact assertions.
+func hopRows(rows []api.Link2HopCard) []string {
+	out := make([]string, len(rows))
+	for i, r := range rows {
+		out[i] = r.ViaTitle + "/" + r.Title
+	}
+	return out
 }
 
 func linkedTitles(cards []linkedCard) []string {
@@ -255,11 +265,8 @@ func TestLinks2Hop_SharedTarget(t *testing.T) {
 	if err != nil {
 		t.Fatalf("links2Hop: %v", err)
 	}
-	if len(got) != 1 || got[0].Title != "X" {
-		t.Fatalf("groups = %+v, want one group titled X", got)
-	}
-	if want := []string{"B"}; !slices.Equal(linkedTitles(got[0].Cards), want) {
-		t.Errorf("titles = %v, want %v", linkedTitles(got[0].Cards), want)
+	if want := []string{"X/B"}; !slices.Equal(hopRows(got), want) {
+		t.Errorf("rows = %v, want %v", hopRows(got), want)
 	}
 }
 
@@ -281,11 +288,8 @@ func TestLinks2Hop_ExcludesCardsAlreadyOneHopAway(t *testing.T) {
 	if err != nil {
 		t.Fatalf("links2Hop: %v", err)
 	}
-	if len(got) != 1 || got[0].Title != "X" {
-		t.Fatalf("groups = %+v, want one group titled X", got)
-	}
-	if want := []string{"C"}; !slices.Equal(linkedTitles(got[0].Cards), want) {
-		t.Errorf("titles = %v, want %v (B is 1 hop away)", linkedTitles(got[0].Cards), want)
+	if want := []string{"X/C"}; !slices.Equal(hopRows(got), want) {
+		t.Errorf("rows = %v, want %v (B is 1 hop away)", hopRows(got), want)
 	}
 }
 
@@ -308,14 +312,9 @@ func TestLinks2Hop_GroupsByEachSharedTarget(t *testing.T) {
 	if err != nil {
 		t.Fatalf("links2Hop: %v", err)
 	}
-	if len(got) != 2 || got[0].Title != "X" || got[1].Title != "Y" {
-		t.Fatalf("groups = %+v, want X and Y only", got)
-	}
-	if want := []string{"B"}; !slices.Equal(linkedTitles(got[0].Cards), want) {
-		t.Errorf("X titles = %v, want %v", linkedTitles(got[0].Cards), want)
-	}
-	if want := []string{"B", "C"}; !slices.Equal(linkedTitles(got[1].Cards), want) {
-		t.Errorf("Y titles = %v, want %v", linkedTitles(got[1].Cards), want)
+	// B appears under both X and Y; Z has no row; rows follow A's link order.
+	if want := []string{"X/B", "Y/B", "Y/C"}; !slices.Equal(hopRows(got), want) {
+		t.Errorf("rows = %v, want %v", hopRows(got), want)
 	}
 }
 
