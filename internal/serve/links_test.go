@@ -44,6 +44,7 @@ func newLinksTestApp(t *testing.T) core.App {
 		&core.TextField{Name: "target_pot"},
 		&core.TextField{Name: "target_title"},
 		&core.TextField{Name: "target_titleLc"},
+		&core.NumberField{Name: "position"},
 		&core.DateField{Name: "deleted"},
 	)
 	if err := app.Save(links); err != nil {

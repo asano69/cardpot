@@ -1,6 +1,7 @@
 package wikilink
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -35,6 +36,7 @@ func newTestApp(t *testing.T) core.App {
 		&core.TextField{Name: "target_title"},
 		&core.TextField{Name: "target_titleLc"},
 		&core.TextField{Name: "target_pot"},
+		&core.NumberField{Name: "position"},
 		&core.DateField{Name: "deleted"},
 	)
 	if err := app.Save(links); err != nil {
@@ -189,6 +191,36 @@ func TestSync_RemovedLinkIsSoftDeleted(t *testing.T) {
 	mustSync(t, app, a.Id, "A\n[B]")
 	if got := linksFrom(t, app, a.Id); len(got) != 1 {
 		t.Errorf("got %d live links, want 1", len(got))
+	}
+}
+
+// linkOrder returns the live link targets of a card in stored order.
+func linkOrder(t *testing.T, app core.App, source string) []string {
+	t.Helper()
+	records, err := app.FindRecordsByFilter("card_links", `source = {:source} && deleted = ""`, "position", 0, 0, map[string]any{"source": source})
+	if err != nil {
+		t.Fatalf("list card_links: %v", err)
+	}
+	var order []string
+	for _, record := range records {
+		order = append(order, record.GetString("target_titleLc"))
+	}
+	return order
+}
+
+func TestSync_StoresLinksInOrderOfFirstAppearance(t *testing.T) {
+	app := newTestApp(t)
+	a := createCard(t, app)
+
+	mustSync(t, app, a.Id, "A\n[a] [b] [a] [c]")
+	if got := linkOrder(t, app, a.Id); !slices.Equal(got, []string{"a", "b", "c"}) {
+		t.Errorf("order = %v, want [a b c]", got)
+	}
+
+	// Reordering and removing links updates the positions of the kept rows.
+	mustSync(t, app, a.Id, "A\n[c] [a]")
+	if got := linkOrder(t, app, a.Id); !slices.Equal(got, []string{"c", "a"}) {
+		t.Errorf("order after edit = %v, want [c a]", got)
 	}
 }
 

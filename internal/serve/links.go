@@ -74,7 +74,7 @@ func findCardBySlug(app core.App, potID, targetSlug string) (*core.Record, error
 // source -- its own one-hop-out neighborhood.
 func ownTargetTitleLcs(app core.App, cardID string) ([]string, error) {
 	links, err := app.FindRecordsByFilter(
-		"card_links", "source = {:source} && "+notDeleted, "", 0, 0,
+		"card_links", "source = {:source} && "+notDeleted, "position", 0, 0,
 		dbx.Params{"source": cardID},
 	)
 	if err != nil {
@@ -162,9 +162,10 @@ func links2Hop(app core.App, card *core.Record) ([]hopGroup, error) {
 		return nil, err
 	}
 
-	// Sync keeps one row per target_titleLc, so no target repeats here.
+	// Sync keeps one row per target_titleLc, so no target repeats here. The
+	// groups follow the order in which the links appear in the card.
 	links, err := app.FindRecordsByFilter(
-		"card_links", "source = {:source} && "+notDeleted, "target_titleLc", 0, 0,
+		"card_links", "source = {:source} && "+notDeleted, "position,target_titleLc", 0, 0,
 		dbx.Params{"source": card.Id},
 	)
 	if err != nil {

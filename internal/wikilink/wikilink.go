@@ -45,7 +45,7 @@ func Sync(app core.App, cardID, text string) error {
 	}
 	pot := source.GetString("pot")
 
-	targets := targetTitlesByTitleLc(parser.Parse(text).WikiLinkTitles())
+	targets := orderedTargets(parser.Parse(text).WikiLinkTitles())
 
 	existing, err := app.FindRecordsByFilter(
 		"card_links", `source = {:source} && deleted = ""`, "", 0, 0,
@@ -55,24 +55,19 @@ func Sync(app core.App, cardID, text string) error {
 		return err
 	}
 
-	stale, missing := diff(existing, targets)
-	if len(stale) == 0 && len(missing) == 0 {
-		return nil
-	}
-
 	collection, err := app.FindCollectionByNameOrId("card_links")
 	if err != nil {
 		return err
 	}
-	return app.RunInTransaction(func(tx core.App) error {
-		for _, record := range stale {
-			record.Set("deleted", types.NowDateTime())
-			if err := tx.Save(record); err != nil {
-				return err
-			}
-		}
-		for _, targetTitleLc := range missing {
-			record := core.NewRecord(collection)
+
+	stale, kept := splitExisting(existing, targets)
+
+	// A new row, or a kept row whose position changed, must be written.
+	var toSave []*core.Record
+	for position, t := range targets {
+		record := kept[t.titleLc]
+		if record == nil {
+			record = core.NewRecord(collection)
 			record.Set("source", cardID)
 			// A wiki link's target is resolved within the same pot as its
 			// source card (see slug.go's resolveTitle), so this is stored
@@ -80,8 +75,26 @@ func Sync(app core.App, cardID, text string) error {
 			// cards link to a given card) possible without having to
 			// re-derive the pot from the source card each time.
 			record.Set("target_pot", pot)
-			record.Set("target_titleLc", targetTitleLc)
-			record.Set("target_title", targets[targetTitleLc])
+			record.Set("target_titleLc", t.titleLc)
+			record.Set("target_title", t.title)
+		} else if record.GetInt("position") == position {
+			continue
+		}
+		record.Set("position", position)
+		toSave = append(toSave, record)
+	}
+	if len(stale) == 0 && len(toSave) == 0 {
+		return nil
+	}
+
+	return app.RunInTransaction(func(tx core.App) error {
+		for _, record := range stale {
+			record.Set("deleted", types.NowDateTime())
+			if err := tx.Save(record); err != nil {
+				return err
+			}
+		}
+		for _, record := range toSave {
 			if err := tx.Save(record); err != nil {
 				return err
 			}
@@ -90,15 +103,23 @@ func Sync(app core.App, cardID, text string) error {
 	})
 }
 
-// targetTitlesByTitleLc maps each linked title's titleLc identity (see
-// internal/slug.ToLowerKey) to the raw title under which it was first
-// linked. This is the same normalization resolveTitle applies to a card's
-// own title before saving (see internal/serve/slug.go), so a wiki link's
-// identity always matches how its target card would itself be identified.
-// Titles that normalize to no usable text at all (e.g. a link made only of
-// brackets and spaces) cannot be stored and are dropped.
-func targetTitlesByTitleLc(titles []string) map[string]string {
-	titleByTitleLc := make(map[string]string, len(titles))
+// target is one distinct link target of a card.
+type target struct {
+	titleLc string // identity, see internal/slug.ToLowerKey
+	title   string // raw title under which it was first linked
+}
+
+// orderedTargets returns the distinct link targets in the order they first
+// appear in the text, so a card linking [a][b][a][c] yields a, b, c. A
+// target's identity is its titleLc (see internal/slug.ToLowerKey), the same
+// normalization resolveTitle applies to a card's own title before saving
+// (see internal/serve/slug.go), so a wiki link's identity always matches how
+// its target card would itself be identified. Titles that normalize to no
+// usable text at all (e.g. a link made only of brackets and spaces) cannot
+// be stored and are dropped.
+func orderedTargets(titles []string) []target {
+	var targets []target
+	seen := make(map[string]bool, len(titles))
 	for _, title := range titles {
 		base := title
 		if strings.ContainsAny(base, "[]") {
@@ -108,32 +129,33 @@ func targetTitlesByTitleLc(titles []string) map[string]string {
 			continue
 		}
 		key := slug.ToLowerKey(base)
-		if _, seen := titleByTitleLc[key]; !seen {
-			titleByTitleLc[key] = title
+		if seen[key] {
+			continue
 		}
+		seen[key] = true
+		targets = append(targets, target{titleLc: key, title: title})
 	}
-	return titleByTitleLc
+	return targets
 }
 
-// diff compares the stored rows with the wanted targets (keyed by
-// titleLc). stale rows (a link that is gone, or a duplicate row) must be
-// deleted; missing keys need a new row. The stored target_title of a kept
-// row is left as is: the row's identity is its titleLc, so a different
-// spelling of the same titleLc is not a change.
-func diff(existing []*core.Record, targets map[string]string) (stale []*core.Record, missing []string) {
-	kept := make(map[string]bool, len(existing))
+// splitExisting separates the stored rows into stale rows (a link that is
+// gone, or a duplicate row), which must be deleted, and the kept row of each
+// wanted target, keyed by titleLc. The stored target_title of a kept row is
+// left as is: the row's identity is its titleLc, so a different spelling of
+// the same titleLc is not a change.
+func splitExisting(existing []*core.Record, targets []target) (stale []*core.Record, kept map[string]*core.Record) {
+	wanted := make(map[string]bool, len(targets))
+	for _, t := range targets {
+		wanted[t.titleLc] = true
+	}
+	kept = make(map[string]*core.Record, len(existing))
 	for _, record := range existing {
-		targetTitleLc := record.GetString("target_titleLc")
-		if _, wanted := targets[targetTitleLc]; wanted && !kept[targetTitleLc] {
-			kept[targetTitleLc] = true
+		titleLc := record.GetString("target_titleLc")
+		if wanted[titleLc] && kept[titleLc] == nil {
+			kept[titleLc] = record
 			continue
 		}
 		stale = append(stale, record)
 	}
-	for targetTitleLc := range targets {
-		if !kept[targetTitleLc] {
-			missing = append(missing, targetTitleLc)
-		}
-	}
-	return stale, missing
+	return stale, kept
 }

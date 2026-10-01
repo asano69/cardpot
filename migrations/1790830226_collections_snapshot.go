@@ -1314,6 +1314,19 @@ func init() {
 						"type": "relation"
 					},
 					{
+						"help": "",
+						"hidden": false,
+						"id": "number1177347317",
+						"max": null,
+						"min": 0,
+						"name": "position",
+						"onlyInt": false,
+						"presentable": false,
+						"required": false,
+						"system": false,
+						"type": "number"
+					},
+					{
 						"autogeneratePattern": "",
 						"help": "",
 						"hidden": false,

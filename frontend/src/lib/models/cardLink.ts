@@ -8,6 +8,8 @@ export interface CardLinkRecord {
   target_pot: string;
   target_title: string;
   target_titleLc: string;
+  // Order in which the target first appears in the source card (0-based).
+  position: number;
   // Soft-delete timestamp; an empty string while the link is live.
   deleted: string;
   created: string;
