@@ -65,11 +65,10 @@ export interface CardRecord {
 // The fields a card grid item displays. Cards that come from the links1hop /
 // links2hop routes carry only these, so the grid view accepts this subset
 // instead of a full CardRecord.
-// `title` is a plain string so the generated API types (lib/api/generated.ts)
-// fit as well as full CardRecords.
-export type CardGridCard = Pick<CardRecord, "description" | "image" | "pin"> & {
-  title: string;
-};
+export type CardGridCard = Pick<
+  CardRecord,
+  "title" | "description" | "image" | "pin"
+>;
 
 // The title shown for a card in CardList's grid (see
 // pages/cards/CardItem.tsx). Branded so call sites can't
@@ -97,6 +96,8 @@ export function collapseGridTitleWhitespace(title: string): string {
 
 // Derives the grid title for `card`: its stored title with ASCII
 // whitespace runs collapsed (see collapseGridTitleWhitespace above).
-export function deriveCardGridTitle(card: { title: string }): CardGridTitle {
+export function deriveCardGridTitle(
+  card: Pick<CardRecord, "title">,
+): CardGridTitle {
   return collapseGridTitleWhitespace(card.title) as CardGridTitle;
 }

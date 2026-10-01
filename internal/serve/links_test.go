@@ -136,7 +136,7 @@ func TestFindCardBySlug_IgnoresDeletedCard(t *testing.T) {
 func hopRows(rows []api.Link2HopCard) []string {
 	out := make([]string, len(rows))
 	for i, r := range rows {
-		out[i] = r.ViaTitle + "/" + r.Title
+		out[i] = r.ViaTitle + "/" + string(r.Title)
 	}
 	return out
 }
@@ -144,7 +144,7 @@ func hopRows(rows []api.Link2HopCard) []string {
 func linkedTitles(cards []linkedCard) []string {
 	titles := make([]string, len(cards))
 	for i, c := range cards {
-		titles[i] = c.Title
+		titles[i] = string(c.Title)
 	}
 	return titles
 }

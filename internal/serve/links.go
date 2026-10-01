@@ -209,7 +209,7 @@ func relatedCards(app core.App, card *core.Record, condition string) ([]linkedCa
 			linkTargets = []string{}
 		}
 		result[i] = linkedCard{
-			Title:         record.GetString("title"),
+			Title:         CardTitle(record.GetString("title")),
 			TitleLc:       record.GetString("titleLc"),
 			Description:   types.JSONRaw(record.GetString("description")),
 			Image:         record.GetString("image"),

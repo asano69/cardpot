@@ -5,10 +5,21 @@ package api
 
 import "github.com/pocketbase/pocketbase/tools/types"
 
+// CreateCardRequest is the body of POST /api/admin/cards.
+type CreateCardRequest struct {
+	Pot            string         `json:"pot"`
+	TitleCandidate TitleCandidate `json:"titleCandidate" tstype:"TitleCandidate"`
+}
+
+// UpdateCardTitleRequest is the body of POST /api/admin/cards/{id}/title.
+type UpdateCardTitleRequest struct {
+	TitleCandidate TitleCandidate `json:"titleCandidate" tstype:"TitleCandidate"`
+}
+
 // LinkedCard is one card entry in the links1hop / links2hop responses.
 type LinkedCard struct {
-	Title   string `json:"title"`
-	TitleLc string `json:"titleLc"`
+	Title   CardTitle `json:"title" tstype:"CardTitle"`
+	TitleLc string    `json:"titleLc"`
 	// Raw JSON as stored in the "description" field (a list of lines).
 	Description   types.JSONRaw `json:"description" tstype:"string[] | null"`
 	Image         string        `json:"image"`

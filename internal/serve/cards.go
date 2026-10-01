@@ -17,6 +17,7 @@ import (
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/asano69/cardpot/internal/api"
 	"github.com/asano69/cardpot/internal/slug"
 )
 
@@ -42,15 +43,6 @@ func isDeleted(record *core.Record) bool {
 	return !record.GetDateTime("deleted").IsZero()
 }
 
-type createCardRequest struct {
-	Pot            string         `json:"pot"`
-	TitleCandidate TitleCandidate `json:"titleCandidate"`
-}
-
-type updateCardTitleRequest struct {
-	TitleCandidate TitleCandidate `json:"titleCandidate"`
-}
-
 // nextCardPosition returns the position for a new card in `pot`.
 func nextCardPosition(app core.App, pot string) (float64, error) {
 	records, err := app.FindRecordsByFilter(
@@ -73,7 +65,7 @@ func nextCardPosition(app core.App, pot string) (float64, error) {
 // frontend/src/components/noteEditor/index.tsx), which needs a real
 // record id before Yjs sync can start.
 func createCardHandler(e *core.RequestEvent) error {
-	var req createCardRequest
+	var req api.CreateCardRequest
 	if err := e.BindBody(&req); err != nil {
 		return e.BadRequestError("invalid request body", err)
 	}
@@ -132,7 +124,7 @@ func createCardHandler(e *core.RequestEvent) error {
 func updateCardTitleHandler(e *core.RequestEvent) error {
 	id := e.Request.PathValue("id")
 
-	var req updateCardTitleRequest
+	var req api.UpdateCardTitleRequest
 	if err := e.BindBody(&req); err != nil {
 		return e.BadRequestError("invalid request body", err)
 	}

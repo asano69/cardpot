@@ -1,7 +1,12 @@
 import { ClientResponseError } from "pocketbase";
 import pb from "./pb";
 import type { CardRecord, TitleCandidate } from "../models/card";
-import type { LinkedCard, Link2HopCard } from "./generated";
+import type {
+  CreateCardRequest,
+  LinkedCard,
+  Link2HopCard,
+  UpdateCardTitleRequest,
+} from "./generated";
 import { titleToSegment, titleToSlug } from "../models/slugify";
 
 // Response shape shared by createCard/updateCardTitle: the saved card,
@@ -21,9 +26,10 @@ export async function createCard(
   pot: string,
   titleCandidate: TitleCandidate,
 ): Promise<CardMutationResult> {
+  const body: CreateCardRequest = { pot, titleCandidate };
   return await pb.send<CardMutationResult>("/api/admin/cards", {
     method: "POST",
-    body: { pot, titleCandidate },
+    body,
   });
 }
 
@@ -39,9 +45,10 @@ export async function updateCardTitle(
   cardId: string,
   titleCandidate: TitleCandidate,
 ): Promise<CardMutationResult> {
+  const body: UpdateCardTitleRequest = { titleCandidate };
   return await pb.send<CardMutationResult>(`/api/admin/cards/${cardId}/title`, {
     method: "POST",
-    body: { titleCandidate },
+    body,
   });
 }
 

@@ -1,3 +1,9 @@
 packages:
   - path: "github.com/asano69/cardpot/internal/api"
     output_path: "frontend/src/lib/api/generated.ts"
+    # names.go holds the Go-only named types; the frontend uses its own
+    # branded types for them (see the frontmatter below).
+    exclude_files:
+      - names.go
+    frontmatter: |
+      import type { CardTitle, TitleCandidate } from "../models/card";
