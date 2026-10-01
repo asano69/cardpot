@@ -131,10 +131,11 @@ func links1Hop(app core.App, card *core.Record) ([]linkedCard, error) {
 }
 
 // links2Hop returns the live cards of the same pot that link to at least one
-// of the targets card links to (A --> X <-- B), one row per (shared target X,
-// card). X does not have to exist. A card sharing several targets appears once
-// per target; targets nobody else links to produce no row. Rows are ordered by
-// the position of X in card, then by title. Cards that are already one hop
+// of the targets card links to (A --> X <-- B), one row per card. X does not
+// have to exist. A card sharing several targets appears only once, under the
+// shared target that comes first in card; targets nobody else links to
+// produce no row. Rows are ordered by the position of X in card, then by
+// title. Cards that are already one hop
 // away (see oneHopIDs) are excluded, so a card never shows up in both views.
 func links2Hop(app core.App, card *core.Record) ([]api.Link2HopCard, error) {
 	cards, err := relatedCards(app, card, `cards.id IN (
@@ -158,16 +159,22 @@ func links2Hop(app core.App, card *core.Record) ([]api.Link2HopCard, error) {
 	}
 
 	rows := []api.Link2HopCard{}
+	// links is ordered by position, so the first target a card matches is the
+	// one with the smallest position. A card already listed is skipped, which
+	// keeps it out of every later group.
+	listed := make(map[string]bool, len(cards))
 	for _, link := range links {
 		titleLc := link.GetString("target_titleLc")
 		for _, c := range cards {
-			if slices.Contains(c.TargetTitleLc, titleLc) {
-				rows = append(rows, api.Link2HopCard{
-					LinkedCard: c,
-					ViaTitle:   link.GetString("target_title"),
-					ViaTitleLc: titleLc,
-				})
+			if listed[c.TitleLc] || !slices.Contains(c.TargetTitleLc, titleLc) {
+				continue
 			}
+			listed[c.TitleLc] = true
+			rows = append(rows, api.Link2HopCard{
+				LinkedCard: c,
+				ViaTitle:   link.GetString("target_title"),
+				ViaTitleLc: titleLc,
+			})
 		}
 	}
 	return rows, nil

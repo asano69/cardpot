@@ -304,15 +304,38 @@ func TestLinks2Hop_GroupsByEachSharedTarget(t *testing.T) {
 	createLink(t, app, a.Id, pot.Id, "Y")
 	createLink(t, app, a.Id, pot.Id, "Z") // nobody else links to Z
 	createLink(t, app, b.Id, pot.Id, "X")
-	createLink(t, app, b.Id, pot.Id, "Y") // B appears in both groups
+	createLink(t, app, b.Id, pot.Id, "Y") // B shares X and Y, but is listed under X only
 	createLink(t, app, c.Id, pot.Id, "Y")
 
 	got, err := links2Hop(app, a)
 	if err != nil {
 		t.Fatalf("links2Hop: %v", err)
 	}
-	// B appears under both X and Y; Z has no row; rows follow A's link order.
-	if want := []string{"X/B", "Y/B", "Y/C"}; !slices.Equal(hopRows(got), want) {
+	// B appears once, under X (the first shared target in A); Z has no row;
+	// rows follow A's link order.
+	if want := []string{"X/B", "Y/C"}; !slices.Equal(hopRows(got), want) {
+		t.Errorf("rows = %v, want %v", hopRows(got), want)
+	}
+}
+
+func TestLinks2Hop_CardIsListedUnderTheFirstSharedTargetOfTheOpenCard(t *testing.T) {
+	app := newLinksTestApp(t)
+	pot := createPot(t, app, "pot1")
+
+	a := createLinksTestCard(t, app, pot.Id, "A", "")
+	b := createLinksTestCard(t, app, pot.Id, "B", "")
+
+	// A links Y before X, while B links X before Y: only A's order counts.
+	createLink(t, app, a.Id, pot.Id, "Y")
+	createLink(t, app, a.Id, pot.Id, "X")
+	createLink(t, app, b.Id, pot.Id, "X")
+	createLink(t, app, b.Id, pot.Id, "Y")
+
+	got, err := links2Hop(app, a)
+	if err != nil {
+		t.Fatalf("links2Hop: %v", err)
+	}
+	if want := []string{"Y/B"}; !slices.Equal(hopRows(got), want) {
 		t.Errorf("rows = %v, want %v", hopRows(got), want)
 	}
 }
