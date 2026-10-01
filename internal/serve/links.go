@@ -117,17 +117,24 @@ func relatedCardsHandler[T any](key string, find func(core.App, *core.Record) (T
 	}
 }
 
-// links1Hop returns the live cards one wiki-link hop away from card: the
-// cards it links to (that actually exist) and the cards that link to it.
+// oneHopIDs is the SQL subquery selecting the ids of the cards one wiki-link
+// hop away from a card: the cards it links to (that actually exist) and the
+// cards that link to it. It is the single definition of "1 hop", shared by
+// links1Hop (IN) and links2Hop (NOT IN). It does not filter deleted cards or
+// the card itself; relatedCards does that. It is uncorrelated, so SQLite
+// evaluates it once per query.
+const oneHopIDs = `
+	SELECT c.id FROM cards c
+	JOIN card_links l ON l.target_pot = c.pot AND l.target_titleLc = c.titleLc
+	WHERE l.source = {:id} AND l.deleted = ''
+	UNION
+	SELECT source FROM card_links
+	WHERE target_pot = {:pot} AND target_titleLc = {:titleLc} AND deleted = ''`
+
+// links1Hop returns the live cards one wiki-link hop away from card (see
+// oneHopIDs).
 func links1Hop(app core.App, card *core.Record) ([]linkedCard, error) {
-	return relatedCards(app, card, `cards.id IN (
-		SELECT c.id FROM cards c
-		JOIN card_links l ON l.target_pot = c.pot AND l.target_titleLc = c.titleLc
-		WHERE l.source = {:id} AND l.deleted = ''
-		UNION
-		SELECT source FROM card_links
-		WHERE target_pot = {:pot} AND target_titleLc = {:titleLc} AND deleted = ''
-	)`)
+	return relatedCards(app, card, "cards.id IN ("+oneHopIDs+")")
 }
 
 // hopGroup is one entry of the links2hop response: a target (headword) that
@@ -141,14 +148,16 @@ type hopGroup struct {
 // links2Hop returns the live cards of the same pot that link to at least one
 // of the targets card links to (A --> X <-- B), grouped by that shared target
 // X. X does not have to exist. A card sharing several targets appears in each
-// of their groups; targets nobody else links to produce no group.
+// of their groups; targets nobody else links to produce no group. Cards that
+// are already one hop away (see oneHopIDs) are excluded, so a card never shows
+// up in both views.
 func links2Hop(app core.App, card *core.Record) ([]hopGroup, error) {
 	cards, err := relatedCards(app, card, `cards.id IN (
 		SELECT l2.source FROM card_links l1
 		JOIN card_links l2
 			ON l2.target_pot = l1.target_pot AND l2.target_titleLc = l1.target_titleLc
 		WHERE l1.source = {:id} AND l1.deleted = '' AND l2.deleted = ''
-	)`)
+	) AND cards.id NOT IN (`+oneHopIDs+")")
 	if err != nil {
 		return nil, err
 	}

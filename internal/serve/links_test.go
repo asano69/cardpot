@@ -262,6 +262,32 @@ func TestLinks2Hop_SharedTarget(t *testing.T) {
 	}
 }
 
+func TestLinks2Hop_ExcludesCardsAlreadyOneHopAway(t *testing.T) {
+	app := newLinksTestApp(t)
+	pot := createPot(t, app, "pot1")
+
+	a := createLinksTestCard(t, app, pot.Id, "A", "")
+	b := createLinksTestCard(t, app, pot.Id, "B", "")
+	c := createLinksTestCard(t, app, pot.Id, "C", "")
+
+	// B shares target X with A, but A also links to B directly (1 hop).
+	createLink(t, app, a.Id, pot.Id, "X")
+	createLink(t, app, a.Id, pot.Id, "B")
+	createLink(t, app, b.Id, pot.Id, "X")
+	createLink(t, app, c.Id, pot.Id, "X")
+
+	got, err := links2Hop(app, a)
+	if err != nil {
+		t.Fatalf("links2Hop: %v", err)
+	}
+	if len(got) != 1 || got[0].Title != "X" {
+		t.Fatalf("groups = %+v, want one group titled X", got)
+	}
+	if want := []string{"C"}; !slices.Equal(linkedTitles(got[0].Cards), want) {
+		t.Errorf("titles = %v, want %v (B is 1 hop away)", linkedTitles(got[0].Cards), want)
+	}
+}
+
 func TestLinks2Hop_GroupsByEachSharedTarget(t *testing.T) {
 	app := newLinksTestApp(t)
 	pot := createPot(t, app, "pot1")
