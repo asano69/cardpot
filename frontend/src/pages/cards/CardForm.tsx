@@ -312,7 +312,7 @@ export default function CardForm() {
             card's pin/delete actions. Always rendered so the layout
             does not shift when a draft becomes a real card; while
             there is no card yet (a draft), the buttons are disabled. */}
-        <div class="page-menu flex flex-col gap-1">
+        <div class="page-menu flex flex-col gap-0.5">
           <button
             type="button"
             aria-label={pinned() ? "Unpin" : "Pin"}
@@ -320,7 +320,7 @@ export default function CardForm() {
             disabled={!cardId()}
             onClick={togglePin}
           >
-            {pinned() ? <PinOff size={20} /> : <Pin size={20} />}
+            {pinned() ? <PinOff size={22} /> : <Pin size={22} />}
           </button>
           <button
             type="button"
@@ -329,7 +329,7 @@ export default function CardForm() {
             disabled={!cardId()}
             onClick={handleDelete}
           >
-            <Trash2 size={20} />
+            <Trash2 size={22} />
           </button>
           <button
             type="button"
@@ -338,7 +338,7 @@ export default function CardForm() {
             disabled={!cardId()}
             onClick={() => setQueryOpen(true)}
           >
-            <Funnel size={20} />
+            <Funnel size={22} />
           </button>
           {/* Debug-only dropdown: exports either the card's raw Yjs
               text (handleShowRawText) or its parsed syntax tree
