@@ -38,11 +38,6 @@ const maxTitleRetries = 3
 // so every lookup that must not see deleted cards adds this clause.
 const notDeleted = `deleted = ""`
 
-// isDeleted reports whether record has been soft-deleted.
-func isDeleted(record *core.Record) bool {
-	return !record.GetDateTime("deleted").IsZero()
-}
-
 // nextCardPosition returns the position for a new card in `pot`.
 func nextCardPosition(app core.App, pot string) (float64, error) {
 	records, err := app.FindRecordsByFilter(

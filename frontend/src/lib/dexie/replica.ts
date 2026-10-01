@@ -1,4 +1,4 @@
-import type { Table } from "dexie";
+import type { EntityTable, IDType } from "dexie";
 import { pullAll, type ReplicaRecord } from "../api/replication";
 import { readCheckpoint, writeCheckpoint } from "./checkpoints";
 
@@ -16,14 +16,16 @@ export interface Replica<T extends ReplicaRecord> {
 // A replica for a table that stores records exactly as the server sends them.
 export function tableReplica<T extends ReplicaRecord>(
   name: string,
-  table: Table<T, string>,
+  table: EntityTable<T, "id">,
 ): Replica<T> {
   return {
     name,
     put: async (records) => {
       await table.bulkPut(records);
     },
-    remove: (id) => table.delete(id),
+    // IDType<T, "id"> is unresolved for a generic T, although a ReplicaRecord's
+    // id is always a string.
+    remove: (id) => table.delete(id as IDType<T, "id">),
   };
 }
 

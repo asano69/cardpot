@@ -67,7 +67,7 @@ generate:
 .PHONY: test
 test:
 	cd frontend && bun run test
-	go test ./...
+	go test ./cmd/... ./internal/... ./scripts/...
 
 lint: typecheck
 	golangci-lint run

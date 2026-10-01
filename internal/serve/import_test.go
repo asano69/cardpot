@@ -106,7 +106,7 @@ func TestImport_CreatesCardsInFileOrder(t *testing.T) {
 	if got := cardText(t, app, first.Id); got != "page1title\nline2\nline3" {
 		t.Errorf("first card text = %q", got)
 	}
-	if got := first.GetString("description"); got != "line2\nline3" {
+	if got := first.GetString("description"); got != `["line2","line3"]` {
 		t.Errorf("first card description = %q", got)
 	}
 	// The grid lists the highest position first, so the file's first page
@@ -138,8 +138,8 @@ func TestImport_OverwritesCardWithSameTitle(t *testing.T) {
 	if got := cardText(t, app, after.Id); got != "A\nnew [link]" {
 		t.Errorf("text = %q, want %q", got, "A\nnew [link]")
 	}
-	if got := after.GetString("description"); got != "new [link]" {
-		t.Errorf("description = %q, want %q", got, "new [link]")
+	if got, want := after.GetString("description"), `["new [link]"]`; got != want {
+		t.Errorf("description = %q, want %q", got, want)
 	}
 	links, err := ownTargetTitleLcs(app, after.Id)
 	if err != nil {

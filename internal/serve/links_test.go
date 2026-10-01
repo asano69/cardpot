@@ -87,7 +87,6 @@ func createLinksTestCard(t *testing.T, app core.App, pot, title, description str
 	return record
 }
 
-func createLink(
 func createLink(t *testing.T, app core.App, source, targetPot, targetTitle string) {
 	t.Helper()
 	collection, err := app.FindCollectionByNameOrId("card_links")

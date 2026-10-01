@@ -39,7 +39,7 @@ export function CardItemView(props: CardItemViewProps) {
     // anywhere on the card opens it.
     <li
       // ref is a callback supplied by the wrapper, not a reactive value.
-      // eslint-disable-next-line solid/reactivity
+       
       ref={props.ref}
       class="card-grid-item"
       classList={{ "opacity-40": props.dragging }}

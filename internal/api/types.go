@@ -28,11 +28,11 @@ type LinkedCard struct {
 }
 
 // Link2HopCard is one row of the links2hop response: a card that links to
-// the shared target Via*, which the open card links to as well. A card
+// the shared target (ViaTitle), which the open card links to as well. A card
 // sharing several targets appears once per target. Rows of the same target
 // are adjacent, in the order the targets appear in the open card.
 type Link2HopCard struct {
-	LinkedCard
+	LinkedCard `tstype:",extends"`
 	ViaTitle   string `json:"via_title"`
 	ViaTitleLc string `json:"via_titleLc"`
 }

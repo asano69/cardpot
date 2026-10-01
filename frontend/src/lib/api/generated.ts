@@ -38,12 +38,11 @@ export interface LinkedCard {
 }
 /**
  * Link2HopCard is one row of the links2hop response: a card that links to
- * the shared target Via*, which the open card links to as well. A card
+ * the shared target (ViaTitle), which the open card links to as well. A card
  * sharing several targets appears once per target. Rows of the same target
  * are adjacent, in the order the targets appear in the open card.
  */
-export interface Link2HopCard {
-  LinkedCard: LinkedCard;
+export interface Link2HopCard extends LinkedCard {
   via_title: string;
   via_titleLc: string;
 }
