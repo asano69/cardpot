@@ -163,11 +163,13 @@ export const editorTheme = EditorView.theme({
     fontFamily: "var(--font-mono)",
     backgroundColor:
       "light-dark(rgba(175, 184, 193, 0.2), rgba(110, 118, 129, 0.4))",
+    fontSize: "0.9em",
   },
   // The declaration line ("code: python") has no full-width background;
   // only its declaration text is highlighted, via ".code-block-start".
   ".cm-line.code-block.start": {
     backgroundColor: "transparent",
+    fontSize: "0.95em",
   },
   // The background must stay translucent: the selection is drawn in a
   // layer beneath the text, so an opaque background would hide it.
