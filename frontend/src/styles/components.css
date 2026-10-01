@@ -156,7 +156,7 @@
   .card-grid-item .description .grid-wikilink,
   .card-grid-item .description .grid-external-link,
   .card-grid-item .description .grid-hashtag {
-    color: light-dark(#0969da, #58a6ff);
+    color: light-dark(#396bdd, #80c9fe);
   }
 
   .card-grid-item .description .grid-external-link {
@@ -178,7 +178,7 @@
   .card-grid-item .description .grid-wikilink,
   .card-grid-item .description .grid-external-link,
   .card-grid-item .description .grid-hashtag {
-    color: light-dark(#0969da, #58a6ff);
+    color: light-dark(#396bdd, #80c9fe);
   }
 
   .card-grid-item .description .grid-external-link {

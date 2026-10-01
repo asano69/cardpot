@@ -188,7 +188,7 @@ export const editorTheme = EditorView.theme({
   // autolinks (see components.css's ".ProseMirror a") so it reads as
   // clickable.
   ".page-link, .link": {
-    color: "light-dark(#0969da, #58a6ff)",
+    color: "light-dark(#396bdd, #80c9fe)",
     cursor: "pointer",
   },
   // External URLs (labelled, bracketed and bare) are underlined so they
