@@ -102,7 +102,9 @@ export function mergeCards(
 // releasePot, so reopening the pot starts a fresh sync.
 const potSyncPromises = new Map<string, Promise<void>>();
 
-function ensurePotSynced(potId: string): Promise<void> {
+// Exported so PotLayout can sync a pot as soon as it is opened, whichever
+// child route (card list or a card opened by URL) is shown first.
+export function ensurePotSynced(potId: string): Promise<void> {
   let promise = potSyncPromises.get(potId);
   if (!promise) {
     promise = syncPotReplica(potId);

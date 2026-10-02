@@ -8,7 +8,7 @@ import { useParams } from "@solidjs/router";
 
 import { fetchPotByName } from "@/lib/api/pots";
 import { useTopBarPotLink } from "@/lib/topBarSlot";
-import { releasePot } from "@/lib/stores/cardsStore";
+import { ensurePotSynced, releasePot } from "@/lib/stores/cardsStore";
 import { closePotReplicas, openPotReplicas } from "@/lib/dexie/dataReplicas";
 import PotContext from "./PotContext";
 
@@ -38,14 +38,16 @@ export default function PotLayout(props: ParentProps) {
 
   // Drops the pot's loaded cards once the user leaves it (another pot, or
   // the pot list). Moving between CardList and CardForm keeps this layout
-  // mounted, so both survive that. The pot's data-only replicas (see
-  // lib/dexie/dataReplicas.ts) are synced for as long as it is open.
+  // mounted, so both survive that. The pot's cards replica and its data-only
+  // replicas (see lib/dexie/dataReplicas.ts) are synced for as long as it is
+  // open, so a card opened directly by URL finds an up-to-date replica too.
   // Realtime is not handled here: AppShell watches the channels for the
   // whole session.
   createEffect(() => {
     const id = pot()?.id;
     if (!id) return;
     void openPotReplicas(id);
+    void ensurePotSynced(id);
     onCleanup(() => {
       releasePot(id);
       closePotReplicas(id);

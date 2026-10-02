@@ -10,6 +10,7 @@ import type { CardRecord } from "../models/card";
 
 import {
   cardsById,
+  ensurePotSynced,
   loadNextCardsPage,
   potWindow,
   releasePot,
@@ -120,7 +121,7 @@ function watch() {
 // mockReset() clears that queue too, so every test starts from a
 // clean slate regardless of how many calls the previous test made.
 beforeEach(() => {
-  for (const potId of "abcdefghijklmnopq") releasePot(potId);
+  for (const potId of "abcdefghijklmnopqr") releasePot(potId);
   vi.mocked(queryCardsPage).mockReset();
   vi.mocked(countCards).mockReset();
   vi.mocked(pullAll).mockClear();
@@ -156,6 +157,22 @@ describe("loadNextCardsPage", () => {
     vi.mocked(queryCardsPage).mockReset();
     await loadNextCardsPage("b");
     expect(queryCardsPage).not.toHaveBeenCalled();
+  });
+});
+
+describe("ensurePotSynced", () => {
+  it("syncs a pot before any page is loaded, and loading a page does not pull again", async () => {
+    // Regression test: opening a card by URL never mounts CardList, so the
+    // replica used to stay unsynced. PotLayout now syncs on open, and the
+    // later page load must share that same sync.
+    await ensurePotSynced("r");
+    expect(pullAll).toHaveBeenCalledTimes(1);
+
+    nextLocalPage(cards("r", 0, 2), 2);
+    await loadNextCardsPage("r");
+
+    expect(pullAll).toHaveBeenCalledTimes(1);
+    expect(potWindow("r")?.ids).toHaveLength(2);
   });
 });
 
