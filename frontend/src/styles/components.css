@@ -201,6 +201,19 @@
     padding: 0 0.2em;
   }
 
+  /* Skeleton lines shown in place of the description of an empty card
+   * (see CardItem.tsx): five bars, the last one shorter. They are plain
+   * divs, so no image is needed. */
+  .card-grid-item .line-img div {
+    height: 4px;
+    margin: 8px 0;
+    background-color: light-dark(#e9eaeb, #4a4d55);
+  }
+
+  .card-grid-item .line-img div:last-of-type {
+    width: 70%;
+  }
+
   /* Cover-fit preview for a card whose document contains an image
    * (see CardItem.tsx). Replaces .description entirely rather than
    * sharing space with it -- the card is too small for both. */

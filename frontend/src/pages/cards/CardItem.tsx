@@ -1,5 +1,5 @@
 // frontend/src/pages/cards/CardItem.tsx
-import { onCleanup, Show } from "solid-js";
+import { Match, onCleanup, Show, Switch } from "solid-js";
 import { A } from "@solidjs/router";
 import { useSortable } from "@dnd-kit/solid/sortable";
 import { registerCardElement } from "@/lib/stores/cardsStore";
@@ -65,8 +65,7 @@ export function CardItemView(props: CardItemViewProps) {
               internal/serve/ydoc.go), show it as a cover thumbnail
               instead of the plain-text description -- there's rarely
               room for both in a card this small. */}
-          <Show
-            when={props.card.image}
+          <Switch
             fallback={
               <div class="description">
                 <CardDescription
@@ -75,15 +74,31 @@ export function CardItemView(props: CardItemViewProps) {
               </div>
             }
           >
-            <div
-              class="thumbnail m-1.5"
-              // JSON.stringify quotes and escapes the URL as a CSS string,
-              // so characters such as "(" or ")" cannot end url() early.
-              style={{
-                "background-image": `url(${JSON.stringify(props.card.image)})`,
-              }}
-            />
-          </Show>
+            {/* A page that does not exist yet has no text to show, so
+                skeleton lines stand in for it (see styles/components.css's
+                .line-img). */}
+            <Match when={props.empty}>
+              <div class="description">
+                <div class="line-img">
+                  <div />
+                  <div />
+                  <div />
+                  <div />
+                  <div />
+                </div>
+              </div>
+            </Match>
+            <Match when={props.card.image}>
+              <div
+                class="thumbnail m-1.5"
+                // JSON.stringify quotes and escapes the URL as a CSS string,
+                // so characters such as "(" or ")" cannot end url() early.
+                style={{
+                  "background-image": `url(${JSON.stringify(props.card.image)})`,
+                }}
+              />
+            </Match>
+          </Switch>
         </div>
         {/* Whole-card hover tint (see styles/components.css's
             .card-grid-item .hover). Its position in the DOM doesn't
