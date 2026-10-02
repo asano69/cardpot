@@ -106,3 +106,13 @@ export function segmentToSlug(segment: string): string {
 export function slugToTitle(slug: string): string {
   return slug.replaceAll("_", " ");
 }
+
+// Mirrors internal/slug.ToLowerKey as the server applies it to a wiki link's
+// target (see internal/wikilink's orderedTargets): bracket markup is stripped
+// first, then the text is lowercased and spaces become underscores. This is
+// the key a link is matched to a card by (cards.titleLc, card_links
+// .target_titleLc).
+export function titleToLowerKey(title: string): string {
+  const base = /[[\]]/.test(title) ? splitWords(title).join(" ") : title;
+  return base.toLowerCase().replaceAll(" ", "_");
+}

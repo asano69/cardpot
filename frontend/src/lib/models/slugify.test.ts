@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { titleToSlug, titleToSegment, segmentToSlug } from "./slugify";
+import {
+  titleToSlug,
+  titleToSegment,
+  segmentToSlug,
+  titleToLowerKey,
+} from "./slugify";
 
 describe("slugify", () => {
   it("collapses spaces into underscores", () => {
@@ -65,5 +70,14 @@ describe("slugify", () => {
 
   it("percent-encodes reserved path characters together", () => {
     expect(titleToSegment("50%/#?")).toBe("50%25%2F%23%3F");
+  });
+
+  it("derives the lower key like internal/slug.ToLowerKey", () => {
+    expect(titleToLowerKey("Hello World")).toBe("hello_world");
+    expect(titleToLowerKey("a_b")).toBe("a_b");
+  });
+
+  it("strips bracket markup before deriving the lower key", () => {
+    expect(titleToLowerKey("a [b] c")).toBe("a_b_c");
   });
 });

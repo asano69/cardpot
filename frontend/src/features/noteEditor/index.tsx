@@ -2,7 +2,7 @@
    The editor is created once per mount: props are read during setup, and
    mountEditor is a ref callback, which the rule mistakes for a plain
    function used in JSX. */
-import { onCleanup, type JSX } from "solid-js";
+import { createEffect, onCleanup, type JSX } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, drawSelection } from "@codemirror/view";
@@ -11,6 +11,10 @@ import { hangingIndent } from "./plugins/decorations/hangingIndent";
 import { wordBreak } from "./plugins/decorations/wordBreak";
 import { codeBlockLines } from "./plugins/decorations/codeBlockLines";
 import { imageWidget } from "./plugins/decorations/imageWidget";
+import { emptyLinks, setLinkAlive } from "./plugins/decorations/emptyLinks";
+import { related } from "@/lib/stores/relatedStore";
+import { isLinkAlive } from "@/lib/models/linkAlive";
+import { titleToLowerKey } from "@/lib/models/slugify";
 import { yCollab } from "y-codemirror.next";
 import { defaultKeymapGroups } from "./keymaps";
 import * as Y from "yjs";
@@ -114,6 +118,7 @@ export default function NoteEditor(props: NoteEditorProps) {
         wordBreak,
         codeBlockLines,
         imageWidget,
+        emptyLinks,
         // Cardpot's own Scrapbox-style syntax parser (see
         // parser/cardpot/index.ts): block notation (indentation, quotes,
         // `code:` and `table:` blocks) and inline notation (decorations,
@@ -155,6 +160,21 @@ export default function NoteEditor(props: NoteEditorProps) {
     // Lets cardpotDebug.dumpTree() in the browser console find this editor.
     const unregisterDebug = registerDebugView(view);
     props.onView?.(view);
+
+    // Feeds the related-card store into the editor as a "is this link alive"
+    // predicate (see emptyLinks.ts). The editor only sees the predicate, so
+    // it does not matter how or when the store gets updated: any change to
+    // the store re-runs this effect and the links are recolored.
+    createEffect(() => {
+      const cards = [...related.oneHop, ...related.twoHop];
+      const ready = related.loaded && !related.error;
+      const own = titleToLowerKey(props.existingTitle ?? props.initialTitle ?? "");
+      view.dispatch({
+        effects: setLinkAlive.of(
+          ready ? (titleLc) => isLinkAlive(titleLc, cards, own) : null,
+        ),
+      });
+    });
 
     // Seed the document's first line with initialTitle for a
     // brand-new draft opened from a URL slug that matched no existing

@@ -23,10 +23,13 @@ interface RelatedState {
   query: CardRecord[];
   // Whether the last load failed (a bad query counts as a failure).
   error: boolean;
+  // Whether a load has succeeded since the store was last emptied. Tells
+  // "not loaded yet" apart from "loaded, and there are no related cards".
+  loaded: boolean;
 }
 
 function emptyState(): RelatedState {
-  return { oneHop: [], twoHop: [], query: [], error: false };
+  return { oneHop: [], twoHop: [], query: [], error: false, loaded: false };
 }
 
 const [related, setRelated] = createStore<RelatedState>(emptyState());
@@ -61,6 +64,7 @@ export async function openRelated(
       twoHop: twoHop ?? [],
       query: query ?? [],
       error: false,
+      loaded: true,
     });
   } catch (err) {
     console.error("[related] failed to load related cards:", err);

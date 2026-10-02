@@ -32,6 +32,7 @@ describe("relatedStore", () => {
     await openRelated("pot", "A");
     expect(related.oneHop.map((c) => c.id)).toEqual(["a"]);
     expect(related.error).toBe(false);
+    expect(related.loaded).toBe(true);
   });
 
   it("drops a stale response that arrives after a newer load", async () => {
@@ -66,6 +67,7 @@ describe("relatedStore", () => {
     await loading;
 
     expect(related.oneHop).toEqual([]);
+    expect(related.loaded).toBe(false);
   });
 
   it("keeps every list an array when a response has no cards", async () => {

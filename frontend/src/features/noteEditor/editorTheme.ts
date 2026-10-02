@@ -197,6 +197,13 @@ export const editorTheme = EditorView.theme({
     textDecoration: "underline",
   },
 
+  // A wiki link whose target is not alive (see emptyLinks.ts). The
+  // descendant selector covers the case where this mark ends up wrapping
+  // the ".page-link" span instead of sitting inside it.
+  ".empty-page-link, .empty-page-link .page-link": {
+    color: "light-dark(#d93025, #fb7476)",
+  },
+
   // HashTag shares ".page-link" above. Blank is an always visible syntax
   // node: its background makes it scannable without opting it into
   // syntaxReveal's hidden-mark flow.
