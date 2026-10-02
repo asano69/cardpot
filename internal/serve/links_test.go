@@ -179,6 +179,36 @@ func TestLinks1Hop_MergesOutgoingAndIncoming(t *testing.T) {
 	}
 }
 
+func TestLinks1Hop_CardThatDoesNotExistYet(t *testing.T) {
+	// A page that has not been created yet can still have incoming links.
+	app := newLinksTestApp(t)
+	pot := createPot(t, app, "pot1")
+
+	source := createLinksTestCard(t, app, pot.Id, "Source", "")
+	createLink(t, app, source.Id, pot.Id, "Ghost")
+
+	ghost, err := absentCard(app, pot.Id, "Ghost")
+	if err != nil {
+		t.Fatalf("absentCard: %v", err)
+	}
+
+	got, err := links1Hop(app, ghost)
+	if err != nil {
+		t.Fatalf("links1Hop: %v", err)
+	}
+	if want := []string{"Source"}; !slices.Equal(linkedTitles(got), want) {
+		t.Errorf("titles = %v, want %v", linkedTitles(got), want)
+	}
+
+	hops, err := links2Hop(app, ghost)
+	if err != nil {
+		t.Fatalf("links2Hop: %v", err)
+	}
+	if len(hops) != 0 {
+		t.Errorf("got %d 2-hop rows, want 0: %v", len(hops), hops)
+	}
+}
+
 func TestLinks1Hop_ExcludesDeletedCards(t *testing.T) {
 	app := newLinksTestApp(t)
 	pot := createPot(t, app, "pot1")

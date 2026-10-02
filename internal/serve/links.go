@@ -63,6 +63,22 @@ func findCardBySlug(app core.App, potID, targetSlug string) (*core.Record, error
 	return candidate, nil
 }
 
+// absentCard returns a stand-in for a card that does not exist (yet), so the
+// link queries below can answer for it: it has no id, so it links to nothing,
+// but other cards may already link to its title. Its titleLc is derived from
+// the slug the same way findCardBySlug derives its candidate.
+func absentCard(app core.App, potID, targetSlug string) (*core.Record, error) {
+	collection, err := app.FindCollectionByNameOrId("cards")
+	if err != nil {
+		return nil, err
+	}
+	card := core.NewRecord(collection)
+	card.Set("id", "")
+	card.Set("pot", potID)
+	card.Set("titleLc", strings.ToLower(targetSlug))
+	return card, nil
+}
+
 // ownTargetTitleLcs returns every target_titleLc a card links to as a
 // source -- its own one-hop-out neighborhood.
 func ownTargetTitleLcs(app core.App, cardID string) ([]string, error) {
@@ -81,7 +97,8 @@ func ownTargetTitleLcs(app core.App, cardID string) ([]string, error) {
 }
 
 // relatedCardsHandler answers with whatever find returns for the requested
-// card, under the JSON key "key".
+// card, under the JSON key "key". A card that does not exist yet is answered
+// for too (see absentCard), since other cards may already link to it.
 func relatedCardsHandler[T any](key string, find func(core.App, *core.Record) (T, error)) func(*core.RequestEvent) error {
 	return func(e *core.RequestEvent) error {
 		pot, err := e.App.FindFirstRecordByFilter(
@@ -94,12 +111,13 @@ func relatedCardsHandler[T any](key string, find func(core.App, *core.Record) (T
 			return e.InternalServerError("find pot", err)
 		}
 
-		card, err := findCardBySlug(e.App, pot.Id, e.Request.PathValue("slug"))
+		slugParam := e.Request.PathValue("slug")
+		card, err := findCardBySlug(e.App, pot.Id, slugParam)
+		if err == nil && card == nil {
+			card, err = absentCard(e.App, pot.Id, slugParam)
+		}
 		if err != nil {
 			return e.InternalServerError("find card", err)
-		}
-		if card == nil {
-			return e.NotFoundError("card not found", nil)
 		}
 
 		result, err := find(e.App, card)

@@ -13,7 +13,11 @@ import type { CardGridCard } from "@/lib/models/card";
 import { CardItemView } from "./CardItem";
 
 export interface RelatedCardsProps {
-  cardId: string;
+  // Title of the card the relations are shown for. Undefined shows nothing.
+  title: string | undefined;
+  // Id of the card, when it exists. A draft has none, so it has no
+  // datalog query either, but its title can still have incoming links.
+  cardId?: string;
   potSlug: string;
 }
 
@@ -69,14 +73,16 @@ function RelationRow(props: RelationRowProps) {
 // the card (or, for the datalog row, its query) changes; links added while the
 // card stays open are not picked up until it is opened again.
 export default function RelatedCards(props: RelatedCardsProps) {
-  const title = () => cardsById[props.cardId]?.title;
-  const query = () => cardsById[props.cardId]?.query ?? "";
+  const query = () =>
+    props.cardId ? (cardsById[props.cardId]?.query ?? "") : "";
 
-  const [oneHop] = createResource(title, (t) =>
-    fetchLinks1Hop(props.potSlug, t),
+  const [oneHop] = createResource(
+    () => props.title,
+    (t) => fetchLinks1Hop(props.potSlug, t),
   );
-  const [twoHop] = createResource(title, (t) =>
-    fetchLinks2Hop(props.potSlug, t),
+  const [twoHop] = createResource(
+    () => props.title,
+    (t) => fetchLinks2Hop(props.potSlug, t),
   );
   // The server returns one row per (shared target, card) with the rows of a
   // target adjacent, so grouping is a single pass over consecutive rows.
@@ -98,7 +104,7 @@ export default function RelatedCards(props: RelatedCardsProps) {
     return groups;
   });
   const [queryCards] = createResource(
-    () => [props.cardId, query()] as const,
+    () => (props.cardId ? ([props.cardId, query()] as const) : undefined),
     ([id]) => fetchRelatedCards(id),
   );
 

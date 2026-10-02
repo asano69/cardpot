@@ -2,6 +2,7 @@ import { createSignal, onCleanup } from "solid-js";
 import * as Y from "yjs";
 import type { EditorView } from "@codemirror/view";
 import NoteEditor from "./index";
+import RelatedCards from "@/pages/cards/RelatedCards";
 import { createCard } from "@/lib/api/cardApi";
 import type { TitleCandidate } from "@/lib/models/card";
 import { mergeCards } from "@/lib/stores/cardsStore";
@@ -90,7 +91,13 @@ export default function DraftCardEditor(props: DraftCardEditorProps) {
         // the editor, so typing can start immediately.
         autofocus={!props.initialTitle}
         onConfirmedTitle={create}
-      />
+      >
+        {/* Only a draft opened from a URL slug has a title, and only
+            that title can already have incoming links. It is not
+            refetched while the header is edited: once the card is
+            created, ExistingCardEditor shows the relations instead. */}
+        <RelatedCards title={props.initialTitle} potSlug={props.potSlug()} />
+      </NoteEditor>
     </>
   );
 }

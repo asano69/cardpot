@@ -76,7 +76,11 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
       existingTitle={props.existingTitle}
       initialSelection={props.initialSelection}
     >
-      <RelatedCards cardId={props.cardId} potSlug={props.potSlug()} />
+      <RelatedCards
+        cardId={props.cardId}
+        title={props.existingTitle}
+        potSlug={props.potSlug()}
+      />
     </NoteEditor>
   );
 }
