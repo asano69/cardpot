@@ -18,6 +18,7 @@ type UpdateCardTitleRequest struct {
 
 // LinkedCard is one card entry in the links1hop / links2hop responses.
 type LinkedCard struct {
+	ID      string    `json:"id"`
 	Title   CardTitle `json:"title" tstype:"CardTitle"`
 	TitleLc string    `json:"titleLc"`
 	// Raw JSON as stored in the "description" field (a list of lines).

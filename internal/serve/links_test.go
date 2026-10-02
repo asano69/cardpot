@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/asano69/cardpot/internal/api"
@@ -93,8 +94,15 @@ func createLink(t *testing.T, app core.App, source, targetPot, targetTitle strin
 	if err != nil {
 		t.Fatalf("find card_links collection: %v", err)
 	}
+	// Like wikilink.Sync, number a source's links in the order they are
+	// created, so tests can rely on link order.
+	position, err := app.CountRecords("card_links", dbx.HashExp{"source": source})
+	if err != nil {
+		t.Fatalf("count card_links: %v", err)
+	}
 	record := core.NewRecord(collection)
 	record.Set("source", source)
+	record.Set("position", position)
 	record.Set("target_pot", targetPot)
 	record.Set("target_title", targetTitle)
 	record.Set("target_titleLc", slug.ToLowerKey(targetTitle))
@@ -173,6 +181,9 @@ func TestLinks1Hop_MergesOutgoingAndIncoming(t *testing.T) {
 	}
 	if string(got[1].Description) != `["out desc"]` || !slices.Equal(got[1].TargetTitleLc, []string{"other"}) {
 		t.Errorf("OutTarget = %+v, want its description and its own link target", got[1])
+	}
+	if got[0].ID != in.Id || got[1].ID != out.Id {
+		t.Errorf("ids = %q, %q; want %q, %q", got[0].ID, got[1].ID, in.Id, out.Id)
 	}
 	if got[0].TargetTitleLc == nil {
 		t.Error("TargetTitleLc must be an empty list, not nil")
@@ -296,6 +307,9 @@ func TestLinks2Hop_SharedTarget(t *testing.T) {
 	}
 	if want := []string{"X/B"}; !slices.Equal(hopRows(got), want) {
 		t.Errorf("rows = %v, want %v", hopRows(got), want)
+	}
+	if got[0].ID != b.Id {
+		t.Errorf("id = %q, want %q", got[0].ID, b.Id)
 	}
 }
 

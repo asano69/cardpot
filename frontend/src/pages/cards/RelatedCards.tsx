@@ -1,12 +1,8 @@
-import { createMemo, createResource, For, Show } from "solid-js";
+import { createEffect, createMemo, For, onCleanup, Show } from "solid-js";
 import { A } from "@solidjs/router";
-import {
-  fetchLinks1Hop,
-  fetchLinks2Hop,
-  fetchRelatedCards,
-} from "@/lib/api/cardApi";
 import type { Link2HopCard } from "@/lib/api/generated";
 import { cardsById } from "@/lib/stores/cardsStore";
+import { closeRelated, openRelated, related } from "@/lib/stores/relatedStore";
 import { Link } from "@/lib/icons";
 import { titleToSegment } from "@/lib/models/slugify";
 import type { CardGridCard } from "@/lib/models/card";
@@ -69,27 +65,28 @@ function RelationRow(props: RelationRowProps) {
 
 // Shows the open card's related cards: the cards one wiki-link hop away, the
 // cards two hops away (one row per shared target), and the cards matched by
-// the datalog query saved in the card's "query" field. Each is refetched when
-// the card (or, for the datalog row, its query) changes; links added while the
-// card stays open are not picked up until it is opened again.
+// the datalog query saved in the card's "query" field. This component only
+// reads relatedStore; the store is reloaded when the title or the saved query
+// changes and emptied when the component goes away. Links added while the card
+// stays open are not picked up until it is opened again.
 export default function RelatedCards(props: RelatedCardsProps) {
   const query = () =>
     props.cardId ? (cardsById[props.cardId]?.query ?? "") : "";
 
-  const [oneHop] = createResource(
-    () => props.title,
-    (t) => fetchLinks1Hop(props.potSlug, t),
-  );
-  const [twoHop] = createResource(
-    () => props.title,
-    (t) => fetchLinks2Hop(props.potSlug, t),
-  );
+  createEffect(() => {
+    // Read only to track it: the server reads the saved query itself.
+    void query();
+    if (!props.title) closeRelated();
+    else void openRelated(props.potSlug, props.title, props.cardId);
+  });
+  onCleanup(closeRelated);
+
   // The server returns one row per (shared target, card) with the rows of a
   // target adjacent, so grouping is a single pass over consecutive rows.
   const twoHopGroups = createMemo(() => {
     const groups: { title: string; titleLc: string; cards: Link2HopCard[] }[] =
       [];
-    for (const row of twoHop() ?? []) {
+    for (const row of related.twoHop) {
       const last = groups[groups.length - 1];
       if (last?.titleLc === row.via_titleLc) {
         last.cards.push(row);
@@ -103,24 +100,19 @@ export default function RelatedCards(props: RelatedCardsProps) {
     }
     return groups;
   });
-  const [queryCards] = createResource(
-    () => (props.cardId ? ([props.cardId, query()] as const) : undefined),
-    ([id]) => fetchRelatedCards(id),
-  );
-
   return (
     <Show
-      when={!oneHop.error && !twoHop.error && !queryCards.error}
+      when={!related.error}
       fallback={
         <p class="text-sm text-[#dc3545]">Failed to load related cards.</p>
       }
     >
-      <Show when={oneHop()?.length}>
+      <Show when={related.oneHop.length}>
         <RelationRow
           rowClass="links-1-hop"
           labelClass="links"
           label="Links"
-          cards={oneHop()!}
+          cards={related.oneHop}
           potSlug={props.potSlug}
         />
       </Show>
@@ -136,12 +128,12 @@ export default function RelatedCards(props: RelatedCardsProps) {
           />
         )}
       </For>
-      <Show when={queryCards()?.length}>
+      <Show when={related.query.length}>
         <RelationRow
           rowClass="links-query"
           labelClass="query"
           label="Query"
-          cards={queryCards()!}
+          cards={related.query}
           potSlug={props.potSlug}
         />
       </Show>
