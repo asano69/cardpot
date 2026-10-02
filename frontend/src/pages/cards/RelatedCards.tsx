@@ -146,16 +146,6 @@ export default function RelatedCards(props: RelatedCardsProps) {
           potSlug={props.potSlug}
         />
       </Show>
-      <Show when={newLinks().length}>
-        <RelationRow
-          rowClass="links-new"
-          labelClass="empty-links"
-          label="New Links"
-          cards={newLinks()}
-          potSlug={props.potSlug}
-          empty
-        />
-      </Show>
       <For each={twoHopGroups()}>
         {(group) => (
           <RelationRow
@@ -168,6 +158,19 @@ export default function RelatedCards(props: RelatedCardsProps) {
           />
         )}
       </For>
+      {/* The rows always appear in this order: Links, the 2-hop rows, New
+          Links, Query. A row with no cards is simply not rendered, so
+          New Links never jumps ahead of the others. */}
+      <Show when={newLinks().length}>
+        <RelationRow
+          rowClass="links-new"
+          labelClass="empty-links"
+          label="New Links"
+          cards={newLinks()}
+          potSlug={props.potSlug}
+          empty
+        />
+      </Show>
       <Show when={related.query.length}>
         <RelationRow
           rowClass="links-query"
