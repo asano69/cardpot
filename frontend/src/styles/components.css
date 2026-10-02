@@ -50,6 +50,12 @@
     aspect-ratio: 1 / 1.1;
   }
 
+  /* A card for a page that does not exist yet (see "New Links" in
+   * RelatedCards.tsx), faded like Cosense's empty page-list-item. */
+  .card-grid-item.empty {
+    opacity: 0.5;
+  }
+
   .card-grid-item a {
     position: relative;
     display: block;

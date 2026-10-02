@@ -23,6 +23,9 @@ export interface CardItemViewProps {
   ref?: (el: HTMLLIElement) => void;
   // Fades the card while it is being dragged.
   dragging?: boolean;
+  // The card stands for a page that does not exist yet (see
+  // styles/components.css's .card-grid-item.empty).
+  empty?: boolean;
 }
 
 // The look of a single card in a card grid, styled to match Cosense's
@@ -42,7 +45,7 @@ export function CardItemView(props: CardItemViewProps) {
        
       ref={props.ref}
       class="card-grid-item"
-      classList={{ "opacity-40": props.dragging }}
+      classList={{ "opacity-40": props.dragging, empty: props.empty }}
     >
       <A
         ref={ripple}

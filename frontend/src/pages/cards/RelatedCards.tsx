@@ -28,17 +28,24 @@ interface RelationRowProps {
   href?: string;
   cards: CardGridCard[];
   potSlug: string;
+  // The row holds links whose target does not exist yet: its label shows
+  // the unlink icon and its cards are drawn faded.
+  empty?: boolean;
 }
 
 // One labelled row: a relation label followed by its cards, all in one grid.
 function RelationRow(props: RelationRowProps) {
   const count = () => `${props.cards.length} pages`;
   // The label's text, with the link icon below it (the "kamon" of the
-  // original design).
+  // original design). An empty row shows a broken link instead.
   const labelContent = () => (
     <>
       <span class="title">{props.label}</span>
-      <Link class="kamon" size={28} />
+      {props.empty ? (
+        <Unlink class="kamon" size={28} />
+      ) : (
+        <Link class="kamon" size={28} />
+      )}
     </>
   );
 
@@ -57,7 +64,13 @@ function RelationRow(props: RelationRowProps) {
           <span class="arrow" />
         </li>
         <For each={props.cards}>
-          {(card) => <CardItemView card={card} potSlug={props.potSlug} />}
+          {(card) => (
+            <CardItemView
+              card={card}
+              potSlug={props.potSlug}
+              empty={props.empty}
+            />
+          )}
         </For>
       </ul>
     </div>
@@ -140,6 +153,7 @@ export default function RelatedCards(props: RelatedCardsProps) {
           label="New Links"
           cards={newLinks()}
           potSlug={props.potSlug}
+          empty
         />
       </Show>
       <For each={twoHopGroups()}>
