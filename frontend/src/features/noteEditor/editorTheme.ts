@@ -201,7 +201,7 @@ export const editorTheme = EditorView.theme({
   // descendant selector covers the case where this mark ends up wrapping
   // the ".page-link" span instead of sitting inside it.
   ".empty-page-link, .empty-page-link .page-link": {
-    color: "light-dark(#d93025, #fb7476)",
+    color: "light-dark(#fd7373, #fd7373)",
   },
 
   // HashTag shares ".page-link" above. Blank is an always visible syntax
