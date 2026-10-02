@@ -9,6 +9,10 @@ vi.mock("../api/cardApi", () => ({
   fetchRelatedCards: vi.fn(async () => []),
 }));
 
+vi.mock("../dexie/cardLinksCollection", () => ({
+  readOwnLinks: vi.fn(async () => []),
+}));
+
 function linked(id: string): LinkedCard {
   return {
     id,

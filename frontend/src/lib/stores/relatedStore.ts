@@ -5,7 +5,9 @@ import {
   fetchRelatedCards,
 } from "../api/cardApi";
 import type { Link2HopCard, LinkedCard } from "../api/generated";
+import { readOwnLinks } from "../dexie/cardLinksCollection";
 import type { CardRecord } from "../models/card";
+import type { CardLinkRecord } from "../models/cardLink";
 
 // The related cards of the one card that is currently open. They live here
 // and not in cardsStore's cardsById: that store only holds the page windows
@@ -29,7 +31,14 @@ interface RelatedState {
 }
 
 function emptyState(): RelatedState {
-  return { oneHop: [], twoHop: [], query: [], error: false, loaded: false };
+  return {
+    oneHop: [],
+    twoHop: [],
+    query: [],
+    ownLinks: [],
+    error: false,
+    loaded: false,
+  };
 }
 
 const [related, setRelated] = createStore<RelatedState>(emptyState());
@@ -51,10 +60,11 @@ export async function openRelated(
 ): Promise<void> {
   const request = ++latest;
   try {
-    const [oneHop, twoHop, query] = await Promise.all([
+    const [oneHop, twoHop, query, ownLinks] = await Promise.all([
       fetchLinks1Hop(potSlug, title),
       fetchLinks2Hop(potSlug, title),
       cardId ? fetchRelatedCards(cardId) : Promise.resolve<CardRecord[]>([]),
+      cardId ? readOwnLinks(cardId) : Promise.resolve<CardLinkRecord[]>([]),
     ]);
     if (request !== latest) return;
     // Solid's store deletes a property set to undefined, so a response
@@ -63,6 +73,7 @@ export async function openRelated(
       oneHop: oneHop ?? [],
       twoHop: twoHop ?? [],
       query: query ?? [],
+      ownLinks: ownLinks ?? [],
       error: false,
       loaded: true,
     });

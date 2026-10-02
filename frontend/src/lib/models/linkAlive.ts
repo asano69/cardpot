@@ -1,4 +1,5 @@
 import type { LinkedCard } from "../api/generated";
+import type { CardLinkRecord } from "./cardLink";
 
 // A wiki link is alive when its target card exists or when some other card
 // links to the same target; otherwise opening it would start an empty draft
@@ -16,5 +17,17 @@ export function isLinkAlive(
   if (titleLc === ownTitleLc) return true;
   return cards.some(
     (card) => card.titleLc === titleLc || card.target_titleLc.includes(titleLc),
+  );
+}
+
+// The links of the open card whose target is not alive (see isLinkAlive),
+// in their original order. Shown as "New Links" next to the related cards.
+export function deadLinks(
+  links: readonly CardLinkRecord[],
+  cards: readonly Pick<LinkedCard, "titleLc" | "target_titleLc">[],
+  ownTitleLc: string,
+): CardLinkRecord[] {
+  return links.filter(
+    (link) => !isLinkAlive(link.target_titleLc, cards, ownTitleLc),
   );
 }
