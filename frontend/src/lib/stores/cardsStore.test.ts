@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { subscribeToCollection, type CollectionEvent } from "../api/realtime";
 import { pullAll } from "../api/replication";
-import { queryCardsPage, countCards } from "../dexie/cardsCollection";
+import {
+  cardsReplica,
+  queryCardsPage,
+  countCards,
+} from "../dexie/cardsCollection";
 import type { CardRecord } from "../models/card";
 
 import {
@@ -120,6 +124,7 @@ beforeEach(() => {
   vi.mocked(queryCardsPage).mockReset();
   vi.mocked(countCards).mockReset();
   vi.mocked(pullAll).mockClear();
+  vi.mocked(cardsReplica.put).mockClear();
 });
 
 describe("loadNextCardsPage", () => {
@@ -161,6 +166,17 @@ describe("realtime events", () => {
     emit("update", card("c-2", "c"));
     expect(cardsById["c-1"]).toBeUndefined();
     expect(cardsById["c-2"]).toBeUndefined();
+  });
+
+  it("writes an update for a card the store does not hold to the replica only", () => {
+    // Regression test: the card may sit on a page of the open pot that is
+    // not loaded yet, and that page is read from the replica, so the
+    // replica must not keep a stale copy.
+    const { emit } = watch();
+    const updated = card("c-3", "c", 5);
+    emit("update", updated);
+    expect(cardsById["c-3"]).toBeUndefined();
+    expect(cardsReplica.put).toHaveBeenCalledWith([updated]);
   });
 
   it("counts a created and a deleted card once", async () => {

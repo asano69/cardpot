@@ -273,10 +273,12 @@ function handleCardEvent(e: CollectionEvent<CardRecord>) {
       dropCard(e.record.id, e.record.pot);
     } else if (e.action === "create") {
       addCreatedCard(e.record);
-    } else if (cardsById[e.record.id]) {
-      // An update for a card we don't hold is ignored, so the store
-      // never grows beyond what the UI actually loaded.
-      setCardsById(e.record.id, e.record);
+    } else {
+      // The store ignores a card it does not hold, so it never grows
+      // beyond what the UI actually loaded. The replica is written
+      // regardless: the card may sit on a page of the open pot that
+      // is not loaded yet, and that page is read from the replica.
+      if (cardsById[e.record.id]) setCardsById(e.record.id, e.record);
       void cardsReplica.put([e.record]);
     }
   });
