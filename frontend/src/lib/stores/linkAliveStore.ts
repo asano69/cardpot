@@ -1,6 +1,4 @@
-/* eslint-disable solid/reactivity --
-   Imperative store functions called from event handlers and async code.
-   Reading the store there is deliberately untracked. */
+ 
 import { createSignal } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import { computeAlive } from "../dexie/linkAliveQuery";
