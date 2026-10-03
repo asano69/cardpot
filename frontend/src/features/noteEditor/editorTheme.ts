@@ -184,13 +184,18 @@ export const editorTheme = EditorView.theme({
   },
 
   // Rendered diagram of a `code:mermaid` block (see mermaidBlock.ts).
+  // The container is the positioning context of the pan/zoom controls and
+  // gives svg-pan-zoom a definite box to fit the diagram into (its height is
+  // set in mermaidBlock.ts). Mermaid puts an inline max-width on the svg, so
+  // overriding it needs !important.
   ".mermaid-block": {
-    padding: "8px 0",
-    overflowX: "auto",
+    position: "relative",
+    overflow: "hidden",
   },
   ".mermaid-block svg": {
-    maxWidth: "100%",
-    height: "auto",
+    width: "100%",
+    height: "100%",
+    maxWidth: "none !important",
   },
   ".mermaid-block.mermaid-error": {
     color: "#dc3545",

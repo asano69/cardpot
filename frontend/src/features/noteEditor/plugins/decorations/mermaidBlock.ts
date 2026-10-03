@@ -34,6 +34,56 @@ function loadMermaid() {
   return mermaidPromise;
 }
 
+// Pan/zoom controls (see mermaid-diagram-pan-zoom) are loaded together with
+// the first rendered diagram, so notes without one never pay for them. The
+// SDK finds diagrams itself through ENHANCED_CLASS, which is only added to a
+// successfully rendered block, so error messages never get controls.
+const ENHANCED_CLASS = "mermaid-pan-zoom";
+
+let enhancementsPromise:
+  | Promise<typeof import("mermaid-diagram-pan-zoom")>
+  | undefined;
+
+function loadEnhancements() {
+  enhancementsPromise ??= Promise.all([
+    import("mermaid-diagram-pan-zoom"),
+    import("mermaid-diagram-pan-zoom/styles/mermaid-enhancements.css"),
+  ])
+    .then(([sdk]) => {
+      sdk.init({
+        containerSelector: `.${ENHANCED_CLASS}`,
+        sourceAttribute: "data-mermaid-source",
+        // A double click is how the user opens the block for editing (see
+        // MermaidWidget.ignoreEvent), so it must not also zoom.
+        panZoomOptions: { dblClickZoomEnabled: false },
+      });
+      return sdk;
+    })
+    .catch((err) => {
+      enhancementsPromise = undefined; // allow a retry
+      throw err;
+    });
+  return enhancementsPromise;
+}
+
+// A failure only costs the controls: the diagram itself is already shown.
+function enhanceDiagrams() {
+  loadEnhancements()
+    .then((sdk) => sdk.enhance())
+    .catch((err) => console.error("[mermaid] failed to add controls:", err));
+}
+
+// Bounds of a rendered diagram's height. svg-pan-zoom fits the diagram into
+// the container, so the container needs a definite height: the diagram's
+// natural height, kept within these bounds.
+const MIN_HEIGHT_PX = 160;
+const MAX_HEIGHT_PX = 480;
+
+function diagramHeight(container: HTMLElement): number {
+  const natural = container.querySelector("svg")?.viewBox.baseVal.height ?? 0;
+  return Math.min(Math.max(natural, MIN_HEIGHT_PX), MAX_HEIGHT_PX);
+}
+
 // Rendered SVG per theme and source, so toggling the caret in and out of a
 // block does not render the same diagram again.
 const svgCache = new Map<string, string>();
@@ -81,6 +131,10 @@ class MermaidWidget extends WidgetType {
       .then(
         (svg) => {
           el.innerHTML = svg;
+          el.style.height = `${diagramHeight(el)}px`;
+          el.dataset.mermaidSource = this.source; // used by the copy button
+          el.classList.add(ENHANCED_CLASS);
+          enhanceDiagrams();
         },
         (err) => {
           el.classList.add("mermaid-error");
@@ -92,10 +146,11 @@ class MermaidWidget extends WidgetType {
     return el;
   }
 
-  // Let the editor handle clicks, so clicking a diagram moves the caret to
-  // the block's edge, which reveals its code.
-  ignoreEvent() {
-    return false;
+  // Panning and the control buttons need the mouse events, so the widget
+  // keeps them. Only a double click reaches the editor, which moves the
+  // caret to the block's edge and reveals its code.
+  ignoreEvent(event: Event) {
+    return event.type !== "dblclick";
   }
 }
 
