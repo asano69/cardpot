@@ -41,8 +41,7 @@ function loadMermaid() {
 const ENHANCED_CLASS = "mermaid-pan-zoom";
 
 let enhancementsPromise:
-  | Promise<typeof import("mermaid-diagram-pan-zoom")>
-  | undefined;
+  Promise<typeof import("mermaid-diagram-pan-zoom")> | undefined;
 
 function loadEnhancements() {
   enhancementsPromise ??= Promise.all([
@@ -73,15 +72,14 @@ function enhanceDiagrams() {
     .catch((err) => console.error("[mermaid] failed to add controls:", err));
 }
 
-// Bounds of a rendered diagram's height. svg-pan-zoom fits the diagram into
-// the container, so the container needs a definite height: the diagram's
-// natural height, kept within these bounds.
-const MIN_HEIGHT_PX = 160;
-const MAX_HEIGHT_PX = 480;
-
-function diagramHeight(container: HTMLElement): number {
-  const natural = container.querySelector("svg")?.viewBox.baseVal.height ?? 0;
-  return Math.min(Math.max(natural, MIN_HEIGHT_PX), MAX_HEIGHT_PX);
+// svg-pan-zoom fits the diagram into the container, so the container needs a
+// height. It takes the diagram's own aspect ratio, which makes the height
+// follow the container's width instead of being a fixed size.
+function diagramAspectRatio(container: HTMLElement): string {
+  const box = container.querySelector("svg")?.viewBox.baseVal;
+  return box && box.width > 0 && box.height > 0
+    ? `${box.width} / ${box.height}`
+    : "";
 }
 
 // Rendered SVG per theme and source, so toggling the caret in and out of a
@@ -92,7 +90,7 @@ let nextId = 0;
 async function renderSvg(source: string): Promise<string> {
   const dark = document.documentElement.getAttribute("data-mode") === "dark";
   // "neutral" is mermaid's grayscale theme; its own "default" is purple.
-  const theme = dark ? "dark" : "neutral";
+  const theme = dark ? "dark" : "default";
   const key = `${theme}\n${source}`;
   const cached = svgCache.get(key);
   if (cached) return cached;
@@ -131,7 +129,7 @@ class MermaidWidget extends WidgetType {
       .then(
         (svg) => {
           el.innerHTML = svg;
-          el.style.height = `${diagramHeight(el)}px`;
+          el.style.aspectRatio = diagramAspectRatio(el);
           el.dataset.mermaidSource = this.source; // used by the copy button
           el.classList.add(ENHANCED_CLASS);
           enhanceDiagrams();

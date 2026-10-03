@@ -184,13 +184,17 @@ export const editorTheme = EditorView.theme({
   },
 
   // Rendered diagram of a `code:mermaid` block (see mermaidBlock.ts).
-  // The container is the positioning context of the pan/zoom controls and
-  // gives svg-pan-zoom a definite box to fit the diagram into (its height is
-  // set in mermaidBlock.ts). Mermaid puts an inline max-width on the svg, so
-  // overriding it needs !important.
+  // The container is the positioning context of the pan/zoom controls. Its
+  // width follows the editor and its height follows its width through the
+  // diagram's aspect ratio (set in mermaidBlock.ts), so svg-pan-zoom always
+  // has a box to fit into. minHeight cancels the SDK's own 320px minimum;
+  // maxHeight keeps a tall diagram from filling the screen. Mermaid puts an
+  // inline max-width on the svg, so overriding it needs !important.
   ".mermaid-block": {
     position: "relative",
     overflow: "hidden",
+    minHeight: "0",
+    maxHeight: "80vh",
   },
   ".mermaid-block svg": {
     width: "100%",
@@ -207,8 +211,8 @@ export const editorTheme = EditorView.theme({
     boxShadow: "var(--shadow-card)",
   },
   ".mermaid-copy-btn svg, .mermaid-expand-btn svg, .mermaid-zoom-btn svg": {
-    width: "14px",
-    height: "14px",
+    width: "16px",
+    height: "16px",
   },
   // The copy button sits at right: 8px; the expand button follows it.
   ".mermaid-expand-btn": {
