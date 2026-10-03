@@ -8,6 +8,7 @@ import PotList from "../pages/pots/PotList";
 import CardList from "../pages/cards/CardList";
 import CardForm from "../pages/cards/CardForm";
 import ApiDocs from "../pages/admin/ApiDocs";
+import Md2sb from "../pages/admin/Md2sb";
 
 // All top-level routes in one place, so adding or removing a page never
 // requires touching main.tsx.
@@ -22,6 +23,8 @@ export default function AppRouter() {
           AuthGate like every other route, so it reuses the same
           PocketBase session -- no separate login needed. */}
       <Route path="/admin/api-docs" component={ApiDocs} />
+      {/* Markdown -> Scrapbox notation converter (see features/md2sb). */}
+      <Route path="/admin/md2sb" component={Md2sb} />
       <Route path="/" component={PotList} />
       {/* The pot segment in the URL is now the pot's unique
           "name" field, not its PocketBase id (see CardList.tsx
