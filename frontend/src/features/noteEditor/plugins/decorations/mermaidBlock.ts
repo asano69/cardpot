@@ -41,7 +41,8 @@ let nextId = 0;
 
 async function renderSvg(source: string): Promise<string> {
   const dark = document.documentElement.getAttribute("data-mode") === "dark";
-  const theme = dark ? "dark" : "default";
+  // "neutral" is mermaid's grayscale theme; its own "default" is purple.
+  const theme = dark ? "dark" : "neutral";
   const key = `${theme}\n${source}`;
   const cached = svgCache.get(key);
   if (cached) return cached;
