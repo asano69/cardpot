@@ -197,6 +197,32 @@ export const editorTheme = EditorView.theme({
     height: "100%",
     maxWidth: "none !important",
   },
+  // Pan/zoom controls of mermaid-diagram-pan-zoom. Its colors come from the
+  // --ifm-* variables mapped in theme/default.css; only the size is reduced
+  // here (the SDK draws 32px buttons). The SDK's stylesheet is unlayered, so
+  // these rules win through the scope prefix EditorView.theme adds.
+  ".mermaid-copy-btn, .mermaid-expand-btn, .mermaid-zoom-btn": {
+    width: "24px",
+    height: "24px",
+    boxShadow: "var(--shadow-card)",
+  },
+  ".mermaid-copy-btn svg, .mermaid-expand-btn svg, .mermaid-zoom-btn svg": {
+    width: "14px",
+    height: "14px",
+  },
+  // The copy button sits at right: 8px; the expand button follows it.
+  ".mermaid-expand-btn": {
+    right: "40px",
+  },
+  ".mermaid-zoom-controls": {
+    gridTemplateColumns: "repeat(3, 24px)",
+    gridTemplateRows: "repeat(3, 24px)",
+    gap: "3px",
+  },
+  ".mermaid-zoom-controls > span": {
+    minWidth: "24px",
+    minHeight: "24px",
+  },
   ".mermaid-block.mermaid-error": {
     color: "#dc3545",
     fontFamily: "var(--font-mono)",

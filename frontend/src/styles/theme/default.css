@@ -67,6 +67,16 @@
   --color-card-title-bg: #f2f2f3;
 }
 
+/* Maps the variables mermaid-diagram-pan-zoom reads (it falls back to
+ * light-only colors without them) to this app's tokens, so its buttons and
+ * fullscreen modal follow every preset and mode. */
+:root {
+  --ifm-color-emphasis-300: var(--color-border);
+  --ifm-color-emphasis-100: var(--color-hover-bg);
+  --ifm-background-surface-color: var(--color-field);
+  --ifm-font-color-base: var(--color-text);
+}
+
 /* Default preset, dark mode. */
 [data-theme="default"][data-mode="dark"] {
   --color-bg: #1e1f20;
