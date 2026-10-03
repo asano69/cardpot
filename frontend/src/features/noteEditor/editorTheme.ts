@@ -183,6 +183,22 @@ export const editorTheme = EditorView.theme({
     padding: "1px 2px",
   },
 
+  // Rendered diagram of a `code:mermaid` block (see mermaidBlock.ts).
+  ".mermaid-block": {
+    padding: "8px 0",
+    overflowX: "auto",
+  },
+  ".mermaid-block svg": {
+    maxWidth: "100%",
+    height: "auto",
+  },
+  ".mermaid-block.mermaid-error": {
+    color: "#dc3545",
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.9em",
+    whiteSpace: "pre-wrap",
+  },
+
   // WikiLink node (see parser/cardpot's WikiLink node and
   // wikiLinkNavigation.ts): styled like the old ProseMirror editor's
   // autolinks (see components.css's ".ProseMirror a") so it reads as

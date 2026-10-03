@@ -11,6 +11,7 @@ import { hangingIndent } from "./plugins/decorations/hangingIndent";
 import { wordBreak } from "./plugins/decorations/wordBreak";
 import { codeBlockLines } from "./plugins/decorations/codeBlockLines";
 import { imageWidget } from "./plugins/decorations/imageWidget";
+import { mermaidBlock } from "./plugins/decorations/mermaidBlock";
 import { emptyLinks, setLinkAlive } from "./plugins/decorations/emptyLinks";
 import {
   linkAlive,
@@ -123,6 +124,7 @@ export default function NoteEditor(props: NoteEditorProps) {
         wordBreak,
         codeBlockLines,
         imageWidget,
+        mermaidBlock,
         emptyLinks,
         // Cardpot's own Scrapbox-style syntax parser (see
         // parser/cardpot/index.ts): block notation (indentation, quotes,
