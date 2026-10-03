@@ -1,0 +1,156 @@
+[
+  {
+    "name": "wikilink",
+    "text": "T\n[page]",
+    "links": [{ "title": "page", "titleLc": "page" }]
+  },
+  {
+    "name": "dedupe-by-titlelc-keeps-first-spelling",
+    "text": "T\n[Foo Bar] [foo_bar]",
+    "links": [{ "title": "Foo Bar", "titleLc": "foo_bar" }]
+  },
+  {
+    "name": "order-of-first-appearance",
+    "text": "T\n[b] [a] [b]",
+    "links": [
+      { "title": "b", "titleLc": "b" },
+      { "title": "a", "titleLc": "a" }
+    ]
+  },
+  {
+    "name": "title-line-is-not-parsed",
+    "text": "[x]\n[y]",
+    "links": [{ "title": "y", "titleLc": "y" }]
+  },
+  {
+    "name": "inline-code-is-skipped",
+    "text": "T\n`[a]` [b]",
+    "links": [{ "title": "b", "titleLc": "b" }]
+  },
+  {
+    "name": "code-block-is-skipped",
+    "text": "T\ncode:x\n\t[a]\n[b]",
+    "links": [{ "title": "b", "titleLc": "b" }]
+  },
+  {
+    "name": "link-inside-decoration",
+    "text": "T\n[* [a]]",
+    "links": [{ "title": "a", "titleLc": "a" }]
+  },
+  {
+    "name": "link-inside-quote",
+    "text": "T\n> [a]",
+    "links": [{ "title": "a", "titleLc": "a" }]
+  },
+  {
+    "name": "double-bracket-is-not-a-link",
+    "text": "T\n[[a]]",
+    "links": []
+  },
+  {
+    "name": "non-link-brackets",
+    "text": "T\n[ ] [$ x] [me.icon] [/project/a] [N35.6,E139.7] [https://example.com/] [https://example.com/a.png]",
+    "links": []
+  },
+  {
+    "name": "link-inside-labelled-external-link",
+    "text": "T\n[https://e.com label [x]]",
+    "links": [{ "title": "x", "titleLc": "x" }]
+  },
+  {
+    "name": "non-http-scheme-is-a-wikilink",
+    "text": "T\n[ftp://x]",
+    "links": [{ "title": "ftp://x", "titleLc": "ftp://x" }]
+  },
+  {
+    "name": "bare-url-swallows-open-bracket",
+    "text": "T\nsee https://e.com/[x] end",
+    "links": []
+  },
+  {
+    "name": "hashtag-at-start-and-after-space",
+    "text": "T\n#a b #c",
+    "links": [
+      { "title": "a", "titleLc": "a" },
+      { "title": "c", "titleLc": "c" }
+    ]
+  },
+  {
+    "name": "hashtag-needs-boundary",
+    "text": "T\na#b",
+    "links": []
+  },
+  {
+    "name": "hashtag-needs-a-following-character",
+    "text": "T\n# x",
+    "links": []
+  },
+  {
+    "name": "hashtag-inside-decoration",
+    "text": "T\n[* #tag]",
+    "links": [{ "title": "tag", "titleLc": "tag" }]
+  },
+  {
+    "name": "hashtag-inside-link-label",
+    "text": "T\n[https://e.com #tag]",
+    "links": [{ "title": "tag", "titleLc": "tag" }]
+  },
+  {
+    "name": "hashtag-after-full-width-space",
+    "text": "T\na\u3000#tag",
+    "links": [{ "title": "tag", "titleLc": "tag" }]
+  },
+  {
+    "name": "hashtag-right-after-quote-mark",
+    "text": "T\n>#tag",
+    "links": [{ "title": "tag", "titleLc": "tag" }]
+  },
+  {
+    "name": "hashtag-after-quote-mark-and-space",
+    "text": "T\n> #tag",
+    "links": [{ "title": "tag", "titleLc": "tag" }]
+  },
+  {
+    "name": "hashtag-at-table-cell-start",
+    "text": "T\ntable:t\n\t#a\t#b",
+    "links": [
+      { "title": "a", "titleLc": "a" },
+      { "title": "b", "titleLc": "b" }
+    ]
+  },
+  {
+    "name": "table-declaration-is-not-parsed",
+    "text": "T\ntable: #x\n\ta",
+    "links": []
+  },
+  {
+    "name": "brackets-do-not-span-table-cells",
+    "text": "T\ntable:t\n\t[a\tb]",
+    "links": []
+  },
+  {
+    "name": "hashtag-inside-inline-code",
+    "text": "T\n`#tag`",
+    "links": []
+  },
+  {
+    "name": "hashtag-inside-brackets-is-a-wikilink",
+    "text": "T\n[#tag]",
+    "links": [{ "title": "#tag", "titleLc": "#tag" }]
+  },
+  {
+    "name": "hashtag-and-wikilink-share-a-target",
+    "text": "T\n[tag] #Tag",
+    "links": [{ "title": "tag", "titleLc": "tag" }]
+  },
+  {
+    "name": "hashtag-keeps-trailing-punctuation",
+    "text": "T\n#tag.",
+    "links": [{ "title": "tag.", "titleLc": "tag." }]
+  },
+  {
+    "name": "hashtag-runs-to-the-next-space",
+    "text": "T\n#hash#Tag",
+    "links": [{ "title": "hash#Tag", "titleLc": "hash#tag" }]
+  }
+]
