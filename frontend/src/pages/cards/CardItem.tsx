@@ -11,6 +11,7 @@ import {
 } from "@/lib/models/card";
 import { ripple } from "@/lib/directives/ripple";
 import { CardDescription } from "@/features/cardDescription";
+import { usePot } from "../pots/PotContext";
 
 export interface CardItemViewProps {
   card: CardGridCard;
@@ -35,6 +36,10 @@ export interface CardItemViewProps {
 // text are precomputed server-side (see internal/serve/ydoc.go's
 // buildTitleAndPreview) from the card's live Yjs body, not parsed here.
 export function CardItemView(props: CardItemViewProps) {
+  // Shared by every grid under PotLayout (the card list and the related
+  // cards), so no extra prop is needed to know which pot the links belong to.
+  const pot = usePot();
+
   return (
     // The <li> carries the grid item's aspect-ratio; the whole card
     // links to its edit page (CardForm doubles as both the create and
@@ -70,6 +75,7 @@ export function CardItemView(props: CardItemViewProps) {
               <div class="description">
                 <CardDescription
                   text={(props.card.description ?? []).join("\n")}
+                  potId={pot()?.id}
                 />
               </div>
             }

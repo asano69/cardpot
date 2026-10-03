@@ -2,7 +2,7 @@
    The editor is created once per mount: props are read during setup, and
    mountEditor is a ref callback, which the rule mistakes for a plain
    function used in JSX. */
-import { createEffect, onCleanup, type JSX } from "solid-js";
+import { createEffect, onCleanup, untrack, type JSX } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, drawSelection } from "@codemirror/view";
@@ -12,9 +12,12 @@ import { wordBreak } from "./plugins/decorations/wordBreak";
 import { codeBlockLines } from "./plugins/decorations/codeBlockLines";
 import { imageWidget } from "./plugins/decorations/imageWidget";
 import { emptyLinks, setLinkAlive } from "./plugins/decorations/emptyLinks";
-import { related } from "@/lib/stores/relatedStore";
-import { isLinkAlive } from "@/lib/models/linkAlive";
-import { titleToLowerKey } from "@/lib/models/slugify";
+import {
+  linkAlive,
+  linkAliveVersion,
+  requestLinkAlive,
+} from "@/lib/stores/linkAliveStore";
+import { usePot } from "@/pages/pots/PotContext";
 import { yCollab } from "y-codemirror.next";
 import { defaultKeymapGroups } from "./keymaps";
 import * as Y from "yjs";
@@ -63,7 +66,9 @@ export interface NoteEditorProps {
 // Rendering-only CodeMirror adapter. The caller owns the Y.Doc and every
 // persistence/network provider, so lifecycle changes cannot alter its mode.
 export default function NoteEditor(props: NoteEditorProps) {
+
   const navigate = useNavigate();
+  const pot = usePot();
   const ytext = props.ydoc.getText("content");
   const handleSlugCandidate = (candidate: TitleCandidate) => {
     props.onConfirmedTitle(candidate);
@@ -161,19 +166,27 @@ export default function NoteEditor(props: NoteEditorProps) {
     const unregisterDebug = registerDebugView(view);
     props.onView?.(view);
 
-    // Feeds the related-card store into the editor as a "is this link alive"
-    // predicate (see emptyLinks.ts). The editor only sees the predicate, so
-    // it does not matter how or when the store gets updated: any change to
-    // the store re-runs this effect and the links are recolored.
-    createEffect(() => {
-      const cards = [...related.oneHop, ...related.twoHop];
-      const ready = related.loaded && !related.error;
-      const own = titleToLowerKey(props.existingTitle ?? props.initialTitle ?? "");
-      view.dispatch({
-        effects: setLinkAlive.of(
-          ready ? (titleLc) => isLinkAlive(titleLc, cards, own) : null,
-        ),
-      });
+    // Feeds the shared link results (see lib/stores/linkAliveStore.ts) into
+    // the editor as a predicate (see emptyLinks.ts). CodeMirror is outside
+    // Solid's tracking, so this effect re-runs on the store's version signal
+    // and sends a fresh predicate. The predicate runs untracked: it asks for a
+    // result the first time it sees a link, and treats "not answered yet" as
+    // alive so links never flash red.
+   createEffect(() => {
+      linkAliveVersion();
+      const potId = pot()?.id;
+      untrack(() =>
+        view.dispatch({
+          effects: setLinkAlive.of(
+            potId
+              ? (titleLc) => {
+                  requestLinkAlive(potId, titleLc);
+                  return linkAlive(potId, titleLc) ?? true;
+                }
+              : null,
+          ),
+        }),
+      );
     });
 
     // Seed the document's first line with initialTitle for a

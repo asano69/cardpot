@@ -45,6 +45,9 @@ export function asCardTitle(title: string): CardTitle {
 export interface CardRecord {
   id: string;
   title: CardTitle;
+  // Case-insensitive key derived from the title (see internal/slug.ToLowerKey).
+  // A wiki link is matched to a card by (pot, titleLc).
+  titleLc: string;
   // The preview text, one entry per line (see descriptionLines in
   // internal/serve/ydoc.go). Null for a card that has none yet.
   description: string[] | null;

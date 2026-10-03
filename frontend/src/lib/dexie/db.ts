@@ -24,7 +24,8 @@ export interface CheckpointRecord {
 //
 // Indexes are declared ahead of being queried where a query is expected
 // (card_links' two), because adding one later needs a version bump, which
-// forces a migration on every existing browser.
+// forces a migration on every existing browser. Version 2 added cards'
+// [pot+titleLc], which linkAliveQuery.ts uses.
 class ReplicaDB extends Dexie {
   cards!: EntityTable<CachedCard, "id">;
   card_links!: EntityTable<CardLinkRecord, "id">;
@@ -35,7 +36,12 @@ class ReplicaDB extends Dexie {
     this.version(1).stores({
       cards: "id, pot, [pot+pin+position]",
       card_links: "id, source, [target_pot+target_titleLc]",
+
       checkpoints: "[collection+potId]",
+    });
+    // Only the changed table is listed: Dexie keeps the others as they were.
+    this.version(2).stores({
+      cards: "id, pot, [pot+pin+position], [pot+titleLc]",
     });
   }
 }

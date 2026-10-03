@@ -50,6 +50,10 @@ vi.mock("../dexie/checkpoints", () => ({
   readCheckpoint: vi.fn(async () => null),
   writeCheckpoint: vi.fn(),
 }));
+// linkAliveStore imports the IndexedDB-backed query, which jsdom cannot run.
+vi.mock("../dexie/linkAliveQuery", () => ({
+  computeAlive: vi.fn(async () => true),
+}));
 
 // Each test uses its own pot id: the store is module-level state.
 

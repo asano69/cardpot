@@ -23,6 +23,9 @@ interface RelatedState {
   twoHop: Link2HopCard[];
   // Cards matched by the datalog query saved in the open card.
   query: CardRecord[];
+  // Links written in the open card, read from the local replica. Whether
+  // each is alive is not decided here (see linkAliveStore.ts).
+  ownLinks: CardLinkRecord[];
   // Whether the last load failed (a bad query counts as a failure).
   error: boolean;
   // Whether a load has succeeded since the store was last emptied. Tells

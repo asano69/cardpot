@@ -201,6 +201,13 @@
     padding: 0 0.2em;
   }
 
+  /* A wiki link whose target is dead (see features/cardDescription). Must
+   * stay after the .grid-wikilink rules above, which have the same
+   * specificity. */
+  .card-grid-item .description .grid-empty {
+    color: #fd7373;
+  }
+
   /* Skeleton lines shown in place of the description of an empty card
    * (see CardItem.tsx): five bars, the last one shorter. They are plain
    * divs, so no image is needed. */

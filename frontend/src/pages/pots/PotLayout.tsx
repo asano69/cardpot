@@ -9,6 +9,10 @@ import { useParams } from "@solidjs/router";
 import { fetchPotByName } from "@/lib/api/pots";
 import { useTopBarPotLink } from "@/lib/topBarSlot";
 import { ensurePotSynced, releasePot } from "@/lib/stores/cardsStore";
+import {
+  markLinkAlivePotReady,
+  releaseLinkAlive,
+} from "@/lib/stores/linkAliveStore";
 import { closePotReplicas, openPotReplicas } from "@/lib/dexie/dataReplicas";
 import PotContext from "./PotContext";
 
@@ -41,16 +45,22 @@ export default function PotLayout(props: ParentProps) {
   // mounted, so both survive that. The pot's cards replica and its data-only
   // replicas (see lib/dexie/dataReplicas.ts) are synced for as long as it is
   // open, so a card opened directly by URL finds an up-to-date replica too.
-  // Realtime is not handled here: AppShell watches the channels for the
-  // whole session.
+// Link results (see lib/stores/linkAliveStore.ts) are only computed once
+  // both replicas have synced, so a half-filled replica never marks a live
+  // link as dead. Realtime is not handled here: AppShell watches the channels
+  // for the whole session.
   createEffect(() => {
     const id = pot()?.id;
     if (!id) return;
-    void openPotReplicas(id);
-    void ensurePotSynced(id);
+    let open = true;
+    void Promise.all([openPotReplicas(id), ensurePotSynced(id)]).then(() => {
+      if (open) markLinkAlivePotReady(id);
+    });
     onCleanup(() => {
+      open = false;
       releasePot(id);
       closePotReplicas(id);
+      releaseLinkAlive(id);
     });
   });
 

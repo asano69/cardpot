@@ -13,6 +13,7 @@ import {
   queryCardsPage,
 } from "../dexie/cardsCollection";
 import { syncReplica } from "../dexie/replica";
+import { refreshLinkAlive } from "./linkAliveStore";
 
 // Re-exported so CardItem only needs to import from this module
 // (cardFlip.ts's registration map is an implementation detail of how
@@ -284,6 +285,8 @@ function handleCardEvent(e: CollectionEvent<CardRecord>) {
       void cardsReplica.put([e.record]);
     }
   });
+  // A created, renamed or deleted card changes which links are alive.
+  refreshLinkAlive();
 }
 
 // Reloads the part of a pot's card list the window currently covers, for
@@ -349,6 +352,7 @@ export async function resyncPot(potId: string): Promise<void> {
       for (const id of vanished) delete store[id];
     }),
   );
+  refreshLinkAlive();
 }
 
 // Keeps every loaded pot window live through the shared cards channel and

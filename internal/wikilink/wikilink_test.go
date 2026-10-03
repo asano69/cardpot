@@ -5,7 +5,9 @@ import (
 	"testing"
 
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/types"
 	// Registers PocketBase's system migrations, which create the internal
+
 	// tables (_collections, ...) that Bootstrap reads. Nothing else this test
 	// package imports pulls them in.
 	_ "github.com/pocketbase/pocketbase/migrations"
@@ -25,7 +27,7 @@ func newTestApp(t *testing.T) core.App {
 	t.Cleanup(func() { _ = app.ResetBootstrapState() })
 
 	cards := core.NewBaseCollection("cards")
-	cards.Fields.Add(&core.TextField{Name: "pot"})
+	cards.Fields.Add(&core.TextField{Name: "pot"}, &core.DateField{Name: "deleted"})
 	if err := app.Save(cards); err != nil {
 		t.Fatalf("create cards collection: %v", err)
 	}
@@ -235,6 +237,24 @@ func TestSync_UnchangedLinksAreNotRewritten(t *testing.T) {
 
 	if len(second) != 1 || second[0].Id != first[0].Id {
 		t.Errorf("link record was replaced: %v -> %v", first[0].Id, second)
+	}
+}
+
+func TestSync_DeletedCardHasNoLinks(t *testing.T) {
+	// Regression test: links written by a soft-deleted card stayed live, so
+	// they were still counted as incoming links of their targets.
+	app := newTestApp(t)
+	a := createCard(t, app)
+	mustSync(t, app, a.Id, "A\n[B]")
+
+	a.Set("deleted", types.NowDateTime())
+	if err := app.Save(a); err != nil {
+		t.Fatalf("soft-delete card: %v", err)
+	}
+	mustSync(t, app, a.Id, "A\n[B]")
+
+	if got := linksFrom(t, app, a.Id); len(got) != 0 {
+		t.Errorf("got %d links, want 0", len(got))
 	}
 }
 

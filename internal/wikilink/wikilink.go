@@ -45,6 +45,12 @@ func Sync(app core.App, cardID, text string) error {
 	}
 	pot := source.GetString("pot")
 
+	// A deleted card links to nothing: its rows are marked deleted like those
+	// of any removed link, so the source of a live link is always a live card.
+	if !source.GetDateTime("deleted").IsZero() {
+		text = ""
+	}
+
 	targets := orderedTargets(parser.Parse(text).WikiLinkTitles())
 
 	existing, err := app.FindRecordsByFilter(

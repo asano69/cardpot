@@ -15,6 +15,7 @@ function card(
   return {
     id,
     title: id as CardRecord["title"],
+    titleLc: id,
     description: [],
     image: "",
     pot,

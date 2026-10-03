@@ -3,10 +3,10 @@ import { A } from "@solidjs/router";
 import type { Link2HopCard } from "@/lib/api/generated";
 import { cardsById } from "@/lib/stores/cardsStore";
 import { closeRelated, openRelated, related } from "@/lib/stores/relatedStore";
+import { linkAlive, requestLinkAlive } from "@/lib/stores/linkAliveStore";
 import { Link, Unlink } from "@/lib/icons";
-import { titleToLowerKey, titleToSegment } from "@/lib/models/slugify";
+import { titleToSegment } from "@/lib/models/slugify";
 import { asCardTitle, type CardGridCard } from "@/lib/models/card";
-import { deadLinks } from "@/lib/models/linkAlive";
 import { CardItemView } from "./CardItem";
 
 export interface RelatedCardsProps {
@@ -114,20 +114,26 @@ export default function RelatedCards(props: RelatedCardsProps) {
     }
     return groups;
   });
-  // Links of the open card whose target is not alive, drawn as empty cards.
-  // Uses the same predicate as the editor's red links (see isLinkAlive), and
-  // is derived from the store, so it follows any later store update.
+  // Links of the open card whose target is dead, drawn as empty cards. Reads
+  // the same shared results as the editor's red links (see linkAliveStore.ts),
+  // so the two can never disagree and nothing is computed twice.
+  createEffect(() => {
+    for (const link of related.ownLinks) {
+      requestLinkAlive(link.target_pot, link.target_titleLc);
+    }
+  });
   const newLinks = createMemo<CardGridCard[]>(() =>
-    deadLinks(
-      related.ownLinks,
-      [...related.oneHop, ...related.twoHop],
-      props.title ? titleToLowerKey(props.title) : "",
-    ).map((link) => ({
-      title: asCardTitle(link.target_title),
-      description: [],
-      image: "",
-      pin: false,
-    })),
+    related.ownLinks
+      .filter(
+        (link) =>
+          linkAlive(link.target_pot, link.target_titleLc) === false,
+      )
+      .map((link) => ({
+        title: asCardTitle(link.target_title),
+        description: [],
+        image: "",
+        pin: false,
+      })),
   );
 
   return (

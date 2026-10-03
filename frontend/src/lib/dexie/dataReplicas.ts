@@ -1,5 +1,6 @@
 import { subscribeToCollection } from "../api/realtime";
 import type { ReplicaRecord } from "../api/replication";
+import { refreshLinkAlive } from "../stores/linkAliveStore";
 import { db } from "./db";
 import {
   applyRecords,
@@ -47,6 +48,7 @@ export function closePotReplicas(potId: string): void {
 
 async function resync(replica: Replica<ReplicaRecord>): Promise<void> {
   for (const potId of openPots) await syncSafely(replica, potId);
+  refreshLinkAlive();
 }
 
 // Applies the realtime events of every data replica to IndexedDB and returns
@@ -58,9 +60,11 @@ export function watchDataReplicas(): () => void {
     subscribeToCollection<ReplicaRecord>(
       replica.name,
       (event) => {
-        applyRecords(replica, [event.record]).catch((err) =>
-          console.error(`[${replica.name}] failed to apply event:`, err),
-        );
+        applyRecords(replica, [event.record])
+          .then(() => refreshLinkAlive())
+          .catch((err) =>
+            console.error(`[${replica.name}] failed to apply event:`, err),
+          );
       },
       () => void resync(replica),
     ),
