@@ -1,5 +1,6 @@
 import { createEffect, createMemo, For, Match, Switch } from "solid-js";
 
+import { hashTagTitle } from "@/lib/models/hashTagTitle";
 import { titleToLowerKey } from "@/lib/models/slugify";
 import { linkAlive, requestLinkAlive } from "@/lib/stores/linkAliveStore";
 import { parseDescription } from "./parseDescription";
@@ -11,11 +12,17 @@ export interface CardDescriptionProps {
   potId?: string;
 }
 
-// A wiki link in a description. Marked empty (see components.css's
+// A wiki link or hashtag in a description. `target` is the title it links to
+// and `text` is what is shown. Marked empty (see components.css's
 // .grid-empty) only once the shared store has answered that its target is
 // dead; "not answered yet" is never marked.
-function WikiLinkSpan(props: { potId?: string; title: string }) {
-  const lc = () => titleToLowerKey(props.title);
+function LinkSpan(props: {
+  potId?: string;
+  class: string;
+  target: string;
+  text: string;
+}) {
+  const lc = () => titleToLowerKey(props.target);
   createEffect(() => {
     if (props.potId) requestLinkAlive(props.potId, lc());
   });
@@ -23,8 +30,8 @@ function WikiLinkSpan(props: { potId?: string; title: string }) {
     props.potId !== undefined && linkAlive(props.potId, lc()) === false;
 
   return (
-    <span class="grid-wikilink" classList={{ "grid-empty": dead() }}>
-      {props.title}
+    <span class={props.class} classList={{ "grid-empty": dead() }}>
+      {props.text}
     </span>
   );
 }
@@ -42,7 +49,20 @@ export default function CardDescription(props: CardDescriptionProps) {
         >
           <Match when={segment.kind === "text"}>{segment.text}</Match>
           <Match when={segment.kind === "wikilink"}>
-            <WikiLinkSpan potId={props.potId} title={segment.text} />
+            <LinkSpan
+              potId={props.potId}
+              class="grid-wikilink"
+              target={segment.text}
+              text={segment.text}
+            />
+          </Match>
+          <Match when={segment.kind === "hashtag"}>
+            <LinkSpan
+              potId={props.potId}
+              class="grid-hashtag"
+              target={hashTagTitle(segment.text)}
+              text={segment.text}
+            />
           </Match>
           <Match when={segment.kind === "inline-code"}>
             <code class="grid-inline-code">{segment.text}</code>

@@ -27,6 +27,12 @@ describe("emptyLinks", () => {
     expect(markedTexts(doc, (lc) => lc === "alive_one")).toEqual(["[ghost]"]);
   });
 
+  it("marks a hashtag whose target is dead, matching by its title", () => {
+    expect(markedTexts("T\n#ghost #alive", (lc) => lc === "alive")).toEqual([
+      "#ghost",
+    ]);
+  });
+
   it("marks nothing until a predicate is known", () => {
     expect(markedTexts(doc, null)).toEqual([]);
   });

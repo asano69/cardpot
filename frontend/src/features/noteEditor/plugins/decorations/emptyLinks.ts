@@ -1,7 +1,8 @@
 import { EditorState, StateEffect, StateField } from "@codemirror/state";
 import { Decoration, type DecorationSet } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { WikiLink } from "../../parser/cardpot";
+import { HashTag, WikiLink } from "../../parser/cardpot";
+import { hashTagTitle } from "@/lib/models/hashTagTitle";
 import { titleToLowerKey } from "@/lib/models/slugify";
 import { decorationPlugin } from "./decorationPlugin";
 
@@ -26,7 +27,7 @@ const linkAliveField = StateField.define<LinkAlive | null>({
 
 const emptyLinkMark = Decoration.mark({ class: "empty-page-link" });
 
-// Marks every WikiLink whose target is not alive.
+// Marks every WikiLink and HashTag whose target is not alive.
 export function buildEmptyLinkDecorations(state: EditorState): DecorationSet {
   const isAlive = state.field(linkAliveField);
   if (!isAlive) return Decoration.none;
@@ -34,9 +35,10 @@ export function buildEmptyLinkDecorations(state: EditorState): DecorationSet {
   const decorations = [];
   syntaxTree(state).iterate({
     enter(node) {
-      if (node.type !== WikiLink) return;
+      if (node.type !== WikiLink && node.type !== HashTag) return;
+      const text = state.sliceDoc(node.from, node.to);
       const titleLc = titleToLowerKey(
-        state.sliceDoc(node.from + 1, node.to - 1),
+        node.type === HashTag ? hashTagTitle(text) : text.slice(1, -1),
       );
       // A link with no usable key is never stored server-side either.
       if (titleLc === "" || isAlive(titleLc)) return;

@@ -1,6 +1,7 @@
 import { EditorView } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { WikiLink } from "../../parser/cardpot";
+import { HashTag, WikiLink } from "../../parser/cardpot";
+import { hashTagTitle } from "@/lib/models/hashTagTitle";
 import { titleToSegment } from "@/lib/models/slugify";
 
 // Makes a WikiLink node ("[title]") act as an internal navigation
@@ -42,13 +43,16 @@ export function wikiLinkNavigation(
       if (pos == null) return false;
 
       let node = syntaxTree(view.state).resolve(pos, 1);
-      while (node && node.type !== WikiLink) {
+      while (node && node.type !== WikiLink && node.type !== HashTag) {
         node = node.parent;
       }
       if (!node) return false;
 
-      // Strip the surrounding "[" and "]" to get the raw title text.
-      const title = view.state.sliceDoc(node.from + 1, node.to - 1);
+      // A wiki link's title is its text without the surrounding "[" and "]";
+      // a hashtag's title is its text without the leading "#".
+      const text = view.state.sliceDoc(node.from, node.to);
+      const title =
+        node.type === HashTag ? hashTagTitle(text) : text.slice(1, -1);
       event.preventDefault();
       navigate(`/${potSlug()}/${titleToSegment(title)}`);
       return true;
