@@ -8,6 +8,13 @@ import { IndexeddbPersistence } from "y-indexeddb";
 import NoteEditor from "./index";
 import RelatedCards from "@/pages/cards/RelatedCards";
 import type { TitleCandidate } from "@/lib/models/card";
+import { extractLinks } from "@/lib/models/extractLinks";
+import { cardsById } from "@/lib/stores/cardsStore";
+import { setOwnLinks } from "@/lib/stores/relatedStore";
+
+// Wait this long after the last edit before the open card's links are
+// extracted again.
+const LINKS_DEBOUNCE_MS = 300;
 
 export interface ExistingCardEditorProps {
   cardId: string;
@@ -61,7 +68,28 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
   // so there's nothing left to do here on confirm.
   const confirm = (_candidate: TitleCandidate) => {};
 
+  // Keeps the related view's links of the open card in step with the live
+  // text. An empty text means nothing has synced yet, so it is skipped
+  // instead of wiping the links read from the replica; the first sync fires
+  // the observer anyway.
+  const ytext = ydoc.getText("content");
+  let linksTimer: ReturnType<typeof setTimeout> | undefined;
+  const updateOwnLinks = () => {
+    const text = ytext.toString();
+    const pot = cardsById[props.cardId]?.pot;
+    if (text === "" || !pot) return;
+    setOwnLinks(pot, extractLinks(text));
+  };
+  const scheduleOwnLinks = () => {
+    clearTimeout(linksTimer);
+    linksTimer = setTimeout(updateOwnLinks, LINKS_DEBOUNCE_MS);
+  };
+  ytext.observe(scheduleOwnLinks);
+  scheduleOwnLinks(); // a handed-off draft already holds text
+
   onCleanup(() => {
+    clearTimeout(linksTimer);
+    ytext.unobserve(scheduleOwnLinks);
     provider.destroy();
     idbProvider.destroy();
     ydoc.destroy();

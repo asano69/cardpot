@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchLinks1Hop, fetchRelatedCards } from "../api/cardApi";
 import type { LinkedCard } from "../api/generated";
-import { closeRelated, openRelated, related } from "./relatedStore";
+import {
+  closeRelated,
+  openRelated,
+  related,
+  setOwnLinks,
+} from "./relatedStore";
 
 vi.mock("../api/cardApi", () => ({
   fetchLinks1Hop: vi.fn(),
@@ -84,6 +89,23 @@ describe("relatedStore", () => {
     await openRelated("pot", "A", "card1");
     expect(related.query).toEqual([]);
     expect(related.error).toBe(false);
+  });
+
+  it("keeps the live links when a load finishes after them", async () => {
+    vi.mocked(fetchLinks1Hop).mockResolvedValueOnce([]);
+    const loading = openRelated("pot", "A", "card1");
+    setOwnLinks("p", [{ title: "X", titleLc: "x" }]);
+    await loading;
+    expect(related.ownLinks.map((l) => l.target_titleLc)).toEqual(["x"]);
+  });
+
+  it("goes back to the replica after the card is closed", async () => {
+    setOwnLinks("p", [{ title: "X", titleLc: "x" }]);
+    closeRelated();
+    expect(related.ownLinks).toEqual([]);
+    vi.mocked(fetchLinks1Hop).mockResolvedValueOnce([]);
+    await openRelated("pot", "A", "card1"); // the mocked replica has no rows
+    expect(related.ownLinks).toEqual([]);
   });
 
   it("flags an error when a request fails", async () => {

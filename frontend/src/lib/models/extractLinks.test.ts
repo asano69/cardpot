@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { extractLinks } from "./extractLinks";
 
 // Shared with the Go test (internal/wikilink/fixture_test.go). The cases are
 // the contract between the two parsers: the TS parser is the reference.
@@ -24,6 +25,7 @@ describe("link extraction fixture", () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  // Phase 3 replaces these with real assertions against extractLinks().
-  for (const c of fixture) it.todo(c.name);
+  for (const c of fixture) {
+    it(c.name, () => expect(extractLinks(c.text)).toEqual(c.links));
+  }
 });
