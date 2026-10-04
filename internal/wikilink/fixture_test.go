@@ -27,27 +27,12 @@ type fixtureCase struct {
 
 // knownFailing lists the cases the Go parser does not match yet. A case that
 // is listed must still fail, so the list can only shrink: when a case starts
-// passing, the test asks for its removal. The list is empty once Phase 1 of
-// docs/architecture/link-extraction-plan.md is done.
-var knownFailing = map[string]bool{
-	"link-inside-labelled-external-link": true,
-	"non-http-scheme-is-a-wikilink":      true,
-	"bare-url-swallows-open-bracket":     true,
-	"hashtag-at-start-and-after-space":   true,
-	"hashtag-inside-decoration":          true,
-	"hashtag-inside-link-label":          true,
-	"hashtag-after-full-width-space":     true,
-	"hashtag-right-after-quote-mark":     true,
-	"hashtag-after-quote-mark-and-space": true,
-	"hashtag-at-table-cell-start":        true,
-	"brackets-do-not-span-table-cells":   true,
-	"hashtag-keeps-trailing-punctuation": true,
-	"hashtag-runs-to-the-next-space":     true,
-}
+// passing, the test asks for its removal. It is empty now.
+var knownFailing = map[string]bool{}
 
 func extractedLinks(text string) []fixtureLink {
 	got := []fixtureLink{}
-	for _, t := range orderedTargets(parser.Parse(text).WikiLinkTitles()) {
+	for _, t := range orderedTargets(parser.Parse(text).LinkTitles()) {
 		got = append(got, fixtureLink{Title: t.title, TitleLc: t.titleLc})
 	}
 	return got

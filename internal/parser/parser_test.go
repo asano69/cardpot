@@ -7,7 +7,7 @@ import (
 
 const testTitle = "T\n"
 
-func TestParseWikiLinkTitles(t *testing.T) {
+func TestParseLinkTitles(t *testing.T) {
 	cases := []struct {
 		name string
 		text string
@@ -23,8 +23,8 @@ func TestParseWikiLinkTitles(t *testing.T) {
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Parse(tt.text).WikiLinkTitles(); !slices.Equal(got, tt.want) {
-				t.Errorf("WikiLinkTitles() = %q, want %q", got, tt.want)
+			if got := Parse(tt.text).LinkTitles(); !slices.Equal(got, tt.want) {
+				t.Errorf("LinkTitles() = %q, want %q", got, tt.want)
 			}
 		})
 	}

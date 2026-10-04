@@ -1,5 +1,7 @@
 package parser
 
+import "unicode/utf8"
+
 // inlineRule mirrors the frontend parseInline rule contract.
 type inlineRule func(s string, pos int) (n *Node, end int)
 
@@ -23,12 +25,31 @@ func parseAt(s string, pos int) (*Node, int) {
 		return parseBracket(s, pos)
 	case '`':
 		return parseInlineCode(s, pos)
+	case '#':
+		return parseHashTag(s, pos)
+	case 'h':
+		return parseBareURL(s, pos)
 	default:
 		return nil, 0
 	}
 }
 
+// scanUntil returns the index of the first character at or after from for
+// which stop is true, or len(s) when there is none.
+func scanUntil(s string, from int, stop func(rune) bool) int {
+	for from < len(s) {
+		r, width := utf8.DecodeRuneInString(s[from:])
+		if stop(r) {
+			break
+		}
+		from += width
+	}
+	return from
+}
+
 var (
 	_ inlineRule = parseBracket
 	_ inlineRule = parseInlineCode
+	_ inlineRule = parseHashTag
+	_ inlineRule = parseBareURL
 )

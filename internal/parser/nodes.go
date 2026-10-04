@@ -15,11 +15,15 @@ const (
 	KindTitle     Kind = "Title"
 	KindLine      Kind = "Line"
 	KindCodeBlock Kind = "CodeBlock"
+	KindQuote     Kind = "Quote"
+	KindTable     Kind = "Table"
 
 	KindInlineCode Kind = "InlineCode"
 	KindDecoration Kind = "Decoration"
 	KindStrong     Kind = "Strong"
 	KindBlank      Kind = "Blank"
+	KindHashTag    Kind = "HashTag"
+	KindBareURL    Kind = "BareURL"
 
 	KindWikiLink     Kind = "WikiLink"
 	KindImage        Kind = "Image"
@@ -31,9 +35,11 @@ const (
 	KindGoogleMap    Kind = "GoogleMap"
 )
 
-// Node is a notation found in a card. Only Line, Decoration, and Strong have
-// children. Text holds the raw title, wiki-link title, image source, raw
-// bracket content, or a code block's declaration after "code:" (for example
+// Node is a notation found in a card. Only Line, Quote, Table, Decoration,
+// Strong, and a labelled ExternalLink have children (a Table's children are
+// the inline nodes of all its cells). Text holds the raw title, wiki-link
+// title, hashtag title (without the leading "#"), image source, raw bracket
+// content, or a code block's declaration after "code:" (for example
 // "main.rs(rust)"), according to Kind.
 type Node struct {
 	Kind     Kind

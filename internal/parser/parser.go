@@ -28,10 +28,11 @@ func (n *Note) Walk(fn func(*Node) bool) bool {
 	return walkNodes(n.Nodes, fn)
 }
 
-// WikiLinkTitles returns all wiki-link titles in document order.
-func (n *Note) WikiLinkTitles() (titles []string) {
+// LinkTitles returns the title of every wiki link and hashtag in document
+// order. A hashtag links to the title that follows its leading "#".
+func (n *Note) LinkTitles() (titles []string) {
 	n.Walk(func(node *Node) bool {
-		if node.Kind == KindWikiLink {
+		if node.Kind == KindWikiLink || node.Kind == KindHashTag {
 			titles = append(titles, node.Text)
 		}
 		return true

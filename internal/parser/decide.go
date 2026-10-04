@@ -11,6 +11,8 @@ import (
 type Decision struct {
 	Kind Kind
 	Src  string
+	// Label is the part of a labelled external link that is not its URL.
+	Label string
 }
 
 var (
@@ -35,8 +37,9 @@ func inferURL(value string) urlKind {
 	if !strings.Contains(value, "://") {
 		return urlNone
 	}
+	// Only http(s) URLs count, like the frontend: "[ftp://x]" is a wiki link.
 	u, err := url.Parse(value)
-	if err != nil || u.Scheme == "" {
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return urlNone
 	}
 	if gyazoRe.MatchString(value) || imageExtRe.MatchString(value) {
@@ -62,10 +65,13 @@ func DecideBracket(content string) Decision {
 	// frontend rules/bracket.ts.
 	firstSpace := strings.IndexFunc(content, isJSSpace)
 	lastSpace := strings.LastIndexFunc(content, isJSSpace)
-	first, last := content, ""
+	first, rest, last := content, "", ""
 	if firstSpace >= 0 {
-		_, width := utf8.DecodeRuneInString(content[lastSpace:])
-		first, last = content[:firstSpace], content[lastSpace+width:]
+		_, firstWidth := utf8.DecodeRuneInString(content[firstSpace:])
+		_, lastWidth := utf8.DecodeRuneInString(content[lastSpace:])
+		first = content[:firstSpace]
+		rest = content[firstSpace+firstWidth:]
+		last = content[lastSpace+lastWidth:]
 	}
 	if coordinateRe.MatchString(content) || coordinateRe.MatchString(first) || coordinateRe.MatchString(last) {
 		return Decision{Kind: KindGoogleMap}
@@ -90,8 +96,11 @@ func DecideBracket(content string) Decision {
 		}
 		return Decision{Kind: KindLinkedImage, Src: src}
 	}
-	if firstKind == urlLink || lastKind != urlNone {
-		return Decision{Kind: KindExternalLink}
+	if firstKind == urlLink {
+		return Decision{Kind: KindExternalLink, Label: rest}
+	}
+	if lastKind != urlNone {
+		return Decision{Kind: KindExternalLink, Label: content[:lastSpace]}
 	}
 	return Decision{Kind: KindWikiLink}
 }

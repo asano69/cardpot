@@ -51,7 +51,7 @@ func Sync(app core.App, cardID, text string) error {
 		text = ""
 	}
 
-	targets := orderedTargets(parser.Parse(text).WikiLinkTitles())
+	targets := orderedTargets(parser.Parse(text).LinkTitles())
 
 	existing, err := app.FindRecordsByFilter(
 		"card_links", `source = {:source} && deleted = ""`, "", 0, 0,

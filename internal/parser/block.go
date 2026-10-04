@@ -15,7 +15,7 @@ func (c *cursor) next()        { c.i++ }
 
 type blockRule func(*cursor) *Node
 
-var blockRules = []blockRule{parseTitle, parseCodeBlock}
+var blockRules = []blockRule{parseTitle, parseCodeBlock, parseTable, parseQuote}
 
 func parseBlocks(lines []string) []*Node {
 	c := &cursor{lines: lines}
@@ -73,6 +73,38 @@ func parseCodeBlock(c *cursor) *Node {
 	}
 	info := strings.TrimSpace(strings.TrimPrefix(rest, "code:"))
 	return &Node{Kind: KindCodeBlock, Text: info, Body: body}
+}
+
+// parseTable consumes a table: declaration and the deeper-indented rows after
+// it. The declaration is not parsed; every row is split into cells at tabs and
+// each cell is parsed on its own. It mirrors frontend rules/table.ts.
+func parseTable(c *cursor) *Node {
+	depth, offset := measureIndent(c.line())
+	if !strings.HasPrefix(c.line()[offset:], "table:") {
+		return nil
+	}
+	c.next()
+
+	n := &Node{Kind: KindTable}
+	for _, line := range bodyLines(c, depth) {
+		for _, cell := range strings.Split(dropRunes(line, depth+1), "\t") {
+			n.Children = append(n.Children, parseInline(cell)...)
+		}
+	}
+	return n
+}
+
+// parseQuote parses a line that starts with ">" (after its indent). The mark
+// and one following space are dropped and the rest is parsed as inline text.
+// It mirrors frontend rules/quote.ts.
+func parseQuote(c *cursor) *Node {
+	_, offset := measureIndent(c.line())
+	rest := c.line()[offset:]
+	if !strings.HasPrefix(rest, ">") {
+		return nil
+	}
+	c.next()
+	return &Node{Kind: KindQuote, Children: parseInline(strings.TrimPrefix(rest[1:], " "))}
 }
 
 func bodyLines(c *cursor, depth int) []string {

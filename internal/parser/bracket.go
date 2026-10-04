@@ -84,5 +84,11 @@ func bracketNode(decision Decision, content string) *Node {
 	if decision.Kind == KindImage || decision.Kind == KindLinkedImage {
 		return &Node{Kind: decision.Kind, Text: decision.Src}
 	}
-	return &Node{Kind: decision.Kind, Text: content}
+	n := &Node{Kind: decision.Kind, Text: content}
+	// The label of an external link is parsed like any other inline text, so
+	// a wiki link or hashtag inside it is found.
+	if decision.Label != "" {
+		n.Children = parseInline(decision.Label)
+	}
+	return n
 }
