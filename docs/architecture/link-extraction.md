@@ -105,7 +105,7 @@
 
 ### 注意が必要な箇所
 
-- `liveOwnLinks` が `undefined` の間は Dexie の `card_links`、`setOwnLinks` が一度でも呼ばれた後は ytext 由来の値が優先される（`ownLinks = liveOwnLinks ?? replica`）。Dexie 側が後から更新されても、ライブの値は上書きされない。`closeRelated` で `undefined` に戻る。
+- `liveOwnLinks` は**所有カードの id を持つ**（`{ cardId, links }`）。`createOwnLinks` は自分の `cardId` と一致するときだけ採用し、それ以外は Dexie の `card_links` を読む。そのため、直前に開いていたカードの値が下書き（`/new`）や次のカードに見えることは構造的に起きない。Dexie 側が後から更新されても、所有者のライブ値は上書きされない。エディタが破棄されるとき `closeOwnLinks(cardId)` が所有者の値だけを消す。
 - 空の ytext はスキップ: 同期前に空の配列を書くと、Dexie 由来の New Links が一瞬消える。同期後に `observe` が発火して導出される。
 - ドラフトは対象外: カードが作られ `ExistingCardEditor` に移った後に導出が始まる（ドラフトの Y.Doc は引き継がれるので、初回に即時導出する）。
 

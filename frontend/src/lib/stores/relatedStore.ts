@@ -18,10 +18,19 @@ export type OwnLink = Pick<
 // what cannot be derived there: the links of the open card as the editor
 // reports them, and the cards matched by the card's saved datalog query.
 
-// Links written in the open card's live text. Undefined until the editor
-// reports them (see setOwnLinks); from then on they win over the replica's
-// older rows.
-const [liveOwnLinks, setLiveOwnLinks] = createSignal<OwnLink[] | undefined>();
+// Links written in the open card's live text, tagged with the card they
+// belong to. Undefined until the editor reports them (see setOwnLinks). The
+// tag is what ties their lifetime to the card: a reader only accepts links of
+// its own card (see createOwnLinks), so links left over from a card that was
+// just closed can never show up under another card or a draft.
+interface LiveOwnLinks {
+  cardId: string;
+  links: OwnLink[];
+}
+
+const [liveOwnLinks, setLiveOwnLinks] = createSignal<
+  LiveOwnLinks | undefined
+>();
 
 // Cards matched by the datalog query saved in the open card. Loaded from the
 // server, so it stays empty offline.
@@ -30,26 +39,42 @@ const [queryCards, setQueryCards] = createSignal<CardRecord[]>([]);
 export { queryCards };
 
 // The links of a card, in order of first appearance: the live text's links
-// while the editor reports them, the replica's rows until then. Whether each
-// link is alive is not decided here (see linkAliveStore.ts). Must be called
-// inside a reactive owner, like createLiveQuery.
+// while the editor reports them for this very card, the replica's rows until
+// then. Whether each link is alive is not decided here (see
+// linkAliveStore.ts). Must be called inside a reactive owner, like
+// createLiveQuery.
 export function createOwnLinks(
   cardId: () => string | undefined,
 ): Accessor<OwnLink[]> {
   const replica = createLiveQuery(cardId, readOwnLinks, [] as CardLinkRecord[]);
-  return createMemo(() => liveOwnLinks() ?? replica());
+  return createMemo(() => {
+    const live = liveOwnLinks();
+    return live && live.cardId === cardId() ? live.links : replica();
+  });
 }
 
-// Replaces the open card's links with the ones found in its live text. The
-// editor calls this while the card is open; closeRelated ends it.
-export function setOwnLinks(pot: string, links: ExtractedLink[]): void {
-  setLiveOwnLinks(
-    links.map((link) => ({
+// Replaces a card's links with the ones found in its live text. The editor of
+// that card calls this while it is open; closeOwnLinks ends it.
+export function setOwnLinks(
+  cardId: string,
+  pot: string,
+  links: ExtractedLink[],
+): void {
+  setLiveOwnLinks({
+    cardId,
+    links: links.map((link) => ({
       target_pot: pot,
       target_title: link.title,
       target_titleLc: link.titleLc,
     })),
-  );
+  });
+}
+
+// Called by a card's editor when it goes away. Only the owner's links are
+// dropped, so a close that runs after the next card already reported its own
+// links cannot erase them.
+export function closeOwnLinks(cardId: string): void {
+  if (liveOwnLinks()?.cardId === cardId) setLiveOwnLinks(undefined);
 }
 
 // Identifies the latest query load, so a slow response for a card that has
@@ -78,8 +103,7 @@ export function clearQuery(): void {
   setQueryCards([]);
 }
 
-// Called when the open card is closed: forgets the query cards and the live
-// links.
+// Forgets the query cards and the live links of whichever card owns them.
 export function closeRelated(): void {
   clearQuery();
   setLiveOwnLinks(undefined);

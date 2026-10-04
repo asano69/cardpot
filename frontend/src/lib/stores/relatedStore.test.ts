@@ -6,6 +6,7 @@ import { db } from "../dexie/db";
 import type { CardLinkRecord } from "../models/cardLink";
 import type { CardRecord } from "../models/card";
 import {
+  closeOwnLinks,
   closeRelated,
   createOwnLinks,
   openRelated,
@@ -116,7 +117,7 @@ describe("createOwnLinks", () => {
     const { links, dispose } = mount("c1");
     await vi.waitFor(() => expect(titleLcs(links())).toEqual(["old"]));
 
-    setOwnLinks("p", [{ title: "New", titleLc: "new" }]);
+    setOwnLinks("c1", "p", [{ title: "New", titleLc: "new" }]);
     expect(titleLcs(links())).toEqual(["new"]);
 
     // A later replica change does not override the live text.
@@ -131,7 +132,7 @@ describe("createOwnLinks", () => {
     const { links, dispose } = mount("c1");
     await vi.waitFor(() => expect(titleLcs(links())).toEqual(["old"]));
 
-    setOwnLinks("p", []);
+    setOwnLinks("c1", "p", []);
     expect(links()).toEqual([]);
     closeRelated();
     expect(titleLcs(links())).toEqual(["old"]);
@@ -140,6 +141,32 @@ describe("createOwnLinks", () => {
 
   it("is empty for a card that does not exist yet", () => {
     const { links, dispose } = mount(undefined);
+    expect(links()).toEqual([]);
+    dispose();
+  });
+
+  it("never shows the live links of another card", () => {
+    // Regression test: the live links of the card that was open before used
+    // to show up under a draft ("/new") or under the next card opened.
+    setOwnLinks("c1", "p", [{ title: "Old", titleLc: "old" }]);
+
+    const draft = mount(undefined);
+    expect(draft.links()).toEqual([]);
+    draft.dispose();
+
+    const other = mount("c2");
+    expect(other.links()).toEqual([]);
+    other.dispose();
+  });
+
+  it("drops live links only when their owner closes", () => {
+    setOwnLinks("c1", "p", [{ title: "Old", titleLc: "old" }]);
+    const { links, dispose } = mount("c1");
+
+    closeOwnLinks("c2"); // another card closing must not touch them
+    expect(titleLcs(links())).toEqual(["old"]);
+
+    closeOwnLinks("c1");
     expect(links()).toEqual([]);
     dispose();
   });

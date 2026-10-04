@@ -10,7 +10,7 @@ import RelatedCards from "@/pages/cards/RelatedCards";
 import type { TitleCandidate } from "@/lib/models/card";
 import { extractLinks } from "@/lib/models/extractLinks";
 import { cardsById } from "@/lib/stores/cardsStore";
-import { setOwnLinks } from "@/lib/stores/relatedStore";
+import { closeOwnLinks, setOwnLinks } from "@/lib/stores/relatedStore";
 
 // Wait this long after the last edit before the open card's links are
 // extracted again.
@@ -78,7 +78,7 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
     const text = ytext.toString();
     const pot = cardsById[props.cardId]?.pot;
     if (text === "" || !pot) return;
-    setOwnLinks(pot, extractLinks(text));
+    setOwnLinks(props.cardId, pot, extractLinks(text));
   };
   const scheduleOwnLinks = () => {
     clearTimeout(linksTimer);
@@ -90,6 +90,7 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
   onCleanup(() => {
     clearTimeout(linksTimer);
     ytext.unobserve(scheduleOwnLinks);
+    closeOwnLinks(props.cardId);
     provider.destroy();
     idbProvider.destroy();
     ydoc.destroy();
