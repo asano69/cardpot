@@ -41,6 +41,7 @@ import { externalLinkNavigation } from "./plugins/interactions/externalLinkNavig
 import { pasteUrlDecode } from "./plugins/interactions/pasteUrlDecode";
 import { pasteMarkdown } from "./plugins/interactions/pasteMarkdown";
 import { pasteCodeBlockIndent } from "./plugins/interactions/pasteCodeBlockIndent";
+import { titleCompletion } from "./plugins/interactions/titleCompletion";
 import type { TitleCandidate } from "@/lib/models/card";
 import { registerDebugView } from "./debug";
 
@@ -127,6 +128,9 @@ export default function NoteEditor(props: NoteEditorProps) {
         imageWidget,
         mermaidBlock,
         emptyLinks,
+        // Suggests existing card titles while a wiki link is typed (see
+        // plugins/interactions/titleCompletion.ts).
+        titleCompletion(() => pot()?.id),
         // Cardpot's own Scrapbox-style syntax parser (see
         // parser/cardpot/index.ts): block notation (indentation, quotes,
         // `code:` and `table:` blocks) and inline notation (decorations,
