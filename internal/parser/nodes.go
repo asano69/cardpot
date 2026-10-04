@@ -81,6 +81,18 @@ func (n *Node) CodeLanguage() string {
 	return n.Text
 }
 
+// IsMermaid reports whether n is a CodeBlock whose language is mermaid. The
+// comparison ignores case and accepts an explicit language in parentheses
+// ("code:diagram.mmd(mermaid)"), like the frontend's mermaidSource.
+func (n *Node) IsMermaid() bool {
+	return n.Kind == KindCodeBlock && strings.EqualFold(n.CodeLanguage(), "mermaid")
+}
+
+// BodyText returns the body lines of a CodeBlock joined into one string.
+func (n *Node) BodyText() string {
+	return strings.Join(n.Body, "\n")
+}
+
 func walkNodes(nodes []*Node, fn func(*Node) bool) bool {
 	for _, n := range nodes {
 		if !fn(n) || !walkNodes(n.Children, fn) {

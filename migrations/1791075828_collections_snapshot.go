@@ -984,16 +984,19 @@ func init() {
 						"type": "json"
 					},
 					{
-						"exceptDomains": null,
+						"autogeneratePattern": "",
 						"help": "",
 						"hidden": false,
-						"id": "url3309110367",
+						"id": "text3309110367",
+						"max": 0,
+						"min": 0,
 						"name": "image",
-						"onlyDomains": null,
+						"pattern": "",
 						"presentable": false,
+						"primaryKey": false,
 						"required": false,
 						"system": false,
-						"type": "url"
+						"type": "text"
 					},
 					{
 						"help": "",
@@ -1314,19 +1317,6 @@ func init() {
 						"type": "relation"
 					},
 					{
-						"help": "",
-						"hidden": false,
-						"id": "number1177347317",
-						"max": null,
-						"min": 0,
-						"name": "position",
-						"onlyInt": false,
-						"presentable": false,
-						"required": false,
-						"system": false,
-						"type": "number"
-					},
-					{
 						"autogeneratePattern": "",
 						"help": "",
 						"hidden": false,
@@ -1370,6 +1360,19 @@ func init() {
 						"required": true,
 						"system": false,
 						"type": "text"
+					},
+					{
+						"help": "",
+						"hidden": false,
+						"id": "number1177347317",
+						"max": null,
+						"min": 0,
+						"name": "position",
+						"onlyInt": false,
+						"presentable": false,
+						"required": false,
+						"system": false,
+						"type": "number"
 					},
 					{
 						"hidden": false,
@@ -1641,21 +1644,6 @@ func init() {
 						"autogeneratePattern": "",
 						"help": "",
 						"hidden": false,
-						"id": "text410646757",
-						"max": 9007199254740991,
-						"min": 0,
-						"name": "html",
-						"pattern": "",
-						"presentable": false,
-						"primaryKey": false,
-						"required": false,
-						"system": false,
-						"type": "text"
-					},
-					{
-						"autogeneratePattern": "",
-						"help": "",
-						"hidden": false,
 						"id": "text1830146365",
 						"max": 0,
 						"min": 0,
@@ -1678,8 +1666,24 @@ func init() {
 						"system": false,
 						"type": "select",
 						"values": [
-							"code"
+							"code",
+							"mermaid"
 						]
+					},
+					{
+						"help": "",
+						"hidden": false,
+						"id": "file2158993354",
+						"maxSelect": 0,
+						"maxSize": 0,
+						"mimeTypes": null,
+						"name": "output_file",
+						"presentable": false,
+						"protected": false,
+						"required": false,
+						"system": false,
+						"thumbs": null,
+						"type": "file"
 					},
 					{
 						"hidden": false,

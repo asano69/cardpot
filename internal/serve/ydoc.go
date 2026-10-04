@@ -278,7 +278,7 @@ func (p *ydocPersistence) updatePreview(room, text string) error {
 	if err != nil {
 		return err
 	}
-	image := parser.Parse(text).FirstImageSrc()
+	image := thumbnailSrc(p.app, parser.Parse(text))
 	// GetString on a JSON field returns its raw JSON text, so it is compared
 	// with the JSON text that is about to be stored.
 	if record.GetString("description") == string(description) && record.GetString("image") == image {
