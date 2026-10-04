@@ -1,0 +1,176 @@
+[
+  {
+    "name": "open-card-alone",
+    "description": "The open card has no card and nothing links to it.",
+    "cards": [],
+    "open": "A",
+    "oneHop": [],
+    "twoHop": []
+  },
+  {
+    "name": "outgoing-and-incoming-merge",
+    "description": "1 hop is the union of cards the open card links to (that exist) and cards linking to it. Ghost has no card, so it is not listed.",
+    "cards": [
+      { "title": "Center", "links": ["Out", "Ghost"] },
+      { "title": "Out", "links": ["Other"] },
+      { "title": "In", "links": ["Center"] }
+    ],
+    "open": "Center",
+    "oneHop": ["In", "Out"],
+    "twoHop": []
+  },
+  {
+    "name": "outgoing-and-incoming-same-card",
+    "description": "A card that is both linked to and linking back is listed once.",
+    "cards": [
+      { "title": "A", "links": ["B"] },
+      { "title": "B", "links": ["A"] }
+    ],
+    "open": "A",
+    "oneHop": ["B"],
+    "twoHop": []
+  },
+  {
+    "name": "page-that-does-not-exist-yet",
+    "description": "The open title has no card, but other cards can already link to it. It links to nothing itself, so there is no 2 hop.",
+    "cards": [{ "title": "Source", "links": ["Ghost"] }],
+    "open": "Ghost",
+    "oneHop": ["Source"],
+    "twoHop": []
+  },
+  {
+    "name": "deleted-cards-are-excluded",
+    "description": "A deleted card is never listed, whether the open card links to it or it links to the open card.",
+    "cards": [
+      { "title": "Center", "links": ["Out"] },
+      { "title": "Out", "deleted": true, "links": [] },
+      { "title": "In", "deleted": true, "links": ["Center"] }
+    ],
+    "open": "Center",
+    "oneHop": [],
+    "twoHop": []
+  },
+  {
+    "name": "self-and-other-pots-are-excluded",
+    "description": "Self links never list the open card. A card of another pot is not linked even when its title matches, and its own links count only inside its pot.",
+    "cards": [
+      { "title": "Center", "links": ["Center", "Same"] },
+      { "title": "Same", "pot": "p2", "links": [] },
+      { "title": "Elsewhere", "pot": "p2", "links": ["Center", "Same"] }
+    ],
+    "open": "Center",
+    "oneHop": [],
+    "twoHop": []
+  },
+  {
+    "name": "titlelc-match-is-case-insensitive",
+    "description": "Links match cards by titleLc: 'foo bar' reaches 'Foo Bar', and 'FOO_BAR' shares its target. The via title keeps the open card's spelling.",
+    "cards": [
+      { "title": "A", "links": ["foo bar"] },
+      { "title": "Foo Bar", "links": [] },
+      { "title": "In", "links": ["FOO_BAR"] }
+    ],
+    "open": "A",
+    "oneHop": ["Foo Bar"],
+    "twoHop": [{ "via": "foo bar", "title": "In" }]
+  },
+  {
+    "name": "two-hop-shared-target",
+    "description": "The target X does not have to exist. Deleted cards and cards of other pots do not count as sharing it.",
+    "cards": [
+      { "title": "A", "links": ["X"] },
+      { "title": "B", "links": ["X"] },
+      { "title": "C", "links": ["Y"] },
+      { "title": "D", "deleted": true, "links": ["X"] },
+      { "title": "E", "pot": "p2", "links": ["X"] }
+    ],
+    "open": "A",
+    "oneHop": [],
+    "twoHop": [{ "via": "X", "title": "B" }]
+  },
+  {
+    "name": "two-hop-excludes-one-hop",
+    "description": "B shares X with A but is already one hop away, so only C is listed.",
+    "cards": [
+      { "title": "A", "links": ["X", "B"] },
+      { "title": "B", "links": ["X"] },
+      { "title": "C", "links": ["X"] }
+    ],
+    "open": "A",
+    "oneHop": ["B"],
+    "twoHop": [{ "via": "X", "title": "C" }]
+  },
+  {
+    "name": "two-hop-groups-by-target",
+    "description": "B shares X and Y but is listed under X only. Z has no other linker, so it has no row.",
+    "cards": [
+      { "title": "A", "links": ["X", "Y", "Z"] },
+      { "title": "B", "links": ["X", "Y"] },
+      { "title": "C", "links": ["Y"] }
+    ],
+    "open": "A",
+    "oneHop": [],
+    "twoHop": [
+      { "via": "X", "title": "B" },
+      { "via": "Y", "title": "C" }
+    ]
+  },
+  {
+    "name": "two-hop-first-shared-target-of-the-open-card",
+    "description": "Only the open card's link order decides the group: A links Y before X, B links X before Y.",
+    "cards": [
+      { "title": "A", "links": ["Y", "X"] },
+      { "title": "B", "links": ["X", "Y"] }
+    ],
+    "open": "A",
+    "oneHop": [],
+    "twoHop": [{ "via": "Y", "title": "B" }]
+  },
+  {
+    "name": "two-hop-title-order-is-binary",
+    "description": "Cards of one group are sorted by title in byte order: uppercase before lowercase.",
+    "cards": [
+      { "title": "A", "links": ["X"] },
+      { "title": "banana", "links": ["X"] },
+      { "title": "Zed", "links": ["X"] },
+      { "title": "Apple", "links": ["X"] }
+    ],
+    "open": "A",
+    "oneHop": [],
+    "twoHop": [
+      { "via": "X", "title": "Apple" },
+      { "via": "X", "title": "Zed" },
+      { "via": "X", "title": "banana" }
+    ]
+  },
+  {
+    "name": "one-hop-order-is-utf8-byte-order",
+    "description": "Hiragana (U+3042), fullwidth A (U+FF21) and an emoji (U+1F600) sort in UTF-8 byte order. UTF-16 order would put the emoji before the fullwidth A.",
+    "cards": [
+      { "title": "Open", "links": [] },
+      { "title": "\ud83d\ude00", "links": ["Open"] },
+      { "title": "\uff21", "links": ["Open"] },
+      { "title": "あ", "links": ["Open"] }
+    ],
+    "open": "Open",
+    "oneHop": ["あ", "\uff21", "\ud83d\ude00"],
+    "twoHop": []
+  },
+  {
+    "name": "two-hop-order-is-utf8-byte-order",
+    "description": "Same characters as above, sorted inside one 2 hop group.",
+    "cards": [
+      { "title": "Open", "links": ["X"] },
+      { "title": "\ud83d\ude00", "links": ["X"] },
+      { "title": "\uff21", "links": ["X"] },
+      { "title": "あ", "links": ["X"] }
+    ],
+    "open": "Open",
+    "oneHop": [],
+    "twoHop": [
+      { "via": "X", "title": "あ" },
+      { "via": "X", "title": "\uff21" },
+      { "via": "X", "title": "\ud83d\ude00" }
+    ]
+  }
+]
