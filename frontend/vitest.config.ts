@@ -11,8 +11,14 @@ export default defineConfig({
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
+    // Solid's default (server) build makes createEffect a no-op; the browser
+    // build is needed to test reactive code such as lib/dexie/liveQuery.ts.
+    conditions: ["browser"],
   },
   test: {
     environment: "jsdom",
+    // Resolve solid-js through Vite (and thus the conditions above) instead of
+    // letting Node load its server build.
+    server: { deps: { inline: [/solid-js/] } },
   },
 });
