@@ -6,11 +6,12 @@ import { db } from "../dexie/db";
 import type { CardLinkRecord } from "../models/cardLink";
 import type { CardRecord } from "../models/card";
 import {
+  clearQuery,
   closeOwnLinks,
   closeRelated,
   createOwnLinks,
   openRelated,
-  queryCards,
+  queryCardsOf,
   setOwnLinks,
 } from "./relatedStore";
 
@@ -44,7 +45,7 @@ describe("openRelated", () => {
   it("stores the matched cards", async () => {
     vi.mocked(fetchRelatedCards).mockResolvedValueOnce([card("a")]);
     await openRelated("c1");
-    expect(queryCards().map((c) => c.id)).toEqual(["a"]);
+    expect(queryCardsOf("c1").map((c) => c.id)).toEqual(["a"]);
   });
 
   it("drops a stale response that arrives after a newer load", async () => {
@@ -62,7 +63,7 @@ describe("openRelated", () => {
     resolveFirst([card("a")]);
     await first;
 
-    expect(queryCards().map((c) => c.id)).toEqual(["b"]);
+    expect(queryCardsOf("c2").map((c) => c.id)).toEqual(["b"]);
   });
 
   it("empties on close and ignores a load still in flight", async () => {
@@ -78,7 +79,7 @@ describe("openRelated", () => {
     resolve([card("a")]);
     await loading;
 
-    expect(queryCards()).toEqual([]);
+    expect(queryCardsOf("c1")).toEqual([]);
   });
 
   it("keeps an array when the response has no cards", async () => {
@@ -86,7 +87,7 @@ describe("openRelated", () => {
       undefined as unknown as [],
     );
     await openRelated("c1");
-    expect(queryCards()).toEqual([]);
+    expect(queryCardsOf("c1")).toEqual([]);
   });
 
   it("logs a failure and shows no cards", async () => {
@@ -95,7 +96,36 @@ describe("openRelated", () => {
     await openRelated("c1");
     expect(logged).toHaveBeenCalled();
     logged.mockRestore();
-    expect(queryCards()).toEqual([]);
+    expect(queryCardsOf("c1")).toEqual([]);
+  });
+
+  it("never returns the query cards of another card", async () => {
+    // Regression test: the result of the card that was open before must not
+    // show up under a draft or under the next card.
+    vi.mocked(fetchRelatedCards).mockResolvedValueOnce([card("a")]);
+    await openRelated("c1");
+
+    expect(queryCardsOf(undefined)).toEqual([]);
+    expect(queryCardsOf("c2")).toEqual([]);
+  });
+
+  it("clears only the owner's result, so a late cleanup cannot cancel the next load", async () => {
+    let resolve!: (cards: CardRecord[]) => void;
+    vi.mocked(fetchRelatedCards).mockReturnValueOnce(
+      new Promise((r) => {
+        resolve = r;
+      }),
+    );
+
+    const loading = openRelated("c2");
+    clearQuery("c1"); // the previous card's cleanup runs after c2 started
+    resolve([card("b")]);
+    await loading;
+
+    expect(queryCardsOf("c2").map((c) => c.id)).toEqual(["b"]);
+
+    clearQuery("c2");
+    expect(queryCardsOf("c2")).toEqual([]);
   });
 });
 

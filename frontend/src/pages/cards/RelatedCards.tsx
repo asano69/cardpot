@@ -5,7 +5,7 @@ import {
   clearQuery,
   createOwnLinks,
   openRelated,
-  queryCards,
+  queryCardsOf,
 } from "@/lib/stores/relatedStore";
 import { linkAlive, requestLinkAlive } from "@/lib/stores/linkAliveStore";
 import { createLiveQuery } from "@/lib/dexie/liveQuery";
@@ -122,13 +122,15 @@ export default function RelatedCards(props: RelatedCardsProps) {
   );
 
   // The datalog query is evaluated by the server, once per card and saved
-  // query. A card without a saved query has nothing to load.
+  // query. A card without a saved query has nothing to load. The cleanup
+  // drops only this card's result, whenever this card goes away or its query
+  // changes.
   createEffect(() => {
     const id = props.cardId;
-    if (id && savedQuery()) void openRelated(id);
-    else clearQuery();
+    if (!id) return;
+    if (savedQuery()) void openRelated(id);
+    onCleanup(() => clearQuery(id));
   });
-  onCleanup(clearQuery);
 
   // The 2 hop rows come with the rows of a target adjacent, so grouping is a
   // single pass over consecutive rows.
@@ -210,12 +212,12 @@ export default function RelatedCards(props: RelatedCardsProps) {
           empty
         />
       </Show>
-      <Show when={queryCards().length}>
+      <Show when={queryCardsOf(props.cardId).length}>
         <RelationRow
           rowClass="links-query"
           labelClass="query"
           label="Query"
-          cards={queryCards()}
+          cards={queryCardsOf(props.cardId)}
           potSlug={props.potSlug}
         />
       </Show>

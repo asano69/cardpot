@@ -32,11 +32,23 @@ const [liveOwnLinks, setLiveOwnLinks] = createSignal<
   LiveOwnLinks | undefined
 >();
 
-// Cards matched by the datalog query saved in the open card. Loaded from the
-// server, so it stays empty offline.
-const [queryCards, setQueryCards] = createSignal<CardRecord[]>([]);
+// Cards matched by the datalog query saved in a card, tagged with the card
+// they belong to (like LiveOwnLinks above). Loaded from the server, so it
+// stays empty offline.
+interface QueryResult {
+  cardId: string;
+  cards: CardRecord[];
+}
 
-export { queryCards };
+const [queryResult, setQueryResult] = createSignal<QueryResult | undefined>();
+
+// The query cards of cardId. Another card's result is never returned, so a
+// result left over from a card that was just closed cannot show up elsewhere.
+// Reactive when called inside a tracking scope.
+export function queryCardsOf(cardId: string | undefined): CardRecord[] {
+  const result = queryResult();
+  return result && result.cardId === cardId ? result.cards : [];
+}
 
 // The links of a card, in order of first appearance: the live text's links
 // while the editor reports them for this very card, the replica's rows until
@@ -78,33 +90,42 @@ export function closeOwnLinks(cardId: string): void {
 }
 
 // Identifies the latest query load, so a slow response for a card that has
-// since been replaced or closed is dropped.
+// since been replaced or closed is dropped. latestCardId is the card that
+// load (or the stored result) belongs to.
 let latest = 0;
+let latestCardId: string | undefined;
 
 // Loads the cards matched by the saved datalog query of a card. A failure
 // (offline, or a bad query) is only logged and shows no row.
 export async function openRelated(cardId: string): Promise<void> {
   const request = ++latest;
+  latestCardId = cardId;
   try {
     const cards = await fetchRelatedCards(cardId);
     if (request !== latest) return;
     // Solid's setters treat undefined specially, so a missing list must
     // still end up as an empty array.
-    setQueryCards(cards ?? []);
+    setQueryResult({ cardId, cards: cards ?? [] });
   } catch (err) {
     console.error("[related] failed to load query cards:", err);
-    if (request === latest) setQueryCards([]);
+    if (request === latest) setQueryResult(undefined);
   }
 }
 
-// Drops the query cards and ignores any load still in flight.
-export function clearQuery(): void {
+// Drops the query cards of cardId and ignores its load still in flight. Only
+// the owner's data is touched, so a cleanup that runs after the next card
+// started its own load cannot cancel it.
+export function clearQuery(cardId: string): void {
+  if (latestCardId !== cardId) return;
   latest++;
-  setQueryCards([]);
+  latestCardId = undefined;
+  setQueryResult(undefined);
 }
 
 // Forgets the query cards and the live links of whichever card owns them.
 export function closeRelated(): void {
-  clearQuery();
+  latest++;
+  latestCardId = undefined;
+  setQueryResult(undefined);
   setLiveOwnLinks(undefined);
 }
