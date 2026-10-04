@@ -10,18 +10,36 @@ type Context = {
   listDepth?: number;
 };
 
+// A heading is first written as this placeholder around its Markdown depth
+// (e.g. "\uE0002\uE000"). Once the whole document is compiled, it is replaced
+// by the real asterisks (see applyHeadingLevels).
+const HEADING_PLACEHOLDER_RE = /\uE000(\d)\uE000/g;
+
 class Compiler {
   lastElmEndLine: number;
   decorate: string[];
+  // Markdown depths of the headings found in the document.
+  headingDepths: Set<number>;
 
   constructor() {
     this.lastElmEndLine = 1;
     this.decorate = [];
+    this.headingDepths = new Set();
   }
 
   isDecorateElement(node): boolean {
-    return ["emphasis", "delete", "strong", "heading"].includes(
+    return ["emphasis", "delete", "heading"].includes(
       typeof node === "string" ? node : node.type,
+    );
+  }
+
+  // Gives the deepest heading in use "[** ]" and every shallower one a more
+  // asterisk, so emphasis stays as small as possible. "[* ]" is left to
+  // body text, so a heading never looks like plain bold.
+  applyHeadingLevels(text: string): string {
+    const depths = [...this.headingDepths].sort((a, b) => b - a);
+    return text.replace(HEADING_PLACEHOLDER_RE, (_, depth: string) =>
+      "*".repeat(2 + depths.indexOf(Number(depth))),
     );
   }
 
@@ -45,6 +63,10 @@ class Compiler {
       result.charAt(result.length - 1) !== "\n"
     ) {
       result += "\n";
+    }
+    // Heading levels depend on the whole document, so they are resolved last.
+    if (ast.type && ast.type === "root") {
+      result = this.applyHeadingLevels(result);
     }
     return result;
   }
@@ -76,12 +98,13 @@ class Compiler {
         result += this.compile(node.children, context);
         break;
       case "strong":
-        this.decorate.push("*");
-        result += this.compile(node.children, context);
+        result += `[[${this.compile(node.children, context)}]]`;
         break;
       case "heading":
         if (!("depth" in node)) break;
-        this.decorate.push("*".repeat(Math.max(1, 5 - (node.depth as number))));
+        this.headingDepths.add(node.depth as number);
+        // The asterisks are filled in by applyHeadingLevels.
+        this.decorate.push(`\uE000${node.depth}\uE000`);
         result += this.compile(node.children, context);
         break;
       case "link":
