@@ -73,6 +73,19 @@ export type CardGridCard = Pick<
   "title" | "description" | "image" | "pin"
 >;
 
+// A related card of the open card (see lib/dexie/relatedQuery.ts). The id is
+// the key the grid is reconciled by.
+export type RelatedCard = CardGridCard & { id: string };
+
+// A row of the 2 hop view: a card that links to a target the open card links
+// to as well. The field names match the server's Link2HopCard, so the view
+// can group rows by via_titleLc as before.
+export type RelatedHopCard = RelatedCard & {
+  // The target as the open card spells it.
+  via_title: string;
+  via_titleLc: string;
+};
+
 // The title shown for a card in CardList's grid (see
 // pages/cards/CardItem.tsx). Branded so call sites can't
 // accidentally pass a card's genuine CardTitle directly where the
