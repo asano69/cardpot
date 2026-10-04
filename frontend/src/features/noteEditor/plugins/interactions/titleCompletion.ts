@@ -1,5 +1,6 @@
 import {
   autocompletion,
+  type Completion,
   type CompletionSource,
 } from "@codemirror/autocomplete";
 import { suggestTitles } from "@/lib/dexie/titleSuggestQuery";
@@ -13,16 +14,24 @@ const OPEN_BRACKET_RE = /\[([^[\]\n]*)$/;
 // "[* text]" and "[/ text]" are decorations, not links.
 const DECORATION_RE = /^[*/]+ /;
 
-// Suggests the titles of existing cards while a wiki link is being typed
-// ("[ap" -> "apple", "application"). potId is read on every request, so it may
-// still be unknown when the editor is created.
+// A hashtag being typed: "#" at the start of the line or after whitespace,
+// then at least one character. Mirrors the parser's hashtag boundary (see
+// rules/hashTag.ts); brackets are excluded so "[* #ta" stays unambiguous.
+const HASHTAG_RE = /(?:^|\s)#([^\s[\]]+)$/;
+
+// Suggests the titles of existing cards while a wiki link ("[ap") or a hashtag
+// ("#ap") is being typed. potId is read on every request, so it may still be
+// unknown when the editor is created.
 export function titleCompletion(potId: () => string | undefined) {
-  const source: CompletionSource = async (context) => {
+  // Shared by both sources: the pot is known, and the cursor is not in plain
+  // text (the title line, code and inline code).
+  const active = (state: Parameters<CompletionSource>[0]["state"]) =>
+    potId() !== undefined && !skipContexts.some((skip) => skip.test(state));
+
+  const linkSource: CompletionSource = async (context) => {
     const pot = potId();
     const match = context.matchBefore(OPEN_BRACKET_RE);
-    if (!pot || !match) return null;
-    // The title line, code and inline code are plain text.
-    if (skipContexts.some((skip) => skip.test(context.state))) return null;
+    if (!pot || !match || !active(context.state)) return null;
 
     const typed = match.text.slice(1);
     if (DECORATION_RE.test(typed)) return null;
@@ -34,20 +43,45 @@ export function titleCompletion(potId: () => string | undefined) {
       // The query already filtered. CodeMirror's own filter would drop
       // matches where the title differs from the typed text (case, "_").
       filter: false,
-      options: titles.map((title) => ({
-        label: title,
-        // closeBrackets has usually inserted "]" already: step over it
-        // instead of duplicating it.
-        apply: (view, _completion, from, to) => {
-          const closed = view.state.sliceDoc(to, to + 1) === "]";
-          view.dispatch({
-            changes: { from, to, insert: closed ? title : `${title}]` },
-            selection: { anchor: from + title.length + 1 },
-            userEvent: "input.complete",
-          });
-        },
-      })),
+      options: titles.map(
+        (title): Completion => ({
+          label: title,
+          // closeBrackets has usually inserted "]" already: step over it
+          // instead of duplicating it.
+          apply: (view, _completion, from, to) => {
+            const closed = view.state.sliceDoc(to, to + 1) === "]";
+            view.dispatch({
+              changes: { from, to, insert: closed ? title : `${title}]` },
+              selection: { anchor: from + title.length + 1 },
+              userEvent: "input.complete",
+            });
+          },
+        }),
+      ),
     };
   };
-  return autocompletion({ override: [source], icons: false });
+
+  const tagSource: CompletionSource = async (context) => {
+    const pot = potId();
+    const match = context.matchBefore(HASHTAG_RE);
+    if (!pot || !match || !active(context.state)) return null;
+
+    // The group is the typed text after "#"; it is always at the match's end.
+    const typed = match.text.slice(match.text.lastIndexOf("#") + 1);
+    const titles = await suggestTitles(pot, titleToLowerKey(typed));
+    return {
+      from: match.to - typed.length,
+      filter: false,
+      options: titles.map(
+        (title): Completion => ({
+          label: title,
+          // A hashtag ends at whitespace, so spaces become "_", which has the
+          // same titleLc.
+          apply: title.replaceAll(" ", "_"),
+        }),
+      ),
+    };
+  };
+
+  return autocompletion({ override: [linkSource, tagSource], icons: false });
 }
