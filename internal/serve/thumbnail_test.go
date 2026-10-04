@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -10,9 +11,28 @@ import (
 )
 
 const (
-	testDiagram = "code:mermaid\n\tgraph TD\n\t\tA-->B"
+	testDiagram = "code:fake\n\tnode a"
 	testPNG     = "[https://example.com/a.png]"
 )
+
+// useFakeRenderer registers a renderer for "fake" code blocks for one test.
+// Its source "bad" fails to render.
+func useFakeRenderer(t *testing.T, variant string) {
+	t.Helper()
+	previous := diagramRenderers
+	diagramRenderers = []diagramRenderer{{
+		language: "fake",
+		kind:     "fake",
+		variant:  variant,
+		render: func(source string) ([]byte, error) {
+			if strings.Contains(source, "bad") {
+				return nil, errors.New("bad source")
+			}
+			return []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`), nil
+		},
+	}}
+	t.Cleanup(func() { diagramRenderers = previous })
+}
 
 // newThumbnailTestApp extends newSlugTestApp with the "renders" collection.
 func newThumbnailTestApp(t *testing.T) core.App {
@@ -40,7 +60,8 @@ func countRenders(t *testing.T, app core.App) int64 {
 	return n
 }
 
-func TestThumbnailSrc_RendersMermaidOnceAndReusesIt(t *testing.T) {
+func TestThumbnailSrc_RendersOnceAndReusesIt(t *testing.T) {
+	useFakeRenderer(t, "v1")
 	app := newThumbnailTestApp(t)
 	note := parser.Parse("T\n" + testDiagram)
 
@@ -57,6 +78,7 @@ func TestThumbnailSrc_RendersMermaidOnceAndReusesIt(t *testing.T) {
 }
 
 func TestThumbnailSrc_FirstInDocumentOrderWins(t *testing.T) {
+	useFakeRenderer(t, "v1")
 	app := newThumbnailTestApp(t)
 
 	if got := thumbnailSrc(app, parser.Parse("T\n"+testPNG+"\n"+testDiagram)); got != "https://example.com/a.png" {
@@ -72,8 +94,9 @@ func TestThumbnailSrc_FirstInDocumentOrderWins(t *testing.T) {
 }
 
 func TestThumbnailSrc_UnrenderableDiagramFallsBackToLaterImage(t *testing.T) {
+	useFakeRenderer(t, "v1")
 	app := newThumbnailTestApp(t)
-	note := parser.Parse("T\ncode:mermaid\n\tthis is not a diagram\n" + testPNG)
+	note := parser.Parse("T\ncode:fake\n\tbad\n" + testPNG)
 
 	if got := thumbnailSrc(app, note); got != "https://example.com/a.png" {
 		t.Errorf("thumbnail = %q, want the image", got)
@@ -83,9 +106,42 @@ func TestThumbnailSrc_UnrenderableDiagramFallsBackToLaterImage(t *testing.T) {
 	}
 }
 
-func TestThumbnailSrc_NoImageNoDiagram(t *testing.T) {
+func TestThumbnailSrc_LanguageWithoutRendererIsIgnored(t *testing.T) {
+	useFakeRenderer(t, "v1")
 	app := newThumbnailTestApp(t)
+
+	if got := thumbnailSrc(app, parser.Parse("T\ncode:mermaid\n\tgraph TD\n"+testPNG)); got != "https://example.com/a.png" {
+		t.Errorf("thumbnail = %q, want the image", got)
+	}
 	if got := thumbnailSrc(app, parser.Parse("T\nplain\ncode:ts\n\tx")); got != "" {
 		t.Errorf("thumbnail = %q, want empty", got)
+	}
+	if n := countRenders(t, app); n != 0 {
+		t.Errorf("got %d renders, want 0", n)
+	}
+}
+
+func TestThumbnailSrc_LanguageMatchesLikeTheEditor(t *testing.T) {
+	useFakeRenderer(t, "v1")
+	app := newThumbnailTestApp(t)
+
+	for _, decl := range []string{"code:FAKE", "code: fake", "code:diagram.x(fake)"} {
+		if got := thumbnailSrc(app, parser.Parse("T\n"+decl+"\n\tnode a")); !strings.HasPrefix(got, "/api/files/") {
+			t.Errorf("%q: thumbnail = %q, want a render", decl, got)
+		}
+	}
+}
+
+func TestRenderHash_DependsOnEveryInput(t *testing.T) {
+	base := renderHash("k", "v1", "src")
+	for name, other := range map[string]string{
+		"kind":    renderHash("k2", "v1", "src"),
+		"variant": renderHash("k", "v2", "src"),
+		"source":  renderHash("k", "v1", "src2"),
+		"split":   renderHash("kv", "1", "src"),
+	} {
+		if other == base {
+			t.Errorf("changing the %s did not change the hash", name)
+		}
 	}
 }

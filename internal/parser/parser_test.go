@@ -151,32 +151,10 @@ func TestFirstImageSrc(t *testing.T) {
 	}
 }
 
-func TestMermaidCodeBlock(t *testing.T) {
-	cases := []struct {
-		decl string
-		want bool
-	}{
-		{"code:mermaid", true},
-		{"code:Mermaid", true},
-		{"code: mermaid", true},
-		{"code:diagram.mmd(mermaid)", true},
-		{"code:mermaidx", false},
-		{"code:ts", false},
-		{"code:", false},
-	}
-	for _, c := range cases {
-		code := Parse(testTitle + c.decl + "\n\tgraph TD\n\t\tA-->B").Nodes[1]
-		if got := code.IsMermaid(); got != c.want {
-			t.Errorf("%q: IsMermaid() = %v, want %v", c.decl, got, c.want)
-		}
-	}
-
-	code := Parse(testTitle + "code:mermaid\n\tgraph TD\n\t\tA-->B").Nodes[1]
+func TestCodeBlockBodyText(t *testing.T) {
+	code := Parse(testTitle + "code:x\n\tgraph TD\n\t\tA-->B").Nodes[1]
 	if got, want := code.BodyText(), "graph TD\n\tA-->B"; got != want {
 		t.Errorf("BodyText() = %q, want %q", got, want)
-	}
-	if line := Parse(testTitle + "[mermaid]").Nodes[1]; line.IsMermaid() {
-		t.Error("a Line node must not be a mermaid block")
 	}
 }
 

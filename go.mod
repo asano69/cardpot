@@ -8,7 +8,6 @@ require (
 	github.com/pocketbase/pocketbase v0.39.4
 	github.com/reearth/ygo v1.49.5
 	github.com/spf13/cobra v1.10.2
-	github.com/zkrebbekx/go-mermaid v0.1.6
 )
 
 require (
