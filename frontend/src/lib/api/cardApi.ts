@@ -1,13 +1,8 @@
 import { ClientResponseError } from "pocketbase";
 import pb from "./pb";
 import type { CardRecord, TitleCandidate } from "../models/card";
-import type {
-  CreateCardRequest,
-  LinkedCard,
-  Link2HopCard,
-  UpdateCardTitleRequest,
-} from "./generated";
-import { titleToSegment, titleToSlug } from "../models/slugify";
+import type { CreateCardRequest, UpdateCardTitleRequest } from "./generated";
+import { titleToSlug } from "../models/slugify";
 
 // Response shape shared by createCard/updateCardTitle: the saved card,
 // plus a merge-alert target computed server-side (see findMergeTarget
@@ -98,38 +93,6 @@ export async function fetchRelatedCards(cardId: string): Promise<CardRecord[]> {
     { method: "GET", requestKey: null },
   );
   return res.cards;
-}
-
-// Shared by
-// Shared by the two hop fetchers below (see internal/serve/links.go). The pot
-// is addressed by its name and the card by the slug derived from its title.
-async function fetchHop<T>(
-  potName: string,
-  title: string,
-  key: "links1hop" | "links2hop",
-): Promise<T> {
-  const res = await pb.send<Record<string, T>>(
-    `/api/pages/${potName}/${titleToSegment(title)}/${key}`,
-    { method: "GET", requestKey: null },
-  );
-  return res[key];
-}
-
-// Fetches the live cards one wiki-link hop away from the card titled `title`.
-export function fetchLinks1Hop(
-  potName: string,
-  title: string,
-): Promise<LinkedCard[]> {
-  return fetchHop<LinkedCard[]>(potName, title, "links1hop");
-}
-
-// Fetches the cards two hops away: one row per (shared target, card), rows of
-// the same target adjacent (see RelatedCards, which groups them).
-export function fetchLinks2Hop(
-  potName: string,
-  title: string,
-): Promise<Link2HopCard[]> {
-  return fetchHop<Link2HopCard[]>(potName, title, "links2hop");
 }
 
 // Updates a card's own fields directly. The title is deliberately not

@@ -1,118 +1,146 @@
+import "fake-indexeddb/auto";
+import { createRoot } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchLinks1Hop, fetchRelatedCards } from "../api/cardApi";
-import type { LinkedCard } from "../api/generated";
+import { fetchRelatedCards } from "../api/cardApi";
+import { db } from "../dexie/db";
+import type { CardLinkRecord } from "../models/cardLink";
+import type { CardRecord } from "../models/card";
 import {
   closeRelated,
+  createOwnLinks,
   openRelated,
-  related,
+  queryCards,
   setOwnLinks,
 } from "./relatedStore";
 
-vi.mock("../api/cardApi", () => ({
-  fetchLinks1Hop: vi.fn(),
-  fetchLinks2Hop: vi.fn(async () => []),
-  fetchRelatedCards: vi.fn(async () => []),
-}));
+vi.mock("../api/cardApi", () => ({ fetchRelatedCards: vi.fn() }));
 
-vi.mock("../dexie/cardLinksCollection", () => ({
-  readOwnLinks: vi.fn(async () => []),
-}));
-
-function linked(id: string): LinkedCard {
-  return {
-    id,
-    title: id,
-    titleLc: id,
-    description: [],
-    image: "",
-    pin: false,
-    target_titleLc: [],
-  } as LinkedCard;
+function card(id: string): CardRecord {
+  return { id, title: id } as CardRecord;
 }
 
-beforeEach(() => {
+function link(id: string, source: string, titleLc: string): CardLinkRecord {
+  return {
+    id,
+    source,
+    target_pot: "p",
+    target_title: titleLc,
+    target_titleLc: titleLc,
+    position: 0,
+    deleted: "",
+    created: "",
+    updated: "",
+  };
+}
+
+beforeEach(async () => {
   closeRelated();
-  vi.mocked(fetchLinks1Hop).mockReset();
+  vi.mocked(fetchRelatedCards).mockReset();
+  await db.card_links.clear();
 });
 
-describe("relatedStore", () => {
-  it("stores the loaded cards with their ids", async () => {
-    vi.mocked(fetchLinks1Hop).mockResolvedValueOnce([linked("a")]);
-    await openRelated("pot", "A");
-    expect(related.oneHop.map((c) => c.id)).toEqual(["a"]);
-    expect(related.error).toBe(false);
-    expect(related.loaded).toBe(true);
+describe("openRelated", () => {
+  it("stores the matched cards", async () => {
+    vi.mocked(fetchRelatedCards).mockResolvedValueOnce([card("a")]);
+    await openRelated("c1");
+    expect(queryCards().map((c) => c.id)).toEqual(["a"]);
   });
 
   it("drops a stale response that arrives after a newer load", async () => {
-    let resolveFirst!: (cards: LinkedCard[]) => void;
-    vi.mocked(fetchLinks1Hop)
+    let resolveFirst!: (cards: CardRecord[]) => void;
+    vi.mocked(fetchRelatedCards)
       .mockReturnValueOnce(
         new Promise((resolve) => {
           resolveFirst = resolve;
         }),
       )
-      .mockResolvedValueOnce([linked("b")]);
+      .mockResolvedValueOnce([card("b")]);
 
-    const first = openRelated("pot", "A");
-    await openRelated("pot", "B");
-    resolveFirst([linked("a")]);
+    const first = openRelated("c1");
+    await openRelated("c2");
+    resolveFirst([card("a")]);
     await first;
 
-    expect(related.oneHop.map((c) => c.id)).toEqual(["b"]);
+    expect(queryCards().map((c) => c.id)).toEqual(["b"]);
   });
 
-  it("empties the store on close and ignores a load still in flight", async () => {
-    let resolve!: (cards: LinkedCard[]) => void;
-    vi.mocked(fetchLinks1Hop).mockReturnValueOnce(
+  it("empties on close and ignores a load still in flight", async () => {
+    let resolve!: (cards: CardRecord[]) => void;
+    vi.mocked(fetchRelatedCards).mockReturnValueOnce(
       new Promise((r) => {
         resolve = r;
       }),
     );
 
-    const loading = openRelated("pot", "A");
+    const loading = openRelated("c1");
     closeRelated();
-    resolve([linked("a")]);
+    resolve([card("a")]);
     await loading;
 
-    expect(related.oneHop).toEqual([]);
-    expect(related.loaded).toBe(false);
+    expect(queryCards()).toEqual([]);
   });
 
-  it("keeps every list an array when a response has no cards", async () => {
-    // Regression test: Solid's store deletes a property set to undefined, so
-    // a missing list used to crash the view and show the error message.
-    vi.mocked(fetchLinks1Hop).mockResolvedValueOnce([linked("a")]);
+  it("keeps an array when the response has no cards", async () => {
     vi.mocked(fetchRelatedCards).mockResolvedValueOnce(
       undefined as unknown as [],
     );
-    await openRelated("pot", "A", "card1");
-    expect(related.query).toEqual([]);
-    expect(related.error).toBe(false);
+    await openRelated("c1");
+    expect(queryCards()).toEqual([]);
   });
 
-  it("keeps the live links when a load finishes after them", async () => {
-    vi.mocked(fetchLinks1Hop).mockResolvedValueOnce([]);
-    const loading = openRelated("pot", "A", "card1");
-    setOwnLinks("p", [{ title: "X", titleLc: "x" }]);
-    await loading;
-    expect(related.ownLinks.map((l) => l.target_titleLc)).toEqual(["x"]);
+  it("logs a failure and shows no cards", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(fetchRelatedCards).mockRejectedValueOnce(new Error("offline"));
+    await openRelated("c1");
+    expect(logged).toHaveBeenCalled();
+    logged.mockRestore();
+    expect(queryCards()).toEqual([]);
+  });
+});
+
+describe("createOwnLinks", () => {
+  const titleLcs = (links: { target_titleLc: string }[]) =>
+    links.map((l) => l.target_titleLc);
+
+  function mount(cardId: string | undefined) {
+    let dispose!: () => void;
+    const links = createRoot((d) => {
+      dispose = d;
+      return createOwnLinks(() => cardId);
+    });
+    return { links, dispose };
+  }
+
+  it("reads the replica's rows until the editor reports the live text", async () => {
+    await db.card_links.put(link("l1", "c1", "old"));
+    const { links, dispose } = mount("c1");
+    await vi.waitFor(() => expect(titleLcs(links())).toEqual(["old"]));
+
+    setOwnLinks("p", [{ title: "New", titleLc: "new" }]);
+    expect(titleLcs(links())).toEqual(["new"]);
+
+    // A later replica change does not override the live text.
+    await db.card_links.put(link("l2", "c1", "later"));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(titleLcs(links())).toEqual(["new"]);
+    dispose();
   });
 
   it("goes back to the replica after the card is closed", async () => {
-    setOwnLinks("p", [{ title: "X", titleLc: "x" }]);
+    await db.card_links.put(link("l1", "c1", "old"));
+    const { links, dispose } = mount("c1");
+    await vi.waitFor(() => expect(titleLcs(links())).toEqual(["old"]));
+
+    setOwnLinks("p", []);
+    expect(links()).toEqual([]);
     closeRelated();
-    expect(related.ownLinks).toEqual([]);
-    vi.mocked(fetchLinks1Hop).mockResolvedValueOnce([]);
-    await openRelated("pot", "A", "card1"); // the mocked replica has no rows
-    expect(related.ownLinks).toEqual([]);
+    expect(titleLcs(links())).toEqual(["old"]);
+    dispose();
   });
 
-  it("flags an error when a request fails", async () => {
-    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.mocked(fetchLinks1Hop).mockRejectedValueOnce(new Error("offline"));
-    await openRelated("pot", "A");
-    logged.mockRestore();
-    expect(related.error).toBe(true);
+  it("is empty for a card that does not exist yet", () => {
+    const { links, dispose } = mount(undefined);
+    expect(links()).toEqual([]);
+    dispose();
   });
 });

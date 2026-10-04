@@ -1,12 +1,23 @@
 import { createEffect, createMemo, For, onCleanup, Show } from "solid-js";
 import { A } from "@solidjs/router";
-import type { Link2HopCard } from "@/lib/api/generated";
 import { cardsById } from "@/lib/stores/cardsStore";
-import { closeRelated, openRelated, related } from "@/lib/stores/relatedStore";
+import {
+  clearQuery,
+  createOwnLinks,
+  openRelated,
+  queryCards,
+} from "@/lib/stores/relatedStore";
 import { linkAlive, requestLinkAlive } from "@/lib/stores/linkAliveStore";
+import { createLiveQuery } from "@/lib/dexie/liveQuery";
+import { computeRelated, type RelatedInput } from "@/lib/dexie/relatedQuery";
 import { Link, Unlink } from "@/lib/icons";
-import { titleToSegment } from "@/lib/models/slugify";
-import { asCardTitle, type CardGridCard } from "@/lib/models/card";
+import { titleToLowerKey, titleToSegment } from "@/lib/models/slugify";
+import {
+  asCardTitle,
+  type CardGridCard,
+  type RelatedHopCard,
+} from "@/lib/models/card";
+import { usePot } from "../pots/PotContext";
 import { CardItemView } from "./CardItem";
 
 export interface RelatedCardsProps {
@@ -78,29 +89,56 @@ function RelationRow(props: RelationRowProps) {
 }
 
 // Shows the open card's related cards: the cards one wiki-link hop away, the
-// cards two hops away (one row per shared target), and the cards matched by
-// the datalog query saved in the card's "query" field. This component only
-// reads relatedStore; the store is reloaded when the title or the saved query
-// changes and emptied when the component goes away. Links added while the card
-// stays open are not picked up until it is opened again.
+// cards two hops away (one row per shared target), the links whose target does
+// not exist yet, and the cards matched by the datalog query saved in the
+// card's "query" field. The hop rows are derived from the local replica and
+// follow it live (see lib/dexie/relatedQuery.ts), so they also work offline.
+// The query row is loaded from the server (see relatedStore.ts).
 export default function RelatedCards(props: RelatedCardsProps) {
-  const query = () =>
+  const pot = usePot();
+  const savedQuery = () =>
     props.cardId ? (cardsById[props.cardId]?.query ?? "") : "";
 
-  createEffect(() => {
-    // Read only to track it: the server reads the saved query itself.
-    void query();
-    if (!props.title) closeRelated();
-    else void openRelated(props.potSlug, props.title, props.cardId);
-  });
-  onCleanup(closeRelated);
+  // The links written in the open card: its live text, or the replica's rows
+  // until the editor reports it.
+  const ownLinks = createOwnLinks(() => props.cardId);
 
-  // The server returns one row per (shared target, card) with the rows of a
-  // target adjacent, so grouping is a single pass over consecutive rows.
+  const related = createLiveQuery(
+    (): RelatedInput | undefined => {
+      const potId = pot()?.id;
+      if (!potId || !props.title) return undefined;
+      return {
+        pot: potId,
+        selfId: props.cardId,
+        selfTitleLc: titleToLowerKey(props.title),
+        ownTargets: ownLinks().map((link) => ({
+          title: link.target_title,
+          titleLc: link.target_titleLc,
+        })),
+      };
+    },
+    computeRelated,
+    { oneHop: [], twoHop: [] },
+  );
+
+  // The datalog query is evaluated by the server, once per card and saved
+  // query. A card without a saved query has nothing to load.
+  createEffect(() => {
+    const id = props.cardId;
+    if (id && savedQuery()) void openRelated(id);
+    else clearQuery();
+  });
+  onCleanup(clearQuery);
+
+  // The 2 hop rows come with the rows of a target adjacent, so grouping is a
+  // single pass over consecutive rows.
   const twoHopGroups = createMemo(() => {
-    const groups: { title: string; titleLc: string; cards: Link2HopCard[] }[] =
-      [];
-    for (const row of related.twoHop) {
+    const groups: {
+      title: string;
+      titleLc: string;
+      cards: RelatedHopCard[];
+    }[] = [];
+    for (const row of related().twoHop) {
       const last = groups[groups.length - 1];
       if (last?.titleLc === row.via_titleLc) {
         last.cards.push(row);
@@ -114,19 +152,19 @@ export default function RelatedCards(props: RelatedCardsProps) {
     }
     return groups;
   });
+
   // Links of the open card whose target is dead, drawn as empty cards. Reads
   // the same shared results as the editor's red links (see linkAliveStore.ts),
   // so the two can never disagree and nothing is computed twice.
   createEffect(() => {
-    for (const link of related.ownLinks) {
+    for (const link of ownLinks()) {
       requestLinkAlive(link.target_pot, link.target_titleLc);
     }
   });
   const newLinks = createMemo<CardGridCard[]>(() =>
-    related.ownLinks
+    ownLinks()
       .filter(
-        (link) =>
-          linkAlive(link.target_pot, link.target_titleLc) === false,
+        (link) => linkAlive(link.target_pot, link.target_titleLc) === false,
       )
       .map((link) => ({
         title: asCardTitle(link.target_title),
@@ -137,18 +175,13 @@ export default function RelatedCards(props: RelatedCardsProps) {
   );
 
   return (
-    <Show
-      when={!related.error}
-      fallback={
-        <p class="text-sm text-[#dc3545]">Failed to load related cards.</p>
-      }
-    >
-      <Show when={related.oneHop.length}>
+    <>
+      <Show when={related().oneHop.length}>
         <RelationRow
           rowClass="links-1-hop"
           labelClass="links"
           label="Links"
-          cards={related.oneHop}
+          cards={related().oneHop}
           potSlug={props.potSlug}
         />
       </Show>
@@ -177,15 +210,15 @@ export default function RelatedCards(props: RelatedCardsProps) {
           empty
         />
       </Show>
-      <Show when={related.query.length}>
+      <Show when={queryCards().length}>
         <RelationRow
           rowClass="links-query"
           labelClass="query"
           label="Query"
-          cards={related.query}
+          cards={queryCards()}
           potSlug={props.potSlug}
         />
       </Show>
-    </Show>
+    </>
   );
 }

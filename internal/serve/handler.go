@@ -66,6 +66,10 @@ func registerRoutes(e *core.ServeEvent) error {
 	// collections themselves do.
 	pages := e.Router.Group("/api/pages")
 	pages.Bind(apis.RequireSuperuserAuth())
+	// links1hop / links2hop are meant for external callers such as agents. The
+	// frontend does not use them: it derives the same rows from its Dexie
+	// replica (see frontend/src/lib/dexie/relatedQuery.ts), checked against
+	// the same fixture (testdata/link-graph.json).
 	pages.GET("/{pot}/{slug}/links1hop", relatedCardsHandler("links1hop", links1Hop))
 	pages.GET("/{pot}/{slug}/links2hop", relatedCardsHandler("links2hop", links2Hop))
 	// Checkpoint-based pull for the frontend's Dexie replication (see

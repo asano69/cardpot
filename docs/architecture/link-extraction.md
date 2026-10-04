@@ -7,7 +7,7 @@
 - 抽出規則の正は**フロントエンドのパーサ**（`parser/cardpot`）。Go の `internal/parser` はそれに揃える。二重実装は許容するが、共有フィクスチャで常に同じ結果になることを保証する。
 - リンクの同一性は **`titleLc`**（`internal/slug.ToLowerKey` / `titleToLowerKey`）。表記が違っても `titleLc` が同じなら同じリンク。
 - サーバーは保存のたびに `card_links` を本文に同期する。クライアントは `card_links` を Dexie に**サーバーの純粋なミラー**として持つ。
-- **開いているカード自身の発リンクだけ**は、保存を待たずにクライアントが ytext から直接導出し、`relatedStore.ownLinks` に載せる。
+- **開いているカード自身の発リンクだけ**は、保存を待たずにクライアントが ytext から直接導出し、`relatedStore` の `liveOwnLinks` に載せる。1 hop / 2 hop はそれと Dexie から導出する（`related-cards-offline-plan.md`）。
 
 ## 2. データの流れ
 
@@ -18,7 +18,7 @@
           │      ▼                                                                 │
           │ extractLinks(text)  ── 純粋関数、TS パーサで直接パース                   │
           │      ▼                                                                 │
-          │ relatedStore.setOwnLinks()  → related.ownLinks ─→ RelatedCards         │
+          │ relatedStore.setOwnLinks()  → liveOwnLinks     ─→ RelatedCards         │
           └────────────────────────────────────────────────────────────────────────┘
                  │ y-websocket
                  ▼
@@ -94,18 +94,18 @@
 ### 仕組み
 
 - `ExistingCardEditor` が `ytext.observe` を購読し、300ms デバウンスして `extractLinks(ytext.toString())` を呼ぶ。
-- 結果を `relatedStore.setOwnLinks(pot, links)` で `related.ownLinks` に置き換える。
-- `RelatedCards` は `related.ownLinks` を読み、各リンクに `requestLinkAlive` を出す。死んでいるものを New Links 行に出す。
+- 結果を `relatedStore.setOwnLinks(pot, links)` で `liveOwnLinks` に置き換える。
+- `RelatedCards` は `createOwnLinks` が返す `ownLinks`（`liveOwnLinks ?? Dexie の card_links`）を読む。各リンクに `requestLinkAlive` を出し、死んでいるものを New Links 行に出す。同じ `ownLinks` が 1 hop / 2 hop の導出入力（`ownTargets`）にもなる。
 
 ### 設計上の判断
 
 - **開いている間は ytext が正本。** 他のクライアントの編集も ytext に入るので、サーバーのエコーとの突き合わせや、overlay の破棄条件は不要。
-- **新しい Store を作らない。** 寿命は `relatedStore` の既存の仕組みに乗る。カードを閉じると `closeRelated()` が `ownLinks` を空に戻す。
+- **新しい Store を作らない。** 寿命は `relatedStore` の既存の仕組みに乗る。カードを閉じると `closeRelated()` が `liveOwnLinks` を `undefined` に戻す。
 - **`OwnLink` 型**は `target_pot / target_title / target_titleLc` だけ。順序は配列の並びで表す（`position` は持たない）。
 
 ### 注意が必要な箇所
 
-- `ownLinksLive` フラグ: `setOwnLinks` が一度でも呼ばれた後は、`openRelated` の応答（Dexie 由来の `ownLinks`）で上書きしない。タイトル変更で `openRelated` が再実行されても、ライブの値が保たれる。`closeRelated` で解除される。
+- `liveOwnLinks` が `undefined` の間は Dexie の `card_links`、`setOwnLinks` が一度でも呼ばれた後は ytext 由来の値が優先される（`ownLinks = liveOwnLinks ?? replica`）。Dexie 側が後から更新されても、ライブの値は上書きされない。`closeRelated` で `undefined` に戻る。
 - 空の ytext はスキップ: 同期前に空の配列を書くと、Dexie 由来の New Links が一瞬消える。同期後に `observe` が発火して導出される。
 - ドラフトは対象外: カードが作られ `ExistingCardEditor` に移った後に導出が始まる（ドラフトの Y.Doc は引き継がれるので、初回に即時導出する）。
 
@@ -114,7 +114,7 @@
 | 表示 | 情報源 | 反映のタイミング |
 | --- | --- | --- |
 | New Links 行（開いているカード） | ytext → `extractLinks` | 編集の約 300ms 後 |
-| 1 hop / 2 hop 行 | サーバー API（`/links1hop`, `/links2hop`） | カードを開いたとき、タイトル変更時。開いたまま追加したリンクは反映されない |
+| 1 hop / 2 hop 行 | Dexie（`cards` / `card_links`）と `ownLinks` からの導出（`computeRelated`、`liveQuery`） | 編集の約 300ms 後（`ownLinks` の変化）、および同期・realtime で Dexie が変わったとき。自動 |
 | エディタの赤リンク | Dexie → `computeAlive` | サーバー保存後（数秒）の realtime / pull |
 | 説明文の赤リンク | 同上 | 同上 |
 
@@ -123,7 +123,6 @@
 ## 9. 既知の制約
 
 - エディタの赤リンクは、`[新しいリンク]` を書いた直後ではなく、サーバー保存後に反映される（`computeAlive` が開いているカードの未保存リンクを見ない）。気になる場合は `computeAlive` に開いているカードの発リンクを加味する。
-- 1 hop / 2 hop は、開いたまま追加したリンクで更新されない。
 - 抽出のたびに本文全体をパースする。長い本文で重ければ `TreeFragment.applyChanges` による増分化を検討する。
 
 ## 10. ファイル対応表
@@ -134,7 +133,10 @@
 | `frontend/src/lib/models/extractLinks.ts` | 本文からリンクを抽出する純粋関数 |
 | `frontend/src/lib/models/hashTagTitle.ts` | ハッシュタグのタイトル導出（3か所で共有） |
 | `frontend/src/lib/models/slugify.ts` | `titleToLowerKey`（Go の `ToLowerKey` と対） |
-| `frontend/src/lib/stores/relatedStore.ts` | 関連カードと `ownLinks`、`setOwnLinks` |
+| `frontend/src/lib/stores/relatedStore.ts` | `liveOwnLinks`、`createOwnLinks`（`ownLinks` の合成）、`setOwnLinks`、Query 行の取得 |
+| `frontend/src/lib/dexie/relatedQuery.ts` | 1 hop / 2 hop の導出（`computeRelated`）。規則の基準は Go の `links1Hop` / `links2Hop` |
+| `frontend/src/lib/dexie/liveQuery.ts` | Dexie の `liveQuery` を Solid に橋渡しする `createLiveQuery` |
+| `frontend/src/lib/models/compareTitles.ts` | SQLite の `ORDER BY title` と同じコードポイント順の比較 |
 | `frontend/src/features/noteEditor/ExistingCardEditor.tsx` | `ytext.observe` による導出 |
 | `frontend/src/pages/cards/RelatedCards.tsx` | 関連カード行と New Links の表示 |
 | `frontend/src/lib/stores/linkAliveStore.ts` | リンクの生死結果の共有ストア |
@@ -145,11 +147,13 @@
 | `internal/serve/ydoc.go` | 保存時に `Sync` を呼ぶ |
 | `internal/serve/link_cleanup.go` | カード削除時のリンク掃除 |
 | `internal/replica/replica.go` | 複製対象の登録 |
-| `testdata/link-extraction.json` | TS と Go の契約（共有フィクスチャ） |
+| `testdata/link-extraction.json` | リンク抽出の TS と Go の契約（共有フィクスチャ） |
+| `testdata/link-graph.json` | 1 hop / 2 hop の TS と Go の契約（共有フィクスチャ。基準は Go） |
 
 ## 11. 変更時のチェックリスト
 
 - 抽出規則を変える: TS を変更 → フィクスチャにケース追加 → Go を追従 → 両方のテストが緑。
 - 新しいリンク記法を足す: `extractLinks` の対象ノード、`hashTagTitle` のような共通関数、Go の `LinkTitles` を揃える。
 - Dexie の `card_links` にクライアント導出値を書かない（§5）。
-- `ownLinks` を触るときは `ownLinksLive` の意味（§7）を壊さない。
+- `ownLinks` を触るときは `liveOwnLinks ?? replica` の優先関係（§7）を壊さない。
+- 1 hop / 2 hop の規則を変える: Go を変更 → `link-graph.json` にケース追加 → TS（`relatedQuery.ts`）を追従 → 両方のテストが緑。
