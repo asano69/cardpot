@@ -31,4 +31,8 @@ pb.afterSend = function (response: Response, data: unknown) {
   return data;
 };
 
+// Dev only: lets you inspect the client from the browser console,
+// e.g. pb.authStore.record or pb.collection("_superusers").authRefresh().
+if (import.meta.env.DEV) Object.assign(window, { pb });
+
 export default pb;

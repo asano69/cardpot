@@ -1,7 +1,8 @@
 // frontend/src/components/layout/UserMenu.tsx
+import { Show } from "solid-js";
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { EllipsisVertical, LogOut, Settings, Help, About } from "@/lib/icons";
-import { logout } from "@/lib/api/auth";
+import { avatarURL, logout } from "@/lib/api/auth";
 
 // Dropdown menu in the top-right corner, currently holding just logout.
 // Split out of TopBar so TopBar stays focused on layout (toggle + logo)
@@ -19,7 +20,17 @@ export default function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenu.Trigger aria-label="Open menu" class="icon-btn">
-        <EllipsisVertical size={24} />
+        {/* The user's avatar cropped to a circle; falls back to the
+            menu icon when no avatar is set. */}
+        <Show when={avatarURL()} fallback={<EllipsisVertical size={24} />}>
+          {(src) => (
+            <img
+              src={src()}
+              alt=""
+              class="h-6 w-6 rounded-full object-cover"
+            />
+          )}
+        </Show>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content class="z-50 min-w-[160px] rounded-md border border-border bg-card p-1 shadow-popover outline-none font-sans">
