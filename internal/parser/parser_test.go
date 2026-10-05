@@ -34,10 +34,10 @@ func TestTitleAndBlocks(t *testing.T) {
 	cases := []struct {
 		name, text, title, tree string
 	}{
-		{"raw title", "  [raw]\n[page]", "  [raw]", "Document(Title,Line(WikiLink))"},
-		{"blank first line has no title", " \u3000\n[page]", "", "Document(Line(WikiLink))"},
-		{"code title stays title", "code:x\n\t[page]", "code:x", "Document(Title,Line(WikiLink))"},
-		{"blank line ends code", testTitle + "code:x\n\t[hidden]\n\n[shown]", "T", "Document(Title,CodeBlock,Line(WikiLink))"},
+		{"raw title", "  [raw]\n[page]", "  [raw]", "Document(Title,Line(link))"},
+		{"blank first line has no title", " \u3000\n[page]", "", "Document(Line(link))"},
+		{"code title stays title", "code:x\n\t[page]", "code:x", "Document(Title,Line(link))"},
+		{"blank line ends code", testTitle + "code:x\n\t[hidden]\n\n[shown]", "T", "Document(Title,CodeBlock,Line(link))"},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
