@@ -67,7 +67,7 @@ export function parseLineBlock(
 
   const content = line.text.slice(contentFrom - cx.lineStart);
   const children = [
-    ...(indent ? [cx.elt("Indent", cx.lineStart, prefixFrom)] : []),
+    ...(indent ? [cx.elt("indent", cx.lineStart, prefixFrom)] : []),
     cx.elt(definition.mark, prefixFrom, prefixTo),
     ...cx.parser.parseInline(content, contentFrom),
   ];

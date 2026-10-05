@@ -6,13 +6,13 @@ import type { InlineContext } from "@lezer/markdown";
 // therefore cannot change how nested brackets are paired.
 export type BracketKind =
   | "Math"
-  | "Icon"
+  | "icon"
   | "ProjectLink"
-  | "GoogleMap"
-  | "Image"
-  | "ExternalLink"
-  | "LinkedImage"
-  | "WikiLink";
+  | "location"
+  | "image"
+  | "urlLink"
+  | "imageLink"
+  | "link";
 
 type UrlKind = "image" | "link";
 
@@ -48,7 +48,7 @@ function inferUrl(value: string): UrlKind | undefined {
 // it is the ambiguity boundary and is independently testable without Lezer.
 export function decideBracketNodeType(content: string): BracketDecision {
   if (content.startsWith("$ ")) return { kind: "Math" };
-  if (ICON_RE.test(content)) return { kind: "Icon" };
+  if (ICON_RE.test(content)) return { kind: "icon" };
   if (PROJECT_RE.test(content)) return { kind: "ProjectLink" };
 
   // Any ECMAScript whitespace separates tokens, like scrapbox-parser's
@@ -65,14 +65,14 @@ export function decideBracketNodeType(content: string): BracketDecision {
     (first && COORDINATE_RE.test(first)) ||
     (last && COORDINATE_RE.test(last))
   ) {
-    return { kind: "GoogleMap" };
+    return { kind: "location" };
   }
 
   const firstKind = inferUrl(first ?? "");
   if (last === undefined) {
-    if (firstKind === "image") return { kind: "Image", src: first };
-    if (firstKind === "link") return { kind: "ExternalLink", href: first };
-    return { kind: "WikiLink" };
+    if (firstKind === "image") return { kind: "image", src: first };
+    if (firstKind === "link") return { kind: "urlLink", href: first };
+    return { kind: "link" };
   }
 
   const lastKind = inferUrl(last);
@@ -85,18 +85,18 @@ export function decideBracketNodeType(content: string): BracketDecision {
     (firstKind === "image" || lastKind === "image")
   ) {
     return firstKind === "image"
-      ? { kind: "LinkedImage", src: first, href: last }
-      : { kind: "LinkedImage", src: last, href: first };
+      ? { kind: "imageLink", src: first, href: last }
+      : { kind: "imageLink", src: last, href: first };
   }
   if (firstKind === "link")
-    return { kind: "ExternalLink", href: first, label: rest };
+    return { kind: "urlLink", href: first, label: rest };
   if (lastKind)
     return {
-      kind: "ExternalLink",
+      kind: "urlLink",
       href: last,
       label: content.slice(0, lastSpace),
     };
-  return { kind: "WikiLink" };
+  return { kind: "link" };
 }
 
 function matchingBracket(cx: InlineContext, from: number): number {
@@ -141,15 +141,15 @@ function parseSingleBracket(cx: InlineContext, pos: number): number {
   const decision = decideBracketNodeType(content);
   const to = end + 1;
 
-  if (decision.kind === "WikiLink" || decision.kind === "ProjectLink") {
+  if (decision.kind === "link" || decision.kind === "ProjectLink") {
     return cx.addElement(marks(cx, decision.kind, pos, to));
   }
   if (
     decision.kind === "Math" ||
-    decision.kind === "Icon" ||
-    decision.kind === "GoogleMap" ||
-    decision.kind === "Image" ||
-    decision.kind === "LinkedImage"
+    decision.kind === "icon" ||
+    decision.kind === "location" ||
+    decision.kind === "image" ||
+    decision.kind === "imageLink"
   ) {
     return cx.addElement(cx.elt(decision.kind, pos, to));
   }
@@ -168,7 +168,7 @@ function parseSingleBracket(cx: InlineContext, pos: number): number {
     else closeStart = labelFrom + label.length;
   }
   return cx.addElement(
-    marks(cx, "ExternalLink", pos, to, children, openEnd, closeStart),
+    marks(cx, "urlLink", pos, to, children, openEnd, closeStart),
   );
 }
 
@@ -181,9 +181,9 @@ function parseStrong(cx: InlineContext, pos: number): number {
   const content = cx.slice(contentFrom, innerEnd);
   const kind = decideBracketNodeType(content).kind;
   const child =
-    kind === "Image"
-      ? "StrongImage"
-      : kind === "Icon"
+    kind === "image"
+      ? "strongImage"
+      : kind === "icon"
         ? "StrongIcon"
         : undefined;
   const children = child
@@ -191,10 +191,10 @@ function parseStrong(cx: InlineContext, pos: number): number {
     : cx.parser.parseInline(content, contentFrom);
   const to = innerEnd + 2;
   return cx.addElement(
-    cx.elt("Strong", pos, to, [
-      cx.elt("StrongMark", pos, contentFrom),
+    cx.elt("strong", pos, to, [
+      cx.elt("strongMark", pos, contentFrom),
       ...children,
-      cx.elt("StrongMark", innerEnd, to),
+      cx.elt("strongMark", innerEnd, to),
     ]),
   );
 }

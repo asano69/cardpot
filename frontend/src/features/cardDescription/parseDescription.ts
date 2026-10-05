@@ -14,17 +14,17 @@ const DUMMY_TITLE = "T\n";
 const CONTAINERS = new Set([
   "Document",
   "Paragraph",
-  "Quote",
+  "quote",
   "Table",
   "TableRow",
   "TableCell",
   "Bold",
   "Italic",
-  "Strong",
+  "strong",
 ]);
 
 // Image nodes are dropped: the card's thumbnail (card.image) shows them.
-const IMAGES = new Set(["Image", "LinkedImage", "StrongImage"]);
+const IMAGES = new Set(["image", "imageLink", "strongImage"]);
 
 function push(out: DescriptionSegment[], segment: DescriptionSegment) {
   if (segment.text === "") return;
@@ -50,19 +50,19 @@ function walk(node: SyntaxNode, doc: string, out: DescriptionSegment[]) {
     const name = child.type.name;
     if (name === "Title") {
       pos++; // also skip the newline after the dummy title
-    } else if (name === "QuoteMark") {
+    } else if (name === "quoteMark") {
       if (doc[pos] === " ") pos++;
-    } else if (name === "WikiLink") {
+    } else if (name === "link") {
       push(out, { kind: "wikilink", text: inner(doc, child) });
-    } else if (name === "ExternalLink") {
+    } else if (name === "urlLink") {
       const { href, label } = decideBracketNodeType(inner(doc, child));
       push(out, { kind: "external-link", text: label ?? href ?? "" });
-    } else if (name === "Code") {
+    } else if (name === "code") {
       push(out, { kind: "inline-code", text: inner(doc, child) });
-    } else if (name === "BareUrl") {
+    } else if (name === "url") {
       const url = doc.slice(child.from, child.to);
       push(out, { kind: "external-link", text: url });
-    } else if (name === "HashTag") {
+    } else if (name === "hashTag") {
       push(out, { kind: "hashtag", text: doc.slice(child.from, child.to) });
     } else if (IMAGES.has(name) || child.type.prop(isMark)) {
       // Dropped.

@@ -22,5 +22,5 @@ export function parseHashTag(
 
   let end = pos + 1;
   while (end < cx.end && !/\s/.test(cx.slice(end, end + 1))) end++;
-  return cx.addElement(cx.elt("HashTag", pos, end));
+  return cx.addElement(cx.elt("hashTag", pos, end));
 }

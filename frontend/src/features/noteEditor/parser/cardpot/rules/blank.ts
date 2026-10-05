@@ -16,5 +16,5 @@ export function parseBlank(
 
   const content = cx.slice(pos + 1, end);
   if (content === "" || !/^\s+$/u.test(content)) return -1;
-  return cx.addElement(cx.elt("Blank", pos, end + 1));
+  return cx.addElement(cx.elt("blank", pos, end + 1));
 }

@@ -15,9 +15,9 @@ export function parseInlineCode(
   }
   if (cx.char(i) !== 96) return -1;
   return cx.addElement(
-    cx.elt("Code", pos, i + 1, [
-      cx.elt("CodeMark", pos, pos + 1),
-      cx.elt("CodeMark", i, i + 1),
+    cx.elt("code", pos, i + 1, [
+      cx.elt("codeMark", pos, pos + 1),
+      cx.elt("codeMark", i, i + 1),
     ]),
   );
 }

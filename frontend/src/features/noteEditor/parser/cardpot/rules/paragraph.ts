@@ -18,7 +18,7 @@ export function parseParagraph(cx: BlockContext, line: Line): boolean {
   const indent = countIndent(line.text);
   const contentFrom = from + indent;
   const children = [
-    ...(indent ? [cx.elt("Indent", from, contentFrom)] : []),
+    ...(indent ? [cx.elt("indent", from, contentFrom)] : []),
     ...cx.parser.parseInline(line.text.slice(indent), contentFrom),
   ];
   cx.addElement(cx.elt("Paragraph", from, from + line.text.length, children));

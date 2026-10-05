@@ -41,9 +41,9 @@ describe("Cardpot title line", () => {
     // Block prefixes must not open a block, and the following lines must not
     // be swallowed as the block's body.
     expect(tree("code: notes\n\tbody")).toBe(
-      "Document(Title,Paragraph(Indent))",
+      "Document(Title,Paragraph(indent))",
     );
-    expect(tree("table:x\n\ta\tb")).toBe("Document(Title,Paragraph(Indent))");
+    expect(tree("table:x\n\ta\tb")).toBe("Document(Title,Paragraph(indent))");
     expect(tree("> quote\nbody")).toBe("Document(Title,Paragraph)");
     // Inline notation stays raw, so the parser agrees with the title the
     // server resolves from the unparsed first line.

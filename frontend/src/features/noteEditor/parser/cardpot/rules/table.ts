@@ -12,7 +12,7 @@ export function parseTable(cx: BlockContext, line: Line): boolean {
   const from = cx.lineStart;
   let to = from + line.text.length;
   const children = [
-    ...(indent ? [cx.elt("Indent", from, from + indent)] : []),
+    ...(indent ? [cx.elt("indent", from, from + indent)] : []),
     cx.elt("TableMark", from + indent, to),
   ];
 
@@ -20,7 +20,7 @@ export function parseTable(cx: BlockContext, line: Line): boolean {
     // Only the table's own indent level (declaration indent + 1) is syntax;
     // any deeper whitespace stays in the first cell, as in Scrapbox.
     const rowStart = rowFrom - (indent + 1);
-    const rowChildren = [cx.elt("Indent", rowStart, rowFrom)];
+    const rowChildren = [cx.elt("indent", rowStart, rowFrom)];
     let cellFrom = rowFrom;
     for (const cell of row.split("\t")) {
       const cellTo = cellFrom + cell.length;

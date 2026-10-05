@@ -14,5 +14,5 @@ export function parseBareUrl(
   if (next !== 104 /* h */) return -1;
   const match = BARE_URL_RE.exec(cx.slice(pos, cx.end));
   if (!match) return -1;
-  return cx.addElement(cx.elt("BareUrl", pos, pos + match[0].length));
+  return cx.addElement(cx.elt("url", pos, pos + match[0].length));
 }

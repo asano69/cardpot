@@ -39,12 +39,12 @@ const defaultParsers = [
   "SetextHeading",
   "Escape",
   "Entity",
-  "InlineCode",
+  "code",
   "HTMLTag",
   "Emphasis",
   "HardBreak",
   "Link",
-  "Image",
+  "image",
 ] as const;
 
 // `Paragraph` deliberately remains. It is the neutral leaf block provided by
@@ -59,33 +59,33 @@ const cardpotParser = parser.configure({
     "TableMark",
     { name: "TableRow", block: true },
     "TableCell",
-    { name: "Quote", block: true },
-    "QuoteMark",
+    { name: "quote", block: true },
+    "quoteMark",
     "Bold",
     "BoldMark",
     "Italic",
     "ItalicMark",
-    "Code",
-    "CodeMark",
-    "WikiLink",
-    "WikiLinkMark",
-    "ExternalLink",
-    "ExternalLinkMark",
-    "Image",
-    "LinkedImage",
-    "Icon",
+    "code",
+    "codeMark",
+    "link",
+    "linkMark",
+    "urlLink",
+    "urlLinkMark",
+    "image",
+    "imageLink",
+    "icon",
     "ProjectLink",
     "ProjectLinkMark",
-    "GoogleMap",
+    "location",
     "Math",
-    "Strong",
-    "StrongMark",
-    "StrongImage",
+    "strong",
+    "strongMark",
+    "strongImage",
     "StrongIcon",
-    "HashTag",
-    "BareUrl",
-    "Blank",
-    "Indent",
+    "hashTag",
+    "url",
+    "blank",
+    "indent",
   ],
   props: [
     revealStyle.add({
@@ -96,48 +96,48 @@ const cardpotParser = parser.configure({
       // an external one.
       Bold: "deco-*",
       Italic: "deco-/",
-      Code: "code highlight",
-      WikiLink: "page-link",
-      ExternalLink: "link",
+      code: "code highlight",
+      link: "page-link",
+      urlLink: "link",
       ProjectLink: "page-link",
-      Strong: "strong",
-      HashTag: "page-link",
+      strong: "strong",
+      hashTag: "page-link",
       // No marks, so nothing is ever hidden: this only styles the URL.
-      BareUrl: "link",
-      Blank: "blank",
+      url: "link",
+      blank: "blank",
       // Whole-line node, not a delimiter pair: only the leading ">"
       // is an isMark child (see rules/quote.ts), so syntaxReveal
       // hides just that prefix while the cursor is elsewhere on the
       // line -- the same live-preview behavior as every other
       // revealable node here.
-      Quote: "quote",
+      quote: "quote",
       // Image/LinkedImage have no mark children of their own (see
       // rules/bracket.ts), so this class only ever shows while the
       // cursor is actively editing the raw "[url]" text -- see the
       // hideContent registration below for what happens otherwise.
-      Image: "image",
-      LinkedImage: "image",
+      image: "image",
+      imageLink: "image",
     }),
     isMark.add({
       BoldMark: true,
       ItalicMark: true,
-      CodeMark: true,
-      WikiLinkMark: true,
-      ExternalLinkMark: true,
+      codeMark: true,
+      linkMark: true,
+      urlLinkMark: true,
       ProjectLinkMark: true,
-      StrongMark: true,
-      QuoteMark: true,
+      strongMark: true,
+      quoteMark: true,
     }),
     isIndent.add({
-      Indent: true,
+      indent: true,
     }),
     // Image/LinkedImage's raw bracketed URL is only shown while the
     // cursor touches it; otherwise it's hidden entirely, since the
     // actual image is already rendered as a widget (see
     // imageWidget.ts) and the raw text would just be noise.
     hideContent.add({
-      Image: true,
-      LinkedImage: true,
+      image: true,
+      imageLink: true,
     }),
   ],
   parseBlock: [
@@ -185,33 +185,33 @@ export const Bold = node("Bold");
 export const BoldMark = node("BoldMark");
 export const Italic = node("Italic");
 export const ItalicMark = node("ItalicMark");
-export const Code = node("Code");
-export const CodeMark = node("CodeMark");
-export const WikiLink = node("WikiLink");
-export const WikiLinkMark = node("WikiLinkMark");
-export const ExternalLink = node("ExternalLink");
-export const ExternalLinkMark = node("ExternalLinkMark");
-export const Image = node("Image");
-export const LinkedImage = node("LinkedImage");
-export const Icon = node("Icon");
+export const Code = node("code");
+export const CodeMark = node("codeMark");
+export const WikiLink = node("link");
+export const WikiLinkMark = node("linkMark");
+export const ExternalLink = node("urlLink");
+export const ExternalLinkMark = node("urlLinkMark");
+export const Image = node("image");
+export const LinkedImage = node("imageLink");
+export const Icon = node("icon");
 export const ProjectLink = node("ProjectLink");
 export const ProjectLinkMark = node("ProjectLinkMark");
-export const GoogleMap = node("GoogleMap");
+export const GoogleMap = node("location");
 export const Math = node("Math");
-export const Strong = node("Strong");
-export const StrongMark = node("StrongMark");
-export const StrongImage = node("StrongImage");
+export const Strong = node("strong");
+export const StrongMark = node("strongMark");
+export const StrongImage = node("strongImage");
 export const StrongIcon = node("StrongIcon");
-export const HashTag = node("HashTag");
-export const BareUrl = node("BareUrl");
-export const Blank = node("Blank");
+export const HashTag = node("hashTag");
+export const BareUrl = node("url");
+export const Blank = node("blank");
 export const CodeBlock = node("CodeBlock");
 export const CodeBlockMark = node("CodeBlockMark");
 export const Table = node("Table");
 export const TableMark = node("TableMark");
 export const TableRow = node("TableRow");
 export const TableCell = node("TableCell");
-export const Indent = node("Indent");
+export const Indent = node("indent");
 export const Title = node("Title");
 
 const cardpotLanguageData = defineLanguageFacet({});

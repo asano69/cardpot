@@ -39,7 +39,7 @@ function indentRanges(input: string): { from: number; to: number }[] {
 describe("Cardpot Lezer syntax", () => {
   it("parses Cardpot inline notation only inside paragraph blocks", () => {
     expect(tree("plain [page] [* bold] `code`")).toBe(
-      "Document(Paragraph(WikiLink(WikiLinkMark,WikiLinkMark),Bold(BoldMark,BoldMark),Code(CodeMark,CodeMark)))",
+      "Document(Paragraph(link(linkMark,linkMark),Bold(BoldMark,BoldMark),code(codeMark,codeMark)))",
     );
     expect(tree("# not a CommonMark heading\n**not CommonMark bold**")).toBe(
       "Document(Paragraph,Paragraph)",
@@ -48,7 +48,7 @@ describe("Cardpot Lezer syntax", () => {
 
   it("parses Scrapbox-compatible hashtags at whitespace boundaries", () => {
     expect(tree("#tag #hash#Tag This is a #second .")).toBe(
-      "Document(Paragraph(HashTag,HashTag,HashTag))",
+      "Document(Paragraph(hashTag,hashTag,hashTag))",
     );
     expect(tree("# →#notTag←")).toBe("Document(Paragraph)");
   });
@@ -86,20 +86,20 @@ describe("Cardpot Lezer syntax", () => {
 
   it("treats a full-width space as the separator of a labelled link", () => {
     expect(tree("[aaa\u3000https://example.com/]")).toBe(
-      "Document(Paragraph(ExternalLink(ExternalLinkMark,ExternalLinkMark)))",
+      "Document(Paragraph(urlLink(urlLinkMark,urlLinkMark)))",
     );
     expect(tree("[https://example.com/\u3000aaa]")).toBe(
-      "Document(Paragraph(ExternalLink(ExternalLinkMark,ExternalLinkMark)))",
+      "Document(Paragraph(urlLink(urlLinkMark,urlLinkMark)))",
     );
     // Without a URL a full-width space is still part of the title.
     expect(tree("[日本語\u3000タイトル]")).toBe(
-      "Document(Paragraph(WikiLink(WikiLinkMark,WikiLinkMark)))",
+      "Document(Paragraph(link(linkMark,linkMark)))",
     );
   });
 
   it("parses a URL written directly in text", () => {
     expect(tree("see https://example.com/a?b=1 and http://x.y end")).toBe(
-      "Document(Paragraph(BareUrl,BareUrl))",
+      "Document(Paragraph(url,url))",
     );
     // Not a URL: no scheme separator, or nothing after it.
     expect(tree("https:/example.com http://")).toBe("Document(Paragraph)");
@@ -107,17 +107,17 @@ describe("Cardpot Lezer syntax", () => {
 
   it("does not let a bare URL swallow a closing bracket", () => {
     expect(tree("[* see https://example.com/]")).toBe(
-      "Document(Paragraph(Bold(BoldMark,BareUrl,BoldMark)))",
+      "Document(Paragraph(Bold(BoldMark,url,BoldMark)))",
     );
     // Inside a bracketed link the bracket rule wins; no nested BareUrl.
     expect(tree("[https://example.com/ label]")).toBe(
-      "Document(Paragraph(ExternalLink(ExternalLinkMark,ExternalLinkMark)))",
+      "Document(Paragraph(urlLink(urlLinkMark,urlLinkMark)))",
     );
   });
 
   it("parses whitespace-only brackets as blanks before WikiLinks", () => {
     expect(tree("[ ] [　] [\t] [ 　 \t　\t ] [page]")).toBe(
-      "Document(Paragraph(Blank,Blank,Blank,Blank,WikiLink(WikiLinkMark,WikiLinkMark)))",
+      "Document(Paragraph(blank,blank,blank,blank,link(linkMark,linkMark)))",
     );
     // "[*** [ ]]" is now correctly recognized as a Bold decoration
     // wrapping a nested Blank, since parseDecoration tracks bracket
@@ -125,7 +125,7 @@ describe("Cardpot Lezer syntax", () => {
     // parses a decoration's content" test above). The bare "[]" still
     // matches nothing (empty content) and stays as plain text.
     expect(tree("[] [*** [ ]]")).toBe(
-      "Document(Paragraph(Bold(BoldMark,Blank,BoldMark)))",
+      "Document(Paragraph(Bold(BoldMark,blank,BoldMark)))",
     );
   });
 
@@ -133,10 +133,10 @@ describe("Cardpot Lezer syntax", () => {
     expect(
       tree("[$ x + [y]] [me.icon*3] [/project/page] [N35.68,E139.76,Z14]"),
     ).toBe(
-      "Document(Paragraph(Math,Icon,ProjectLink(ProjectLinkMark,ProjectLinkMark),GoogleMap))",
+      "Document(Paragraph(Math,icon,ProjectLink(ProjectLinkMark,ProjectLinkMark),location))",
     );
     expect(tree("[a [b] c] [unterminated [page]")).toBe(
-      "Document(Paragraph(WikiLink(WikiLinkMark,WikiLinkMark),WikiLink(WikiLinkMark,WikiLinkMark)))",
+      "Document(Paragraph(link(linkMark,linkMark),link(linkMark,linkMark)))",
     );
   });
 
@@ -146,10 +146,10 @@ describe("Cardpot Lezer syntax", () => {
         "[https://example.com/] [https://example.com/a.png] [https://example.com/a.png https://example.com/] [label https://example.com/] [https://example.com/ label]",
       ),
     ).toBe(
-      "Document(Paragraph(ExternalLink(ExternalLinkMark,ExternalLinkMark),Image,LinkedImage,ExternalLink(ExternalLinkMark,ExternalLinkMark),ExternalLink(ExternalLinkMark,ExternalLinkMark)))",
+      "Document(Paragraph(urlLink(urlLinkMark,urlLinkMark),image,imageLink,urlLink(urlLinkMark,urlLinkMark),urlLink(urlLinkMark,urlLinkMark)))",
     );
     expect(tree("[https://example.com/ label [page]]")).toBe(
-      "Document(Paragraph(ExternalLink(ExternalLinkMark,WikiLink(WikiLinkMark,WikiLinkMark),ExternalLinkMark)))",
+      "Document(Paragraph(urlLink(urlLinkMark,link(linkMark,linkMark),urlLinkMark)))",
     );
   });
 
@@ -160,21 +160,21 @@ describe("Cardpot Lezer syntax", () => {
       tree(
         "[https://example.com/images?q=abc&s=10.png] [https://example.com/img#.png]",
       ),
-    ).toBe("Document(Paragraph(Image,Image))");
+    ).toBe("Document(Paragraph(image,image))");
     // An extension in the middle of the query is not a trailing one.
     expect(tree("[https://example.com/page?file=a.png&x=1]")).toBe(
-      "Document(Paragraph(ExternalLink(ExternalLinkMark,ExternalLinkMark)))",
+      "Document(Paragraph(urlLink(urlLinkMark,urlLinkMark)))",
     );
   });
 
-  it("parses double brackets as Strong and preserves nested bracket pairing", () => {
+  it("parses double brackets as strong and preserves nested bracket pairing", () => {
     expect(
       tree("[[strong [page]]] [[https://example.com/a.png]] [[me.icon]]"),
     ).toBe(
-      "Document(Paragraph(Strong(StrongMark,WikiLink(WikiLinkMark,WikiLinkMark),StrongMark),Strong(StrongMark,StrongImage,StrongMark),Strong(StrongMark,StrongIcon,StrongMark)))",
+      "Document(Paragraph(strong(strongMark,link(linkMark,linkMark),strongMark),strong(strongMark,strongImage,strongMark),strong(strongMark,StrongIcon,strongMark)))",
     );
     expect(tree("[[]] [[unterminated]")).toBe(
-      "Document(Paragraph(WikiLink(WikiLinkMark,WikiLinkMark)))",
+      "Document(Paragraph(link(linkMark,linkMark)))",
     );
   });
 
@@ -190,12 +190,12 @@ describe("Cardpot Lezer syntax", () => {
     );
   });
 
-  it("falls through to WikiLink when an asterisk run has no following space", () => {
+  it("falls through to link when an asterisk run has no following space", () => {
     // No space after the asterisks -- Bold doesn't match, and the
     // content isn't whitespace-only either, so this still resolves to
     // a WikiLink, matching the old exact-"[* "-prefix behavior.
     expect(tree("[**]")).toBe(
-      "Document(Paragraph(WikiLink(WikiLinkMark,WikiLinkMark)))",
+      "Document(Paragraph(link(linkMark,linkMark)))",
     );
   });
 
@@ -225,16 +225,16 @@ describe("Cardpot Lezer syntax", () => {
 
   it("recurses into a combined decoration's content", () => {
     expect(tree("[*/ [Link]]")).toBe(
-      "Document(Paragraph(Bold(BoldMark,Italic(WikiLink(WikiLinkMark,WikiLinkMark)),BoldMark)))",
+      "Document(Paragraph(Bold(BoldMark,Italic(link(linkMark,linkMark)),BoldMark)))",
     );
   });
 
-  it("recursively parses a decoration's content so a nested WikiLink still resolves", () => {
+  it("recursively parses a decoration's content so a nested link still resolves", () => {
     // Unlike the old parseBold, which stopped scanning at the first "[",
     // the shared decoration dispatcher tracks bracket depth and re-parses
     // its content as inline, so a nested link inside the decoration works.
     expect(tree("[* [Link] text]")).toBe(
-      "Document(Paragraph(Bold(BoldMark,WikiLink(WikiLinkMark,WikiLinkMark),BoldMark)))",
+      "Document(Paragraph(Bold(BoldMark,link(linkMark,linkMark),BoldMark)))",
     );
   });
 
@@ -242,16 +242,16 @@ describe("Cardpot Lezer syntax", () => {
     expect(
       tree("before\ncode:typescript\n\t[not-a-link]\n\tconst x = 1\nafter"),
     ).toBe(
-      "Document(Paragraph,CodeBlock(CodeBlockMark,Indent,Indent),Paragraph)",
+      "Document(Paragraph,CodeBlock(CodeBlockMark,indent,indent),Paragraph)",
     );
     expect(tree("\tcode:main.rs(rust)\n\t\tfn main() {}\n\tnext")).toBe(
-      "Document(CodeBlock(Indent,CodeBlockMark,Indent),Paragraph(Indent))",
+      "Document(CodeBlock(indent,CodeBlockMark,indent),Paragraph(indent))",
     );
   });
 
   it("does not treat the removed fenced-code syntax as a block", () => {
     expect(tree("```ts\n[page]\n``` ")).toBe(
-      "Document(Paragraph(Code(CodeMark,CodeMark)),Paragraph(WikiLink(WikiLinkMark,WikiLinkMark)),Paragraph(Code(CodeMark,CodeMark)))",
+      "Document(Paragraph(code(codeMark,codeMark)),Paragraph(link(linkMark,linkMark)),Paragraph(code(codeMark,codeMark)))",
     );
   });
 
@@ -259,36 +259,36 @@ describe("Cardpot Lezer syntax", () => {
     expect(
       tree("table:links\n\t[* bold]\t[page]\t`code`\n\t#tag\t[ ]\t\noutside"),
     ).toBe(
-      "Document(Table(TableMark,TableRow(Indent,TableCell(Bold(BoldMark,BoldMark)),TableCell(WikiLink(WikiLinkMark,WikiLinkMark)),TableCell(Code(CodeMark,CodeMark))),TableRow(Indent,TableCell(HashTag),TableCell(Blank),TableCell)),Paragraph)",
+      "Document(Table(TableMark,TableRow(indent,TableCell(Bold(BoldMark,BoldMark)),TableCell(link(linkMark,linkMark)),TableCell(code(codeMark,codeMark))),TableRow(indent,TableCell(hashTag),TableCell(blank),TableCell)),Paragraph)",
     );
   });
 
   it("terminates tables at equal or shallower indentation", () => {
     expect(tree("\ttable:nested\n\t\ta\tb\n\tnext\ntail")).toBe(
-      "Document(Table(Indent,TableMark,TableRow(Indent,TableCell,TableCell)),Paragraph(Indent),Paragraph)",
+      "Document(Table(indent,TableMark,TableRow(indent,TableCell,TableCell)),Paragraph(indent),Paragraph)",
     );
   });
 
   it("parses a quote line and delegates its content to Cardpot inline rules", () => {
     expect(tree("> [* bold] [page] `code`")).toBe(
-      "Document(Quote(QuoteMark,Bold(BoldMark,BoldMark),WikiLink(WikiLinkMark,WikiLinkMark),Code(CodeMark,CodeMark)))",
+      "Document(quote(quoteMark,Bold(BoldMark,BoldMark),link(linkMark,linkMark),code(codeMark,codeMark)))",
     );
-    expect(tree(">no separating space")).toBe("Document(Quote(QuoteMark))");
+    expect(tree(">no separating space")).toBe("Document(quote(quoteMark))");
   });
 
   it("recognizes quote prefixes after any supported indentation", () => {
     expect(tree("  > indented quote")).toBe(
-      "Document(Quote(Indent,QuoteMark))",
+      "Document(quote(indent,quoteMark))",
     );
     expect(tree("\t> indented quote")).toBe(
-      "Document(Quote(Indent,QuoteMark))",
+      "Document(quote(indent,quoteMark))",
     );
   });
 
   it("records each non-blank line's ECMAScript whitespace indentation", () => {
     const input = "plain\n \t　nested\n\fother";
     expect(tree(input)).toBe(
-      "Document(Paragraph,Paragraph(Indent),Paragraph(Indent))",
+      "Document(Paragraph,Paragraph(indent),Paragraph(indent))",
     );
     // The ranges themselves encode the character-count depth. `isIndent`
     // gives consumers a NodeProp-based way to recognize these semantic nodes.
@@ -301,7 +301,7 @@ describe("Cardpot Lezer syntax", () => {
 
   it("consumes whitespace-only lines that Lezer itself does not treat as blank", () => {
     expect(tree("\u3000\n> quote\n\tnext")).toBe(
-      "Document(Quote(QuoteMark),Paragraph(Indent))",
+      "Document(quote(quoteMark),Paragraph(indent))",
     );
   });
 
@@ -312,10 +312,10 @@ describe("Cardpot Lezer syntax", () => {
 
   it("uses the same indentation rule for code and table continuation rows", () => {
     expect(tree(" code:js\n  const x = 1\n　　nested\nafter")).toBe(
-      "Document(CodeBlock(Indent,CodeBlockMark,Indent,Indent),Paragraph)",
+      "Document(CodeBlock(indent,CodeBlockMark,indent,indent),Paragraph)",
     );
     expect(tree("　table:data\n　 a\tb\nnext")).toBe(
-      "Document(Table(Indent,TableMark,TableRow(Indent,TableCell,TableCell)),Paragraph)",
+      "Document(Table(indent,TableMark,TableRow(indent,TableCell,TableCell)),Paragraph)",
     );
   });
 });

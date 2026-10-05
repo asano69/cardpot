@@ -13,7 +13,7 @@ export function parseCodeBlock(cx: BlockContext, line: Line): boolean {
   const from = cx.lineStart;
   let to = from + line.text.length;
   const children = [
-    ...(indent ? [cx.elt("Indent", from, from + indent)] : []),
+    ...(indent ? [cx.elt("indent", from, from + indent)] : []),
     cx.elt("CodeBlockMark", from + indent, to),
   ];
   consumeIndentedLines(cx, line, indent, (text, lineFrom) => {
@@ -22,7 +22,7 @@ export function parseCodeBlock(cx: BlockContext, line: Line): boolean {
     void text;
     // Only the block's own indent level (declaration indent + 1) is syntax;
     // any deeper whitespace is part of the raw code.
-    children.push(cx.elt("Indent", lineFrom - (indent + 1), lineFrom));
+    children.push(cx.elt("indent", lineFrom - (indent + 1), lineFrom));
     to = lineFrom + text.length;
   });
   cx.addElement(cx.elt("CodeBlock", from, to, children));

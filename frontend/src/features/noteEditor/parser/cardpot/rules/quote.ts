@@ -7,8 +7,8 @@ import { parseLineBlock } from "./lineBlock";
 export function parseQuote(cx: BlockContext, line: Line): boolean {
   return parseLineBlock(cx, line, {
     kind: "quote",
-    node: "Quote",
-    mark: "QuoteMark",
+    node: "quote",
+    mark: "quoteMark",
     trimFollowingSpace: true,
   });
 }
