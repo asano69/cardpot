@@ -1,13 +1,10 @@
-// cards.go implements the custom API routes a client uses to resolve
-// a card's title: one for brand-new drafts (which need a real record
-// id before Yjs sync can start) and one for renaming an existing
-// card's title. Kept as dedicated routes rather than a collection
-// before-save hook, so being called at all already means "the client
-// wants this title candidate tried" -- no separate change-detection
-// logic is needed to tell a real title edit apart from an unrelated
-// save (pin toggle, position update, ...). A card's URL segment is not
-// a separate field resolved here -- it's derived from the title on
-// demand (see internal/slug.FromTitle and lib/slugify.ts).
+// cards.go implements the custom API route a client uses to create a
+// brand-new draft card (which needs a real record id before Yjs sync can
+// start). Renaming an existing card is not done here: the server resolves
+// the title from the room's live text (see title_watch.go), which also
+// announces a duplicate title to clients. A card's URL segment is not a
+// separate field resolved here -- it's derived from the title on demand
+// (see internal/slug.FromTitle and lib/slugify.ts).
 package serve
 
 import (
@@ -106,70 +103,8 @@ func createCardHandler(e *core.RequestEvent) error {
 			}
 			return e.InternalServerError("save card", err)
 		}
-		return jsonWithMergeTarget(e, e.App, req.Pot, title, req.TitleCandidate, "", record)
+		return e.JSON(http.StatusOK, map[string]any{"card": record})
 	}
 	return e.InternalServerError("failed to create card after retries", nil)
 }
 
-// updateCardTitleHandler resolves a new title for an existing card
-// from the client-supplied candidate (see slug.go's resolveTitle).
-// This is the single place a card's title changes -- it no longer
-// depends on ygo's periodic Yjs snapshot timing (see ydoc.go's
-// updatePreview, which only touches "description").
-func updateCardTitleHandler(e *core.RequestEvent) error {
-	id := e.Request.PathValue("id")
-
-	var req api.UpdateCardTitleRequest
-	if err := e.BindBody(&req); err != nil {
-		return e.BadRequestError("invalid request body", err)
-	}
-	if req.TitleCandidate == "" {
-		return e.BadRequestError("titleCandidate is required", nil)
-	}
-
-	record, err := e.App.FindRecordById("cards", id)
-	if err != nil {
-		return e.NotFoundError("card not found", err)
-	}
-	pot := record.GetString("pot")
-
-	candidate := req.TitleCandidate
-	for attempt := 0; attempt < maxTitleRetries; attempt++ {
-		title, err := resolveTitle(e.App, pot, candidate, id)
-		if err != nil {
-			return e.InternalServerError("resolve title", err)
-		}
-
-		record.Set("title", string(title))
-		// See createCardHandler's own comment on titleLc.
-		record.Set("titleLc", slug.ToLowerKey(string(title)))
-		if err := e.App.Save(record); err != nil {
-			if attempt < maxTitleRetries-1 {
-				candidate = TitleCandidate(fmt.Sprintf("%s_%d", req.TitleCandidate, attempt+2))
-				continue
-			}
-			return e.InternalServerError("save card", err)
-		}
-		return jsonWithMergeTarget(e, e.App, pot, title, req.TitleCandidate, id, record)
-	}
-	return e.InternalServerError("failed to update title after retries", nil)
-}
-
-// jsonWithMergeTarget writes record as JSON alongside a "mergeTarget"
-// field: the title of another card in the same pot whose header text
-// this save's header appears to duplicate (see findMergeTarget in
-// slug.go), or null when there's no such duplicate.
-func jsonWithMergeTarget(e *core.RequestEvent, app core.App, pot string, title CardTitle, rawHeader TitleCandidate, excludeID string, record *core.Record) error {
-	mergeTarget, err := findMergeTarget(app, pot, title, rawHeader, excludeID)
-	if err != nil {
-		return e.InternalServerError("find merge target", err)
-	}
-	var target any
-	if mergeTarget != "" {
-		target = string(mergeTarget)
-	}
-	return e.JSON(http.StatusOK, map[string]any{
-		"card":        record,
-		"mergeTarget": target,
-	})
-}

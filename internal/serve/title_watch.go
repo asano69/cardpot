@@ -34,6 +34,12 @@ type titleWatcher struct {
 	mu      sync.Mutex
 	timers  map[string]*time.Timer
 	lastRaw map[string]string
+
+	// notify reports a card's duplicate title to clients: mergeTarget is
+	// the title it duplicates, or "" when it no longer does. Set once at
+	// startup (see registerRoutes), before any room can be loaded; nil
+	// disables the report.
+	notify func(cardID, mergeTarget string) error
 }
 
 func newTitleWatcher() *titleWatcher {
@@ -97,24 +103,46 @@ func (w *titleWatcher) resolve(app core.App, room, raw string) {
 			slog.Warn("resolve title", "room", room, "error", err)
 			return
 		}
-		if record.GetString("title") == string(title) {
-			return // unchanged -- avoid a no-op write and its "updated" bump
-		}
-
-		record.Set("title", string(title))
-		// See cards.go's own comment on titleLc: this is what actually
-		// enforces uniqueness now. The URL segment is derived from
-		// title on demand (see internal/slug.FromTitle) instead of
-		// being stored.
-		record.Set("titleLc", slug.ToLowerKey(string(title)))
-		if err := app.Save(record); err != nil {
-			if attempt < maxTitleRetries-1 {
-				candidate = TitleCandidate(fmt.Sprintf("%s_%d", raw, attempt+2))
-				continue
+		// An unchanged title is not written again: avoid a no-op write and
+		// its "updated" bump.
+		if record.GetString("title") != string(title) {
+			record.Set("title", string(title))
+			// See cards.go's own comment on titleLc: this is what actually
+			// enforces uniqueness now. The URL segment is derived from
+			// title on demand (see internal/slug.FromTitle) instead of
+			// being stored.
+			record.Set("titleLc", slug.ToLowerKey(string(title)))
+			if err := app.Save(record); err != nil {
+				if attempt < maxTitleRetries-1 {
+					candidate = TitleCandidate(fmt.Sprintf("%s_%d", raw, attempt+2))
+					continue
+				}
+				slog.Warn("save resolved title", "room", room, "error", err)
+				return
 			}
-			slog.Warn("save resolved title", "room", room, "error", err)
 		}
+		// Reported even when the title did not change: a card created from
+		// a draft already holds its disambiguated title by now.
+		w.alert(app, pot, room, TitleCandidate(raw), title)
 		return
+	}
+}
+
+// alert tells clients whether the card's header collided with another
+// card's title (see findMergeTarget). A card that does not collide is
+// reported too, with an empty target, so a shown alert is cleared. A failure
+// is only logged: it must never affect the title itself.
+func (w *titleWatcher) alert(app core.App, pot, room string, raw TitleCandidate, title CardTitle) {
+	if w.notify == nil {
+		return
+	}
+	target, err := findMergeTarget(app, pot, raw, title, room)
+	if err != nil {
+		slog.Warn("find merge target", "room", room, "error", err)
+		return
+	}
+	if err := w.notify(room, string(target)); err != nil {
+		slog.Warn("notify merge target", "room", room, "error", err)
 	}
 }
 

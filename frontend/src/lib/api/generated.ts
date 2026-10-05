@@ -17,12 +17,6 @@ export interface CreateCardRequest {
   titleCandidate: TitleCandidate;
 }
 /**
- * UpdateCardTitleRequest is the body of POST /api/admin/cards/{id}/title.
- */
-export interface UpdateCardTitleRequest {
-  titleCandidate: TitleCandidate;
-}
-/**
  * LinkedCard is one card entry in the links1hop / links2hop responses.
  */
 export interface LinkedCard {

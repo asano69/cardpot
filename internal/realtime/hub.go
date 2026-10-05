@@ -17,6 +17,11 @@ const (
 	historyTTL  = 10 * time.Minute
 )
 
+// MergeAlertChannel carries the duplicate-title alerts of cards (see
+// PublishMergeAlert). Unlike the replicated collections' channels, it holds
+// no records.
+const MergeAlertChannel = "card_alerts"
+
 // Hub owns the centrifuge node and publishes the changes of every replicated
 // collection (see internal/replica) to the channel named after it. The app is
 // small enough that each client simply receives all events of a channel, and
@@ -28,7 +33,8 @@ type Hub struct {
 
 // New creates and starts the hub. Only authenticated users may connect (see
 // authenticate), and they may only subscribe to the channel of a replicated
-// collection; clients can never publish, because no OnPublish handler is set.
+// collection or to MergeAlertChannel; clients can never publish, because no
+// OnPublish handler is set.
 func New(app core.App) (*Hub, error) {
 	node, err := centrifuge.New(centrifuge.Config{})
 	if err != nil {
@@ -45,7 +51,7 @@ func New(app core.App) (*Hub, error) {
 
 	node.OnConnect(func(client *centrifuge.Client) {
 		client.OnSubscribe(func(e centrifuge.SubscribeEvent, cb centrifuge.SubscribeCallback) {
-			if _, ok := replica.Find(e.Channel); !ok {
+			if _, ok := replica.Find(e.Channel); !ok && e.Channel != MergeAlertChannel {
 				cb(centrifuge.SubscribeReply{}, centrifuge.ErrorPermissionDenied)
 				return
 			}

@@ -591,4 +591,30 @@
     cursor: not-allowed;
     opacity: 0.4;
   }
+
+  /* Banner above the note editor (see CardForm.tsx), styled like
+   * Cosense's .alert. Only the info variant is used so far. */
+  .alert {
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+
+    a {
+      font-weight: bold;
+      text-decoration: underline;
+    }
+
+    /* The action button sits right of the message. The gap is set here,
+     * by the parent, so .btn itself stays layout-neutral. */
+    > .btn {
+      margin: 0 0 0 1em;
+    }
+  }
+
+  .alert-info {
+    background-color: #d9edf7;
+    border-color: hsl(190, 65.2%, 84%);
+    color: #31708f;
+  }
 }

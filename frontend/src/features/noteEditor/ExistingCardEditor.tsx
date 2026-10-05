@@ -25,7 +25,6 @@ export interface ExistingCardEditorProps {
   // can never be lost in an encode/decode round trip. Omitted when
   // opening a card that wasn't just created from a draft.
   initialYdoc?: Y.Doc;
-  onMergeTarget?: (target: string | null) => void;
   existingTitle?: string;
   // Forwarded straight to NoteEditor (see its own initialSelection comment).
   initialSelection?: { anchor: number; head: number };

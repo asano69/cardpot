@@ -21,11 +21,12 @@ const shutdownTimeout = 10 * time.Second
 
 // Register starts the hub, mounts its WebSocket endpoint and publishes every
 // change of a replicated collection to that collection's channel. It is meant
-// to be called once from the server's OnServe hook.
-func Register(e *core.ServeEvent) error {
+// to be called once from the server's OnServe hook, and returns the hub so
+// other packages can publish through it (see PublishMergeAlert).
+func Register(e *core.ServeEvent) (*Hub, error) {
 	hub, err := New(e.App)
 	if err != nil {
-		return fmt.Errorf("start realtime hub: %w", err)
+		return nil, fmt.Errorf("start realtime hub: %w", err)
 	}
 	hub.BindHooks(e.App)
 
@@ -40,7 +41,22 @@ func Register(e *core.ServeEvent) error {
 		}
 		return te.Next()
 	})
-	return nil
+	return hub, nil
+}
+
+// PublishMergeAlert tells clients that the card cardID duplicates the title
+// of mergeTarget, or that it no longer duplicates anything when mergeTarget
+// is empty (sent as null, so a shown alert is cleared).
+func (h *Hub) PublishMergeAlert(cardID, mergeTarget string) error {
+	var target any
+	if mergeTarget != "" {
+		target = mergeTarget
+	}
+	data, err := json.Marshal(map[string]any{"cardId": cardID, "mergeTarget": target})
+	if err != nil {
+		return err
+	}
+	return h.publish(MergeAlertChannel, data)
 }
 
 // authenticate accepts any valid PocketBase auth token (a regular user or a

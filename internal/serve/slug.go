@@ -1,11 +1,9 @@
 // Package serve: slug.go resolves a unique display "title" for a card
 // from arbitrary candidate text (the card's header, or its first body
 // line if the header is empty). This is deliberately separate from
-// ydoc.go's Yjs persistence hook: title resolution reacts to an
-// explicit client request (see the /api/admin/cards and
-// /api/admin/cards/{id}/title routes in cards.go), not to every Yjs
-// update, so there's no need to detect whether the header actually
-// changed before recomputing it.
+// ydoc.go's Yjs persistence hook: title resolution is called for a new
+// card (see createCardHandler in cards.go) and by the debounced header
+// watcher (see title_watch.go), not on every Yjs update.
 //
 // A card's URL segment is no longer a separate stored field -- it's
 // derived from this same title on demand (see internal/slug.FromTitle
@@ -18,7 +16,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/pocketbase/dbx"
@@ -110,39 +107,23 @@ func titleBase(candidate TitleCandidate) string {
 	return base
 }
 
-// titleSuffixRe matches the trailing numeric dedup suffix a title gets
-// from resolveUniqueTitleInPot (e.g. "p_2" -> "p"). Only one level is
-// stripped per call.
-var titleSuffixRe = regexp.MustCompile(`^(.+)_\d+$`)
-
-// stripTitleSuffix strips one level of the trailing numeric dedup
-// suffix from title (see titleSuffixRe), or returns "" if title has no
-// such suffix.
-func stripTitleSuffix(title CardTitle) CardTitle {
-	m := titleSuffixRe.FindStringSubmatch(string(title))
-	if m == nil {
-		return ""
-	}
-	return CardTitle(m[1])
-}
-
-// findMergeTarget returns the title this card would collide with if
-// its own numeric dedup suffix were stripped (e.g. "p_2" -> "p"), but
-// only when that collision looks like a genuine duplicate rather than
-// two deliberately different headers that happen to share a stripped
-// title: the other card's own header (its card_lines position-0 line)
-// must match rawHeader once both are trimmed. Returns "" when no merge
-// alert should be shown.
-func findMergeTarget(app core.App, pot string, title CardTitle, rawHeader TitleCandidate, excludeID string) (CardTitle, error) {
-	stripped := stripTitleSuffix(title)
-	if stripped == "" {
+// findMergeTarget returns the title of the card that candidate collided
+// with, or "" when it did not. A collision means resolveTitle had to
+// disambiguate: the resolved title differs from the base title the
+// candidate asks for, because another live card of the pot (excluding
+// excludeID) already holds that base's titleLc. Comparing against the base
+// instead of looking at a "_<number>" suffix keeps a title the user typed
+// as "p_2" from being reported as a duplicate of "p".
+func findMergeTarget(app core.App, pot string, candidate TitleCandidate, title CardTitle, excludeID string) (CardTitle, error) {
+	base := titleBase(candidate)
+	if string(title) == base {
 		return "", nil
 	}
 
 	other, err := app.FindFirstRecordByFilter(
 		"cards",
-		"pot = {:pot} && title = {:title} && id != {:id} && "+notDeleted,
-		dbx.Params{"pot": pot, "title": string(stripped), "id": excludeID},
+		"pot = {:pot} && id != {:id} && titleLc = {:titleLc} && "+notDeleted,
+		dbx.Params{"pot": pot, "id": excludeID, "titleLc": slug.ToLowerKey(base)},
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", nil
@@ -150,42 +131,5 @@ func findMergeTarget(app core.App, pot string, title CardTitle, rawHeader TitleC
 	if err != nil {
 		return "", err
 	}
-
-	otherHeader, err := firstLineContent(app, other.Id)
-	if err != nil {
-		return "", err
-	}
-
-	if !headersMatch(rawHeader, otherHeader) {
-		return "", nil
-	}
-	return stripped, nil
-}
-
-// headersMatch reports whether two card headers should be treated as
-// the same title for merge-alert purposes: exact match once both are
-// trimmed of leading/trailing whitespace. strings.TrimSpace already
-// strips the full-width space (U+3000) commonly typed in Japanese
-// text, via Go's Unicode White_Space table, so no extra normalization
-// is needed here.
-func headersMatch(a, b TitleCandidate) bool {
-	return strings.TrimSpace(string(a)) == strings.TrimSpace(string(b))
-}
-
-// firstLineContent returns the content of a card's first line (see
-// lines.go's textblockTags), which is always its header -- or "" if
-// the card has no lines yet.
-func firstLineContent(app core.App, cardID string) (TitleCandidate, error) {
-	record, err := app.FindFirstRecordByFilter(
-		"card_lines",
-		"card = {:card} && ln = 0",
-		dbx.Params{"card": cardID},
-	)
-	if errors.Is(err, sql.ErrNoRows) {
-		return "", nil
-	}
-	if err != nil {
-		return "", err
-	}
-	return TitleCandidate(record.GetString("content")), nil
+	return CardTitle(other.GetString("title")), nil
 }

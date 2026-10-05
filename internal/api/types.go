@@ -11,11 +11,6 @@ type CreateCardRequest struct {
 	TitleCandidate TitleCandidate `json:"titleCandidate" tstype:"TitleCandidate"`
 }
 
-// UpdateCardTitleRequest is the body of POST /api/admin/cards/{id}/title.
-type UpdateCardTitleRequest struct {
-	TitleCandidate TitleCandidate `json:"titleCandidate" tstype:"TitleCandidate"`
-}
-
 // LinkedCard is one card entry in the links1hop / links2hop responses.
 type LinkedCard struct {
 	ID      string    `json:"id"`

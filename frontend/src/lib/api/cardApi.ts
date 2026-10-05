@@ -1,16 +1,14 @@
 import { ClientResponseError } from "pocketbase";
 import pb from "./pb";
 import type { CardRecord, TitleCandidate } from "../models/card";
-import type { CreateCardRequest, UpdateCardTitleRequest } from "./generated";
+import type { CreateCardRequest } from "./generated";
 import { titleToSlug } from "../models/slugify";
 
-// Response shape shared by createCard/updateCardTitle: the saved card,
-// plus a merge-alert target computed server-side (see findMergeTarget
-// in internal/serve/slug.go) -- the title of another card in the same
-// pot whose header this one's header appears to duplicate, or null.
+// Response shape of createCard: the saved card. A duplicate title is not
+// reported here: the server announces it on its own channel (see
+// lib/stores/mergeAlertStore.ts).
 export interface CardMutationResult {
   card: CardRecord;
-  mergeTarget: string | null;
 }
 
 // Creates a new "cards" record with a title resolved server-side from
@@ -23,25 +21,6 @@ export async function createCard(
 ): Promise<CardMutationResult> {
   const body: CreateCardRequest = { pot, titleCandidate };
   return await pb.send<CardMutationResult>("/api/admin/cards", {
-    method: "POST",
-    body,
-  });
-}
-
-// Resolves and saves a new title for an existing card (see
-// internal/serve/cards.go's updateCardTitleHandler). The card's URL
-// segment is derived from this same title on demand (see
-// lib/slugify.ts) instead of being a separate field kept in sync here.
-// Resolving a card by its URL slug now happens entirely client-side
-// against the already-loaded cardsById store (see
-// lib/stores/cardsStore.ts's findCardByPotAndSlug) instead of a dedicated
-// server route -- there is no per-open network round-trip anymore.
-export async function updateCardTitle(
-  cardId: string,
-  titleCandidate: TitleCandidate,
-): Promise<CardMutationResult> {
-  const body: UpdateCardTitleRequest = { titleCandidate };
-  return await pb.send<CardMutationResult>(`/api/admin/cards/${cardId}/title`, {
     method: "POST",
     body,
   });

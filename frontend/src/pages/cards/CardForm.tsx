@@ -1,5 +1,5 @@
 import { createSignal, createEffect, Show } from "solid-js";
-import { useParams, useNavigate } from "@solidjs/router";
+import { useParams, useNavigate, A } from "@solidjs/router";
 import { Alert } from "@kobalte/core/alert";
 import type * as Y from "yjs";
 import DraftCardEditor from "@/features/noteEditor/DraftCardEditor";
@@ -24,6 +24,7 @@ import {
 import { useTitle } from "@/lib/useTitle";
 import { useFooterSlot } from "@/lib/footerSlot";
 import { deriveCardGridTitle } from "@/lib/models/card";
+import { mergeTargetOf } from "@/lib/stores/mergeAlertStore";
 import { usePot } from "../pots/PotContext";
 import { isRenameOfOpenCard, type SyncedCard } from "./cardUrlSync";
 
@@ -42,7 +43,9 @@ export default function CardForm() {
     params.cardSlug ? undefined : {},
   );
   const [draftYdoc, setDraftYdoc] = createSignal<Y.Doc>();
-  const [mergeTarget, setMergeTarget] = createSignal<string | null>(null);
+  // The title the open card duplicates, announced by the server (see
+  // lib/stores/mergeAlertStore.ts).
+  const mergeTarget = () => mergeTargetOf(cardId());
   // Set only right before a draft's title resolves into a real card
   // (see handleCreated below), so the freshly mounted ExistingCardEditor
   // restores the caret where the draft editor left it. Reset to undefined
@@ -274,9 +277,22 @@ export default function CardForm() {
       <div class="page-column">
         <div class="col-page flex flex-col">
           <Show when={mergeTarget()}>
-            <Alert class="mb-2 rounded-md border border-[#dc3545] bg-card px-3 py-2 text-sm text-[#dc3545]">
-              "{mergeTarget()}" already exists.
-            </Alert>
+            {(target) => (
+              <div class="page-alert">
+                <Alert class="alert alert-info merge-pages">
+                  "
+                  <A href={`/${params.slug}/${titleToSegment(target())}`}>
+                    {target()}
+                  </A>
+                  " already exists.
+                  {/* Merging is not implemented yet: the button only
+                      reserves its place in the layout. */}
+                  <button type="button" class="btn btn-primary">
+                    Merge pages
+                  </button>
+                </Alert>
+              </div>
+            )}
           </Show>
           <Show
             when={cardId()}
@@ -289,7 +305,6 @@ export default function CardForm() {
                     potSlug={() => params.slug}
                     initialTitle={value.initialTitle}
                     onCreated={handleCreated}
-                    onMergeTarget={setMergeTarget}
                   />
                 )}
               </Show>
@@ -301,7 +316,6 @@ export default function CardForm() {
                 potSlug={() => params.slug}
                 initialYdoc={draftYdoc()}
                 existingTitle={cardsById[id]?.title}
-                onMergeTarget={setMergeTarget}
                 onContentSnapshot={(fn) => setContentSnapshot(() => fn)}
                 initialSelection={focusSelection()}
               />

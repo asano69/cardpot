@@ -73,27 +73,24 @@ export interface CollectionEvent<T> {
   record: T;
 }
 
-// Subscribes to every event of one replicated collection (see
-// internal/replica), across all pots, and returns an unsubscribe function.
-// The channel is named after the collection.
+// Subscribes to a server channel and returns an unsubscribe function. Every
+// message is passed to onData as the server published it.
 //
 // `onResync` fires when events may have been missed and could not be
 // replayed (server restart, history expired, history overflow). The caller
 // must then reload what it shows from the server. A plain short disconnect
 // does not trigger it: the server replays the missed events through
 // `onEvent` instead.
-export function subscribeToCollection<T>(
+export function subscribeToChannel<T>(
   name: string,
-  onEvent: (event: CollectionEvent<T>) => void,
+  onData: (data: T) => void,
   onResync: () => void,
 ): () => void {
   const connection = getClient();
   const subscription = connection.newSubscription(name);
   let subscribedBefore = false;
 
-  subscription.on("publication", (ctx) =>
-    onEvent(ctx.data as CollectionEvent<T>),
-  );
+  subscription.on("publication", (ctx) => onData(ctx.data as T));
   subscription.on("subscribed", (ctx) => {
     // The first subscription has no earlier state to recover. Any later one
     // that did not recover may have a gap.
@@ -109,4 +106,15 @@ export function subscribeToCollection<T>(
     subscription.unsubscribe();
     connection.removeSubscription(subscription);
   };
+}
+
+// Subscribes to every event of one replicated collection (see
+// internal/replica), across all pots. The channel is named after the
+// collection.
+export function subscribeToCollection<T>(
+  name: string,
+  onEvent: (event: CollectionEvent<T>) => void,
+  onResync: () => void,
+): () => void {
+  return subscribeToChannel<CollectionEvent<T>>(name, onEvent, onResync);
 }

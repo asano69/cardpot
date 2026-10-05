@@ -151,6 +151,38 @@ func TestCardHooks_IgnoreOtherCollections(t *testing.T) {
 	}
 }
 
+func TestPublishMergeAlert(t *testing.T) {
+	app := newTestApp(t)
+	hub, got := newTestHub(app, nil)
+
+	for _, target := range []string{"p", ""} {
+		if err := hub.PublishMergeAlert("c1", target); err != nil {
+			t.Fatalf("PublishMergeAlert(%q): %v", target, err)
+		}
+	}
+
+	if len(*got) != 2 {
+		t.Fatalf("got %d publications, want 2", len(*got))
+	}
+	for i, want := range []string{"p", ""} {
+		p := (*got)[i]
+		var event struct {
+			CardID      string  `json:"cardId"`
+			MergeTarget *string `json:"mergeTarget"`
+		}
+		if err := json.Unmarshal(p.data, &event); err != nil {
+			t.Fatalf("decode payload %s: %v", p.data, err)
+		}
+		if p.channel != MergeAlertChannel || event.CardID != "c1" {
+			t.Errorf("publication %d = (%q, %q), want (%q, %q)", i, p.channel, event.CardID, MergeAlertChannel, "c1")
+		}
+		// An empty target must be sent as null, not as "".
+		if (want == "") != (event.MergeTarget == nil) || (event.MergeTarget != nil && *event.MergeTarget != want) {
+			t.Errorf("publication %d mergeTarget = %v, want %q", i, event.MergeTarget, want)
+		}
+	}
+}
+
 // newAuthRecord saves a record with a password in collection and returns its
 // auth token.
 func newAuthRecord(t *testing.T, app core.App, collection *core.Collection, email string) (*core.Record, string) {

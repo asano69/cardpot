@@ -16,7 +16,6 @@ export interface DraftCardEditorProps {
     ydoc: Y.Doc,
     selection: { anchor: number; head: number },
   ) => void;
-  onMergeTarget?: (target: string | null) => void;
 }
 
 // A draft's Y.Doc is purely in-memory: no WebsocketProvider, and (unlike
@@ -49,7 +48,6 @@ export default function DraftCardEditor(props: DraftCardEditorProps) {
       mergeCards([result.card]);
       created = true;
       setSaveError(false);
-      props.onMergeTarget?.(result.mergeTarget);
       // Read after the request: the user may have kept typing or moved
       // the caret while it was in flight.
       const { anchor, head } = view?.state.selection.main ?? {

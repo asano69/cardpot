@@ -48,9 +48,13 @@ func registerRoutes(e *core.ServeEvent) error {
 
 	// Realtime card events (see internal/realtime). Authentication happens
 	// inside the hub (any valid auth token), not via this router's middleware.
-	if err := realtime.Register(e); err != nil {
+	hub, err := realtime.Register(e)
+	if err != nil {
 		return err
 	}
+	// A duplicate card title is announced to clients through the hub (see
+	// title_watch.go).
+	titleWatcherInstance.notify = hub.PublishMergeAlert
 
 	// Custom API routes that return or mutate user data go under this
 	// group so RequireAuth only has to be declared once here, instead of
@@ -61,7 +65,6 @@ func registerRoutes(e *core.ServeEvent) error {
 	admin := e.Router.Group("/api/admin")
 	admin.Bind(apis.RequireAuth())
 	admin.POST("/cards", createCardHandler)
-	admin.POST("/cards/{id}/title", updateCardTitleHandler)
 
 	// Public-data-shaped but still gated behind authentication (any
 	// regular user or superuser), since it returns the same card fields
