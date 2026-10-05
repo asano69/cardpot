@@ -37,7 +37,7 @@ export default function PotLayout(props: ParentProps) {
   const [pot] = createResource(() => params.slug, fetchPotByName);
 
   useTopBarPotLink(() =>
-    pot() ? { name: pot()!.title, slug: params.slug } : undefined,
+    pot() ? { name: pot()!.title, slug: params.slug, id: pot()!.id } : undefined,
   );
 
   // Drops the pot's loaded cards once the user leaves it (another pot, or

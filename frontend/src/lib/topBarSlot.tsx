@@ -29,6 +29,8 @@ export function useTopBarActions(actions: () => JSX.Element | undefined): void {
 export interface TopBarPotLink {
   name: string;
   slug: string;
+  // The pot's id, used by the title search to query the pot's cards.
+  id: string;
 }
 
 const [topBarPotLink, setTopBarPotLink] = createSignal<TopBarPotLink>();

@@ -4,6 +4,7 @@ import { Menu, Plus, X } from "@/lib/icons";
 import Logo from "../Logo";
 
 import ThemeToggle from "./ThemeToggle";
+import TitleSearch from "./TitleSearch";
 
 import UserMenu from "./UserMenu";
 import { topBarActions, topBarPotLink } from "@/lib/topBarSlot";
@@ -58,20 +59,26 @@ export default function TopBar(props: TopBarProps) {
           </Show>
         </div>
 
-        {/* Center slot: "add card" is shared between CardList and
-            CardForm (both register a pot link via useTopBarPotLink),
-            so it lives here instead of being duplicated as a per-page
-            button. Only shown while a pot is in context -- there's
-            nothing to add a card to from the pots list itself. */}
-        <div class="flex items-center justify-self-center">
+        {/* Center slot: "add card" and the title search are shared between
+            CardList and CardForm (both register a pot link via
+            useTopBarPotLink), so they live here instead of being
+            duplicated as per-page controls. Only shown while a pot is in
+            context -- there's nothing to add to or search from the pots
+            list itself. */}
+        <div class="col-search justify-self-center">
           <Show when={topBarPotLink()}>
             <A
               href={`/${topBarPotLink()!.slug}/new`}
               aria-label="Add card"
-              class="flex h-8 w-8 items-center justify-center rounded-full bg-[hsl(144,30%,50%)] text-white transition-colors hover:bg-[hsl(153,10%,50%)]"
+              title="New"
+              class="new-button flex h-8 w-8 items-center justify-center rounded-full bg-[hsl(144,30%,50%)] text-white transition-colors hover:bg-[hsl(153,10%,50%)]"
             >
               <Plus size={20} strokeWidth={4} />
             </A>
+            <TitleSearch
+              potId={topBarPotLink()!.id}
+              potSlug={topBarPotLink()!.slug}
+            />
           </Show>
         </div>
 
