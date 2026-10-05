@@ -1,3 +1,4 @@
+import { ClientResponseError } from "pocketbase";
 import pb from "./pb";
 
 // Thin wrapper around PocketBase's auth state, so components never need
@@ -26,8 +27,33 @@ export function avatarURL(): string | undefined {
   return pb.files.getURL(record, file, { thumb: "64x64" });
 }
 
+// Logs in a regular user, or a superuser: one form serves both. "users" is
+// tried first; wrong credentials for it (400) fall back to "_superusers".
+// Anything else (network, ...) is a real failure and is rethrown.
 export async function login(email: string, password: string): Promise<void> {
-  await pb.collection("_superusers").authWithPassword(email, password);
+  try {
+    await pb.collection("users").authWithPassword(email, password);
+  } catch (err) {
+    if (!(err instanceof ClientResponseError) || err.status !== 400) throw err;
+    await pb.collection("_superusers").authWithPassword(email, password);
+  }
+}
+
+// Re-validates the stored token with the server and extends it. This catches
+// a token the server has already invalidated (e.g. after a password change),
+// which the client-side expiry check cannot see. Only a response from the
+// server clears the session: a network error (status 0) must not log out an
+// offline user.
+export async function refreshSession(): Promise<void> {
+  const record = pb.authStore.record;
+  if (!pb.authStore.isValid || !record) return;
+  try {
+    await pb.collection(record.collectionName).authRefresh({ requestKey: null });
+  } catch (err) {
+    if (err instanceof ClientResponseError && err.status !== 0) {
+      pb.authStore.clear();
+    }
+  }
 }
 
 export function logout(): void {

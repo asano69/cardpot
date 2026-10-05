@@ -27,7 +27,7 @@ export default function UserMenu() {
             <img
               src={src()}
               alt=""
-              class="h-6 w-6 rounded-full object-cover"
+              class="h-8 w-8 rounded-full object-cover"
             />
           )}
         </Show>

@@ -5,20 +5,19 @@ import PocketBase from "pocketbase";
 // (e.g. POST /api/admin/jobs/rescan) from the frontend.
 const pb = new PocketBase("/");
 
-// A 401 means the server rejected the request as unauthenticated. A 403
-// also means the same thing in this app: every collection here is
-// superuser-only (listRule/viewRule = null), so PocketBase responds with
-// 403 "Only superusers can perform this action" -- not 401 -- whenever
-// the request carries an invalid/expired token, since an invalid token is
-// treated as no auth at all rather than a distinct "unauthenticated"
-// error. Either status means the client-side JWT expiry check in
-// pb.authStore.isValid failed to catch a session the server has already
-// invalidated (revoked token, password change, etc.). Clearing the store
-// here triggers AuthGate's onChange listener and falls back to Login,
-// instead of leaving requests (e.g. Catalog's fetchManifests) stuck
-// rejected forever behind a "Loading…" screen.
+// A 401 means the server rejected the request as unauthenticated: the
+// client-side JWT expiry check in pb.authStore.isValid missed a session the
+// server has already invalidated (revoked token, password change, etc.).
+// Clearing the store here triggers AuthGate's onChange listener and falls
+// back to Login.
+//
+// A 403 is deliberately NOT handled here: it is an ordinary "not allowed"
+// error for a regular user, and clearing the session on it would log the
+// user out. An invalid token sent to a collection route is treated as no
+// auth at all and yields empty lists rather than a 403, which is why
+// refreshSession() (see auth.ts) re-validates the token on its own.
 pb.afterSend = function (response: Response, data: unknown) {
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401) {
     pb.authStore.clear();
   }
   // In dev, also log the full response body for failed requests

@@ -4,9 +4,9 @@ import Logo from "@/components/Logo";
 
 import { login } from "@/lib/api/auth";
 
-// Login screen shown by AuthGate when no valid superuser session exists.
-// This app is single-user, so the PocketBase superuser account also
-// serves as the app's only login; there is no separate "users" collection.
+// Login screen shown by AuthGate when no valid session exists. One form
+// serves both regular users ("users" collection) and superusers; see
+// login() in lib/api/auth.ts.
 export default function Login() {
   const [email, setEmail] = createSignal("");
   const [password, setPassword] = createSignal("");

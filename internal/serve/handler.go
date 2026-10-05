@@ -43,11 +43,11 @@ func registerRoutes(e *core.ServeEvent) error {
 	// PoC: real-time Yjs sync (see docs/yjs-design.md). Intentionally
 	// unauthenticated for now -- {room} is any client-chosen room name,
 	// which also doubles as the "cards" record id (see NoteEditor.tsx).
-	// TODO: gate behind RequireSuperuserAuth once the design is validated.
+	// TODO: gate behind RequireAuth once the design is validated.
 	e.Router.GET("/yjs/{room}", apis.WrapStdHandler(yjsServer))
 
 	// Realtime card events (see internal/realtime). Authentication happens
-	// inside the hub (superuser token), not via this router's middleware.
+	// inside the hub (any valid auth token), not via this router's middleware.
 	if err := realtime.Register(e); err != nil {
 		return err
 	}
