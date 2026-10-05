@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/reearth/ygo/crdt"
 
@@ -40,6 +41,11 @@ type titleWatcher struct {
 	// startup (see registerRoutes), before any room can be loaded; nil
 	// disables the report.
 	notify func(cardID, mergeTarget string) error
+
+	// notifyRename reports that the card was renamed away from oldTitle,
+	// which other cards still link to (linkedFrom holds their titles).
+	// Set once at startup, like notify; nil disables the report.
+	notifyRename func(cardID, oldTitle string, linkedFrom []string) error
 }
 
 func newTitleWatcher() *titleWatcher {
@@ -106,11 +112,12 @@ func (w *titleWatcher) resolve(app core.App, room, raw string) {
 		// An unchanged title is not written again: avoid a no-op write and
 		// its "updated" bump.
 		if record.GetString("title") != string(title) {
-			record.Set("title", string(title))
 			// See cards.go's own comment on titleLc: this is what actually
 			// enforces uniqueness now. The URL segment is derived from
 			// title on demand (see internal/slug.FromTitle) instead of
 			// being stored.
+			previous := record.GetString("title")
+			record.Set("title", string(title))
 			record.Set("titleLc", slug.ToLowerKey(string(title)))
 			if err := app.Save(record); err != nil {
 				if attempt < maxTitleRetries-1 {
@@ -120,6 +127,7 @@ func (w *titleWatcher) resolve(app core.App, room, raw string) {
 				slog.Warn("save resolved title", "room", room, "error", err)
 				return
 			}
+			w.alertRename(app, pot, room, previous, string(title))
 		}
 		// Reported even when the title did not change: a card created from
 		// a draft already holds its disambiguated title by now.
@@ -144,6 +152,46 @@ func (w *titleWatcher) alert(app core.App, pot, room string, raw TitleCandidate,
 	if err := w.notify(room, string(target)); err != nil {
 		slog.Warn("notify merge target", "room", room, "error", err)
 	}
+}
+
+// alertRename tells clients that other cards still link to the title the card
+// just left. Nothing is sent when no live card links to it, or when only the
+// case changed (links match by titleLc, so they stay valid). A failure is only
+// logged: it must never affect the title itself.
+func (w *titleWatcher) alertRename(app core.App, pot, room, oldTitle, newTitle string) {
+	if w.notifyRename == nil {
+		return
+	}
+	oldLc := slug.ToLowerKey(oldTitle)
+	if oldLc == slug.ToLowerKey(newTitle) {
+		return
+	}
+	linkedFrom, err := linkingCardTitles(app, pot, oldLc, room)
+	if err != nil {
+		slog.Warn("find linking cards", "room", room, "error", err)
+		return
+	}
+	if len(linkedFrom) == 0 {
+		return
+	}
+	if err := w.notifyRename(room, oldTitle, linkedFrom); err != nil {
+		slog.Warn("notify rename", "room", room, "error", err)
+	}
+}
+
+// linkingCardTitles returns the titles of the live cards (other than
+// excludeID) whose text links to the target (pot, titleLc), sorted by title.
+func linkingCardTitles(app core.App, pot, titleLc, excludeID string) ([]string, error) {
+	titles := []string{}
+	err := app.DB().NewQuery(`
+		SELECT DISTINCT c.title FROM card_links l
+		JOIN cards c ON c.id = l.source
+		WHERE l.target_pot = {:pot} AND l.target_titleLc = {:titleLc}
+			AND l.deleted = '' AND c.deleted = '' AND c.id != {:id}
+		ORDER BY c.title`).
+		Bind(dbx.Params{"pot": pot, "titleLc": titleLc, "id": excludeID}).
+		Column(&titles)
+	return titles, err
 }
 
 // forget cancels room's pending debounce timer and drops its cached

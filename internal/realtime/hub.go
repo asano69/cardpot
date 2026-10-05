@@ -22,6 +22,10 @@ const (
 // no records.
 const MergeAlertChannel = "card_alerts"
 
+// RenameAlertChannel carries the alerts sent when a card is renamed away from
+// a title other cards still link to (see PublishRenameAlert).
+const RenameAlertChannel = "card_rename_alerts"
+
 // Hub owns the centrifuge node and publishes the changes of every replicated
 // collection (see internal/replica) to the channel named after it. The app is
 // small enough that each client simply receives all events of a channel, and
@@ -51,7 +55,7 @@ func New(app core.App) (*Hub, error) {
 
 	node.OnConnect(func(client *centrifuge.Client) {
 		client.OnSubscribe(func(e centrifuge.SubscribeEvent, cb centrifuge.SubscribeCallback) {
-			if _, ok := replica.Find(e.Channel); !ok && e.Channel != MergeAlertChannel {
+			if _, ok := replica.Find(e.Channel); !ok && e.Channel != MergeAlertChannel && e.Channel != RenameAlertChannel {
 				cb(centrifuge.SubscribeReply{}, centrifuge.ErrorPermissionDenied)
 				return
 			}

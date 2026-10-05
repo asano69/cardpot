@@ -4,6 +4,7 @@ import { loadAllPots } from "@/lib/stores/potsStore";
 import { watchCards } from "@/lib/stores/cardsStore";
 import { watchConnection } from "@/lib/stores/connectionStore";
 import { watchMergeAlerts } from "@/lib/stores/mergeAlertStore";
+import { watchRenameAlerts } from "@/lib/stores/renameAlertStore";
 import { watchDataReplicas } from "@/lib/dexie/dataReplicas";
 
 // Wraps every route so Header and Sidebar render once regardless of page.
@@ -24,6 +25,7 @@ export default function AppShell(props: ParentProps) {
     onCleanup(watchDataReplicas());
     onCleanup(watchConnection());
     onCleanup(watchMergeAlerts());
+    onCleanup(watchRenameAlerts());
   });
 
   return <MainLayout>{props.children}</MainLayout>;

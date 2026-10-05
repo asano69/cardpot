@@ -59,6 +59,18 @@ func (h *Hub) PublishMergeAlert(cardID, mergeTarget string) error {
 	return h.publish(MergeAlertChannel, data)
 }
 
+// PublishRenameAlert tells clients that the card cardID was renamed away from
+// oldTitle, which the cards titled linkedFrom still link to.
+func (h *Hub) PublishRenameAlert(cardID, oldTitle string, linkedFrom []string) error {
+	data, err := json.Marshal(map[string]any{
+		"cardId": cardID, "oldTitle": oldTitle, "linkedFrom": linkedFrom,
+	})
+	if err != nil {
+		return err
+	}
+	return h.publish(RenameAlertChannel, data)
+}
+
 // authenticate accepts any valid PocketBase auth token (a regular user or a
 // superuser). There is no per-pot filtering yet: every client receives the
 // events of all pots.

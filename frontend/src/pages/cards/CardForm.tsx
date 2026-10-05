@@ -1,11 +1,11 @@
 import { createSignal, createEffect, Show } from "solid-js";
 import { useParams, useNavigate, A } from "@solidjs/router";
-import { Alert } from "@kobalte/core/alert";
 import type * as Y from "yjs";
 import DraftCardEditor from "@/features/noteEditor/DraftCardEditor";
 import ExistingCardEditor from "@/features/noteEditor/ExistingCardEditor";
 import { getSyntaxTreeJson } from "@/features/noteEditor/debug";
 import Loading from "@/components/Loading";
+import PageAlert from "@/components/PageAlert";
 import ActionsMenu from "@/components/menus/ActionsMenu";
 import QueryDialog from "@/components/dialogs/QueryDialog";
 import { Trash2, Pin, PinOff, Wrench, Funnel } from "@/lib/icons";
@@ -18,6 +18,7 @@ import {
 } from "@/lib/stores/cardsStore";
 import {
   titleToSegment,
+  titleToLowerKey,
   segmentToSlug,
   slugToTitle,
 } from "@/lib/models/slugify";
@@ -25,6 +26,10 @@ import { useTitle } from "@/lib/useTitle";
 import { useFooterSlot } from "@/lib/footerSlot";
 import { deriveCardGridTitle } from "@/lib/models/card";
 import { mergeTargetOf } from "@/lib/stores/mergeAlertStore";
+import {
+  dismissRenameAlert,
+  renameAlertOf,
+} from "@/lib/stores/renameAlertStore";
 import { usePot } from "../pots/PotContext";
 import { isRenameOfOpenCard, type SyncedCard } from "./cardUrlSync";
 
@@ -46,6 +51,19 @@ export default function CardForm() {
   // The title the open card duplicates, announced by the server (see
   // lib/stores/mergeAlertStore.ts).
   const mergeTarget = () => mergeTargetOf(cardId());
+  // The pending rename alert of the open card, with the card's current title
+  // as the new one. Hidden once the card is back to its old title (titleLc is
+  // what links match by).
+  const renameAlert = () => {
+    const id = cardId();
+    const alert = renameAlertOf(id);
+    const card = id ? cardsById[id] : undefined;
+    if (!alert || !card) return undefined;
+    if (titleToLowerKey(card.title) === titleToLowerKey(alert.oldTitle)) {
+      return undefined;
+    }
+    return { ...alert, newTitle: card.title as string };
+  };
   // Set only right before a draft's title resolves into a real card
   // (see handleCreated below), so the freshly mounted ExistingCardEditor
   // restores the caret where the draft editor left it. Reset to undefined
@@ -278,20 +296,39 @@ export default function CardForm() {
         <div class="col-page flex flex-col">
           <Show when={mergeTarget()}>
             {(target) => (
-              <div class="page-alert">
-                <Alert class="alert alert-info merge-pages">
-                  "
-                  <A href={`/${params.slug}/${titleToSegment(target())}`}>
-                    {target()}
-                  </A>
-                  " already exists.
-                  {/* Merging is not implemented yet: the button only
-                      reserves its place in the layout. */}
-                  <button type="button" class="btn btn-primary">
-                    Merge pages
-                  </button>
-                </Alert>
-              </div>
+              <PageAlert variant="info" class="merge-pages">
+                "
+                <A href={`/${params.slug}/${titleToSegment(target())}`}>
+                  {target()}
+                </A>
+                " already exists.
+                {/* Merging is not implemented yet: the button only
+                    reserves its place in the layout. */}
+                <button type="button" class="btn btn-primary">
+                  Merge pages
+                </button>
+              </PageAlert>
+            )}
+          </Show>
+          <Show when={renameAlert()}>
+            {(alert) => (
+              <PageAlert
+                variant="success"
+                class="replace-page-links-alert"
+                onClose={() => dismissRenameAlert(alert().cardId)}
+              >
+                <p>
+                  This page is linked from {alert().linkedFrom.length}{" "}
+                  {alert().linkedFrom.length === 1 ? "page" : "pages"}:{" "}
+                  {alert().linkedFrom.join(", ")}
+                </p>
+                {/* Updating the links is not implemented yet: the button
+                    only reserves its place in the layout. */}
+                <button type="button" class="btn">
+                  Update links from [{alert().oldTitle}] to [
+                  {alert().newTitle}]
+                </button>
+              </PageAlert>
             )}
           </Show>
           <Show

@@ -55,6 +55,7 @@ func registerRoutes(e *core.ServeEvent) error {
 	// A duplicate card title is announced to clients through the hub (see
 	// title_watch.go).
 	titleWatcherInstance.notify = hub.PublishMergeAlert
+	titleWatcherInstance.notifyRename = hub.PublishRenameAlert
 
 	// Custom API routes that return or mutate user data go under this
 	// group so RequireAuth only has to be declared once here, instead of
