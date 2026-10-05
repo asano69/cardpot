@@ -27,6 +27,15 @@ export function avatarURL(): string | undefined {
   return pb.files.getURL(record, file, { thumb: "64x64" });
 }
 
+// First character of the logged-in user's name (or email, for a superuser,
+// who has no name), uppercased. Used as the avatar fallback. Array.from keeps
+// a non-BMP character (e.g. an emoji) in one piece.
+export function userInitial(): string {
+  const record = pb.authStore.record;
+  const label: string = record?.name || record?.email || "";
+  return Array.from(label)[0]?.toUpperCase() ?? "?";
+}
+
 // Logs in a regular user, or a superuser: one form serves both. "users" is
 // tried first; wrong credentials for it (400) fall back to "_superusers".
 // Anything else (network, ...) is a real failure and is rethrown.

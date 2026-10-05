@@ -1,8 +1,8 @@
 // frontend/src/components/layout/UserMenu.tsx
-import { Show } from "solid-js";
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
-import { EllipsisVertical, LogOut, Settings, Help, About } from "@/lib/icons";
-import { avatarURL, logout } from "@/lib/api/auth";
+import { Image } from "@kobalte/core/image";
+import { LogOut, Settings, Help, About } from "@/lib/icons";
+import { avatarURL, logout, userInitial } from "@/lib/api/auth";
 
 // Dropdown menu in the top-right corner, currently holding just logout.
 // Split out of TopBar so TopBar stays focused on layout (toggle + logo)
@@ -19,18 +19,26 @@ export default function UserMenu() {
 
   return (
     <DropdownMenu>
-      <DropdownMenu.Trigger aria-label="Open menu" class="icon-btn">
-        {/* The user's avatar cropped to a circle; falls back to the
-            menu icon when no avatar is set. */}
-        <Show when={avatarURL()} fallback={<EllipsisVertical size={24} />}>
-          {(src) => (
-            <img
-              src={src()}
-              alt=""
-              class="h-8 w-8 rounded-full object-cover"
-            />
-          )}
-        </Show>
+      <DropdownMenu.Trigger
+        aria-label="Open menu"
+        class="icon-btn flex items-center justify-center"
+      >
+        {/* The user's avatar cropped to a circle. While it is missing,
+            loading or failed, Kobalte shows the fallback: the user's
+            initial. */}
+        <Image
+          fallbackDelay={0}
+          class="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-hover-bg"
+        >
+          <Image.Img
+            src={avatarURL()}
+            alt=""
+            class="h-full w-full object-cover"
+          />
+          <Image.Fallback class="text-sm font-bold">
+            {userInitial()}
+          </Image.Fallback>
+        </Image>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content class="z-50 min-w-[160px] rounded-md border border-border bg-card p-1 shadow-popover outline-none font-sans">
