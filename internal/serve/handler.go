@@ -53,19 +53,21 @@ func registerRoutes(e *core.ServeEvent) error {
 	}
 
 	// Custom API routes that return or mutate user data go under this
-	// group so RequireSuperuserAuth only has to be declared once here,
-	// instead of on every individual route.
+	// group so RequireAuth only has to be declared once here, instead of
+	// on every individual route. Any authenticated record (a regular user
+	// or a superuser) is accepted; per-pot permissions do not exist yet.
+	// The path keeps its "admin" name only to avoid churn in the frontend,
+	// scripts and generated types.
 	admin := e.Router.Group("/api/admin")
-	admin.Bind(apis.RequireSuperuserAuth())
+	admin.Bind(apis.RequireAuth())
 	admin.POST("/cards", createCardHandler)
 	admin.POST("/cards/{id}/title", updateCardTitleHandler)
 
-	// Public-data-shaped but still gated behind superuser auth (see
-	// pb.ts: every collection here is superuser-only), since it
-	// returns the same card fields the "cards"/"card_links"
-	// collections themselves do.
+	// Public-data-shaped but still gated behind authentication (any
+	// regular user or superuser), since it returns the same card fields
+	// the "cards"/"card_links" collections themselves do.
 	pages := e.Router.Group("/api/pages")
-	pages.Bind(apis.RequireSuperuserAuth())
+	pages.Bind(apis.RequireAuth())
 	// links1hop / links2hop are meant for external callers such as agents. The
 	// frontend does not use them: it derives the same rows from its Dexie
 	// replica (see frontend/src/lib/dexie/relatedQuery.ts), checked against
@@ -87,7 +89,7 @@ func registerRoutes(e *core.ServeEvent) error {
 	// This shell is left unauthenticated on purpose: it's an empty
 	// HTML/JS bundle with no data in it. Every route that actually
 	// returns collection data is guarded below with
-	// RequireSuperuserAuth, so an unauthenticated visitor only ever
+	// RequireAuth, so an unauthenticated visitor only ever
 	// sees the login screen the SPA renders client-side.
 	e.Router.GET("/{path...}", apis.Static(static.FS, true))
 

@@ -43,15 +43,13 @@ func Register(e *core.ServeEvent) error {
 	return nil
 }
 
-// authenticate accepts only a valid PocketBase superuser token: every
-// collection in this app is superuser-only, so realtime must be too.
+// authenticate accepts any valid PocketBase auth token (a regular user or a
+// superuser). There is no per-pot filtering yet: every client receives the
+// events of all pots.
 func authenticate(app core.App, token string) (userID string, err error) {
 	record, err := app.FindAuthRecordByToken(token, core.TokenTypeAuth)
 	if err != nil {
 		return "", errors.New("invalid or expired auth token")
-	}
-	if !record.IsSuperuser() {
-		return "", errors.New("realtime requires a superuser")
 	}
 	return record.Id, nil
 }

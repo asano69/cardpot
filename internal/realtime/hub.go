@@ -26,7 +26,7 @@ type Hub struct {
 	publish func(channel string, data []byte) error // replaceable in tests
 }
 
-// New creates and starts the hub. Only superusers may connect (see
+// New creates and starts the hub. Only authenticated users may connect (see
 // authenticate), and they may only subscribe to the channel of a replicated
 // collection; clients can never publish, because no OnPublish handler is set.
 func New(app core.App) (*Hub, error) {

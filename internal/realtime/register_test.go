@@ -181,13 +181,13 @@ func TestAuthenticate(t *testing.T) {
 	if err := app.Save(members); err != nil {
 		t.Fatalf("create members collection: %v", err)
 	}
-	_, memberToken := newAuthRecord(t, app, members, "member@example.com")
+	member, memberToken := newAuthRecord(t, app, members, "member@example.com")
 
 	if got, err := authenticate(app, superuserToken); err != nil || got != superuser.Id {
 		t.Errorf("superuser: authenticate = (%q, %v), want (%q, nil)", got, err, superuser.Id)
 	}
-	if _, err := authenticate(app, memberToken); err == nil {
-		t.Error("non-superuser token was accepted")
+	if got, err := authenticate(app, memberToken); err != nil || got != member.Id {
+		t.Errorf("regular user: authenticate = (%q, %v), want (%q, nil)", got, err, member.Id)
 	}
 	if _, err := authenticate(app, "not-a-token"); err == nil {
 		t.Error("garbage token was accepted")
