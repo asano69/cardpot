@@ -616,8 +616,8 @@ func init() {
 					"body": "<p>Hello,</p>\n<p>Click on the button below to confirm your new email address.</p>\n<p>\n  <a class=\"btn\" href=\"{APP_URL}/_/#/auth/confirm-email-change/{TOKEN}\" target=\"_blank\" rel=\"noopener\">Confirm new email</a>\n</p>\n<p><i>If you didn't ask to change your email address, please ignore this email.</i></p>\n<p>\n  Thanks,<br/>\n  {APP_NAME} team\n</p>",
 					"subject": "Confirm your {APP_NAME} new email address"
 				},
-				"createRule": "",
-				"deleteRule": "id = @request.auth.id",
+				"createRule": null,
+				"deleteRule": null,
 				"emailChangeToken": {
 					"duration": 1800
 				},
@@ -1074,16 +1074,16 @@ func init() {
 					"CREATE UNIQUE INDEX ` + "`" + `idx_cards_pot_normtitle` + "`" + ` ON ` + "`" + `cards` + "`" + ` (\n  ` + "`" + `pot` + "`" + `,\n  (CASE WHEN REPLACE(` + "`" + `title` + "`" + `, ' ', '_') = 'new' THEN 'new_' ELSE REPLACE(` + "`" + `title` + "`" + `, ' ', '_') END)\n) WHERE ` + "`" + `deleted` + "`" + ` = ''",
 					"CREATE UNIQUE INDEX ` + "`" + `idx_x1tpfrw3fh` + "`" + ` ON ` + "`" + `cards` + "`" + ` (` + "`" + `pot` + "`" + `, ` + "`" + `titleLc` + "`" + `) WHERE ` + "`" + `deleted` + "`" + ` = ''"
 				],
-				"listRule": null,
+				"listRule": "@request.auth.id != \"\"",
 				"name": "cards",
 				"system": false,
 				"type": "base",
-				"updateRule": null,
-				"viewRule": null
+				"updateRule": "@request.auth.id != \"\" &&\n@request.body.pot:isset = false &&\n@request.body.title:isset = false &&\n@request.body.titleLc:isset = false &&\n@request.body.description:isset = false &&\n@request.body.image:isset = false &&\n@request.body.created:isset = false &&\n@request.body.updated:isset = false",
+				"viewRule": "@request.auth.id != \"\""
 			},
 			{
-				"createRule": null,
-				"deleteRule": null,
+				"createRule": "@request.auth.id != \"\"",
+				"deleteRule": "@request.auth.id != \"\"",
 				"fields": [
 					{
 						"autogeneratePattern": "[a-z0-9]{15}",
@@ -1198,12 +1198,12 @@ func init() {
 					"CREATE UNIQUE INDEX ` + "`" + `idx_1zt5k21ybq` + "`" + `\nON ` + "`" + `pots` + "`" + ` (` + "`" + `name` + "`" + ` COLLATE NOCASE);",
 					"CREATE UNIQUE INDEX ` + "`" + `idx_8nhmy9s1sd` + "`" + ` ON ` + "`" + `pots` + "`" + ` (` + "`" + `position` + "`" + `)"
 				],
-				"listRule": null,
+				"listRule": "@request.auth.id != \"\"",
 				"name": "pots",
 				"system": false,
 				"type": "base",
-				"updateRule": null,
-				"viewRule": null
+				"updateRule": "@request.auth.id != \"\"",
+				"viewRule": "@request.auth.id != \"\""
 			},
 			{
 				"createRule": null,
