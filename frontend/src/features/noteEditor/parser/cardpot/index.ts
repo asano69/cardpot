@@ -26,6 +26,9 @@ import { parseTitle } from "./rules/title";
 
 export { hideContent, isIndent, isMark, revealStyle };
 
+// Names of @lezer/markdown's own parsers, which are not Cardpot node names.
+// They must stay exactly as the library spells them (e.g. "InlineCode",
+// "Image"), or `remove` silently stops removing them.
 const defaultParsers = [
   "LinkReference",
   "IndentedCode",
@@ -39,12 +42,12 @@ const defaultParsers = [
   "SetextHeading",
   "Escape",
   "Entity",
-  "code",
+  "InlineCode",
   "HTMLTag",
   "Emphasis",
   "HardBreak",
   "Link",
-  "image",
+  "Image",
 ] as const;
 
 // `Paragraph` deliberately remains. It is the neutral leaf block provided by
