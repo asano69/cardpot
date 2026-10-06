@@ -81,6 +81,46 @@ export const editorTheme = EditorView.theme({
     wordBreak: "normal",
   },
 
+  // Flags of collaborators outside the visible area (see
+  // plugins/decorations/outsideCursors.ts). Positioned in screen
+  // coordinates, so they are fixed.
+  ".shared-cursors": {
+    pointerEvents: "none",
+  },
+  ".shared-cursors .cursor": {
+    position: "fixed",
+    zIndex: "101",
+    width: "2px",
+    height: "20px",
+    opacity: "0.7",
+    backgroundColor: "green",
+  },
+  ".shared-cursors .user-flag": {
+    marginTop: "-7px",
+    width: "50px",
+    height: "14px",
+    padding: "0 2px",
+    fontFamily: "var(--font-sans)",
+    fontSize: "10px",
+    lineHeight: "14px",
+    color: "#fff",
+    backgroundColor: "green",
+    whiteSpace: "nowrap",
+    textOverflow: "ellipsis",
+    overflow: "hidden",
+  },
+  ".shared-cursors .cursor.outside-top, .shared-cursors .cursor.outside-bottom":
+    {
+      zIndex: "1001",
+      opacity: "0.3",
+    },
+  ".shared-cursors .cursor.outside-top .user-flag": {
+    marginTop: "7px",
+  },
+  ".shared-cursors .cursor.outside-bottom .user-flag": {
+    marginTop: "-7px",
+  },
+
   ".cm-line": {
     lineHeight: "1.7",
     fontSize: "15px",

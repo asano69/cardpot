@@ -22,6 +22,7 @@ import { usePot } from "@/pages/pots/PotContext";
 import { yCollab } from "y-codemirror.next";
 import { defaultKeymapGroups } from "./keymaps";
 import { caretOnly } from "./awareness";
+import { outsideCursors } from "./plugins/decorations/outsideCursors";
 import * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
 import {
@@ -112,6 +113,12 @@ export default function NoteEditor(props: NoteEditorProps) {
           ytext,
           props.provider ? caretOnly(props.provider.awareness) : null,
         ),
+        // Flags of collaborators editing outside the visible area, pinned
+        // to its top or bottom edge (see outsideCursors.ts). A draft has no
+        // provider, so no collaborators either.
+        props.provider
+          ? outsideCursors(props.provider.awareness, props.ydoc, ytext)
+          : [],
         titleCandidateExtension(handleSlugCandidate),
         titleLineHighlight,
         editorTheme,
