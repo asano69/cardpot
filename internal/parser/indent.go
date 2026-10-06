@@ -11,6 +11,10 @@ func isJSSpace(r rune) bool {
 	return unicode.Is(unicode.Zs, r) || strings.ContainsRune("\t\n\v\f\r\u2028\u2029\uFEFF", r)
 }
 
+// IsSpace reports whether r is ECMAScript whitespace (\s), the parser's
+// definition of a word separator.
+func IsSpace(r rune) bool { return isJSSpace(r) }
+
 // measureIndent returns leading ECMAScript-whitespace character count and the
 // byte offset immediately after it.
 func measureIndent(line string) (depth, offset int) {

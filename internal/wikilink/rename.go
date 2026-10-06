@@ -25,7 +25,8 @@ type Edit struct {
 // every character around the link stay as they are. The title line, code
 // blocks and inline code hold no links (see the parser) and are never touched.
 // A hashtag ends at a space, so the spaces of newTitle become "_", which has
-// the same identity.
+// the same identity. Any other whitespace cannot be written in a hashtag, so
+// then a hashtag is replaced as a whole by a bracket link.
 func RenameEdits(text, oldLc, newTitle string) []Edit {
 	lines := strings.Split(text, "\n")
 	offsets := make([]int, len(lines)) // UTF-16 offset of each line start
@@ -36,6 +37,9 @@ func RenameEdits(text, oldLc, newTitle string) []Edit {
 	}
 
 	hashTag := strings.ReplaceAll(newTitle, " ", "_")
+	fitsHashTag := !strings.ContainsFunc(newTitle, func(r rune) bool {
+		return r != ' ' && parser.IsSpace(r)
+	})
 	var edits []Edit
 	for _, link := range parser.Parse(text).Links() {
 		if linkKey(link.Title) != oldLc {
@@ -44,7 +48,11 @@ func RenameEdits(text, oldLc, newTitle string) []Edit {
 		line := lines[link.Line]
 		from, to, insert := link.Start+1, link.End-1, newTitle // between "[" and "]"
 		if link.HashTag {
-			to, insert = link.End, hashTag // after "#"
+			if fitsHashTag {
+				to, insert = link.End, hashTag // after "#"
+			} else {
+				from, to, insert = link.Start, link.End, "["+newTitle+"]"
+			}
 		}
 		edits = append(edits, Edit{
 			From:   offsets[link.Line] + utf16Len(line[:from]),

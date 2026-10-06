@@ -34,6 +34,9 @@ func TestRenameEdits(t *testing.T) {
 		{"UTF-16 positions after an emoji", "T\n😀 [old] 日本 #old", "old", "n",
 			"T\n😀 [n] 日本 #n"},
 		{"other links stay", "T\n[other] [old_x]", "old", "n", "T\n[other] [old_x]"},
+		{"a hashtag becomes a bracket link when the title has other whitespace",
+			"T\n#old and [old]", "old", "New\u3000Name",
+			"T\n[New\u3000Name] and [New\u3000Name]"},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {

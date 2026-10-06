@@ -11,6 +11,7 @@ package serve
 import (
 	"fmt"
 	"log/slog"
+	"slices"
 	"sync"
 	"time"
 
@@ -166,32 +167,44 @@ func (w *titleWatcher) alertRename(app core.App, pot, room, oldTitle, newTitle s
 	if oldLc == slug.ToLowerKey(newTitle) {
 		return
 	}
-	linkedFrom, err := linkingCardTitles(app, pot, oldLc, room)
+	linking, err := linkingCards(app, pot, oldLc)
 	if err != nil {
 		slog.Warn("find linking cards", "room", room, "error", err)
 		return
 	}
-	if len(linkedFrom) == 0 {
+	// A card that only links to itself has nothing to warn about.
+	if !slices.ContainsFunc(linking, func(c linkingCard) bool { return c.ID != room }) {
 		return
+	}
+	linkedFrom := make([]string, len(linking))
+	for i, c := range linking {
+		linkedFrom[i] = c.Title
 	}
 	if err := w.notifyRename(room, oldTitle, linkedFrom); err != nil {
 		slog.Warn("notify rename", "room", room, "error", err)
 	}
 }
 
-// linkingCardTitles returns the titles of the live cards (other than
-// excludeID) whose text links to the target (pot, titleLc), sorted by title.
-func linkingCardTitles(app core.App, pot, titleLc, excludeID string) ([]string, error) {
-	titles := []string{}
+// linkingCard is a live card whose text links to a target.
+type linkingCard struct {
+	ID    string `db:"id"`
+	Title string `db:"title"`
+}
+
+// linkingCards returns the live cards whose text links to the target (pot,
+// titleLc), sorted by title. The renamed card is included: its own text may
+// link to its old title too.
+func linkingCards(app core.App, pot, titleLc string) ([]linkingCard, error) {
+	cards := []linkingCard{}
 	err := app.DB().NewQuery(`
-		SELECT DISTINCT c.title FROM card_links l
+		SELECT DISTINCT c.id, c.title FROM card_links l
 		JOIN cards c ON c.id = l.source
 		WHERE l.target_pot = {:pot} AND l.target_titleLc = {:titleLc}
-			AND l.deleted = '' AND c.deleted = '' AND c.id != {:id}
+			AND l.deleted = '' AND c.deleted = ''
 		ORDER BY c.title`).
-		Bind(dbx.Params{"pot": pot, "titleLc": titleLc, "id": excludeID}).
-		Column(&titles)
-	return titles, err
+		Bind(dbx.Params{"pot": pot, "titleLc": titleLc}).
+		All(&cards)
+	return cards, err
 }
 
 // forget cancels room's pending debounce timer and drops its cached

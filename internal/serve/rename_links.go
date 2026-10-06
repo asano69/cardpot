@@ -12,9 +12,11 @@
 //  2. Commit (one DB transaction): store every edited doc and bring the
 //     derived data (description, card_links) of every card up to date. All
 //     cards change or none does.
-//  3. Publish: a card whose room is loaded in memory gets the edit applied to
-//     its live doc, which also reaches the peers. This cannot be rolled back,
-//     so it only runs after the commit succeeded.
+//  3. Publish: a card whose room is loaded in memory has its room closed.
+//     Applying the edit to the server's doc would not reach the peers, so
+//     they reconnect instead and the room reloads from the log committed in
+//     step 2. This cannot be rolled back, so it only runs after the commit
+//     succeeded.
 package serve
 
 import (
@@ -71,9 +73,9 @@ func renameLinksHandler(e *core.RequestEvent) error {
 	return e.JSON(http.StatusOK, api.RenameLinksResponse{Updated: updated})
 }
 
-// renameLinks rewrites, in every other card of card's pot that links to
-// oldTitle, those links to card's current title. It returns how many cards
-// were changed.
+// renameLinks rewrites, in every card of card's pot that links to oldTitle
+// (card itself included), those links to card's current title. It returns how
+// many cards were changed.
 func renameLinks(app core.App, card *core.Record, oldTitle string) (int, error) {
 	newTitle := card.GetString("title")
 	oldLc := slug.ToLowerKey(oldTitle)
@@ -81,7 +83,7 @@ func renameLinks(app core.App, card *core.Record, oldTitle string) (int, error) 
 		return 0, nil // links match by titleLc, so they are still valid
 	}
 
-	ids, err := linkingCardIDs(app, card.GetString("pot"), oldLc, card.Id)
+	ids, err := linkingCardIDs(app, card.GetString("pot"), oldLc)
 	if err != nil {
 		return 0, fmt.Errorf("find linking cards: %w", err)
 	}
@@ -115,10 +117,10 @@ func renameLinks(app core.App, card *core.Record, oldTitle string) (int, error) 
 		if r.live == nil {
 			continue
 		}
-		// The edit is merged by item id, so it is safe even if peers typed
-		// since the snapshot was taken.
-		if err := r.live.ApplyUpdate(r.state); err != nil {
-			slog.Warn("apply link rename to live room", "room", r.id, "error", err)
+		// Peers reconnect and merge whatever they typed since the snapshot
+		// was taken, so nothing is lost by closing the room.
+		if err := yjsServer.CloseRoom(r.id, true); err != nil {
+			slog.Warn("close room after link rename", "room", r.id, "error", err)
 		}
 	}
 	return len(prepared), nil
@@ -236,17 +238,18 @@ func liveDoc(room string) *crdt.Doc {
 	return yjsServer.GetDoc(room)
 }
 
-// linkingCardIDs returns the ids of the live cards (other than excludeID)
-// whose text links to the target (pot, titleLc).
-func linkingCardIDs(app core.App, pot, titleLc, excludeID string) ([]string, error) {
+// linkingCardIDs returns the ids of the live cards whose text links to the
+// target (pot, titleLc). The renamed card is included: its own text may link
+// to its old title too.
+func linkingCardIDs(app core.App, pot, titleLc string) ([]string, error) {
 	ids := []string{}
 	err := app.DB().NewQuery(`
 		SELECT DISTINCT c.id FROM card_links l
 		JOIN cards c ON c.id = l.source
 		WHERE l.target_pot = {:pot} AND l.target_titleLc = {:titleLc}
-			AND l.deleted = '' AND c.deleted = '' AND c.id != {:id}
+			AND l.deleted = '' AND c.deleted = ''
 		ORDER BY c.id`).
-		Bind(dbx.Params{"pot": pot, "titleLc": titleLc, "id": excludeID}).
+		Bind(dbx.Params{"pot": pot, "titleLc": titleLc}).
 		Column(&ids)
 	return ids, err
 }

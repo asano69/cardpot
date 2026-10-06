@@ -8,7 +8,7 @@ func TestRenameLinks_ReplacesLinksAndSyncsDerivedData(t *testing.T) {
 	// "New" is a reserved title (see slug.IsReserved) and would be imported as
 	// "New_", so the renamed card uses an ordinary one.
 	runImport(t, app, "pot1", `{"pages":[
-		{"title":"Fresh","lines":["Fresh","own text"]},
+		{"title":"Fresh","lines":["Fresh","own [Old] text"]},
 		{"title":"B","lines":["B","see [Old] and #old"]},
 		{"title":"C","lines":["C","[other]"]}
 	]}`)
@@ -19,8 +19,11 @@ func TestRenameLinks_ReplacesLinksAndSyncsDerivedData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("renameLinks: %v", err)
 	}
-	if updated != 1 {
-		t.Errorf("updated = %d, want 1", updated)
+	if updated != 2 {
+		t.Errorf("updated = %d, want 2 (B and the renamed card itself)", updated)
+	}
+	if got, want := cardText(t, app, renamed.Id), "Fresh\nown [Fresh] text"; got != want {
+		t.Errorf("text of the renamed card = %q, want %q", got, want)
 	}
 
 	b := cardInPot(t, app, pot.Id, "b")
