@@ -1,8 +1,10 @@
-import { createSignal } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { useSortable } from "@dnd-kit/solid/sortable";
 import { Pencil, Trash2 } from "@/lib/icons";
+import { potCoverURL } from "@/lib/api/pots";
 import ActionsMenu from "@/components/menus/ActionsMenu";
+import PotIcon from "@/components/PotIcon";
 import PromptDialog from "@/components/dialogs/PromptDialog";
 import ConfirmDialog from "@/components/dialogs/ConfirmDialog";
 import { removePot, renamePot } from "@/lib/stores/potsStore";
@@ -18,8 +20,9 @@ export interface PotGridItemProps {
 }
 
 // A single pot in PotList's grid, styled identically to CardItem's own
-// card-grid-item -- but with no description (pots have no equivalent
-// field) and no pin indicator. Clicking the card opens that pot's own
+// card-grid-item -- but with the pot's cover image in place of a
+// description (pots have no equivalent field; without a cover, PotIcon's
+// logo is shown instead) and no pin indicator. Clicking the card opens that pot's own
 // card list; renaming and deleting -- which used to live inline on
 // PotItem's row -- now live behind an ActionsMenu ("...") overlaid on
 // the card, since there is no longer a separate "pot detail" page to
@@ -55,6 +58,27 @@ export default function PotGridItem(props: PotGridItemProps) {
           <div class="header">
             <h3 class="title">{props.pot.title}</h3>
           </div>
+          {/* Same cover-fit thumbnail as CardItem's (see
+              styles/components.css's .card-grid-item .thumbnail). */}
+          <Show
+            when={potCoverURL(props.pot)}
+            fallback={
+              <div class="flex flex-1 items-center justify-center">
+                <PotIcon />
+              </div>
+            }
+          >
+            {(src) => (
+              <div
+                class="thumbnail m-1.5"
+                // JSON.stringify quotes and escapes the URL as a CSS string,
+                // so characters such as "(" or ")" cannot end url() early.
+                style={{
+                  "background-image": `url(${JSON.stringify(src())})`,
+                }}
+              />
+            )}
+          </Show>
         </div>
       </A>
       {/* Sits as a sibling of the <a>, not inside it, so clicking it
