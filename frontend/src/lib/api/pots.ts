@@ -12,6 +12,13 @@ export async function fetchPotByName(name: string): Promise<PotRecord> {
     .getFirstListItem<PotRecord>(pb.filter("name = {:name}", { name }));
 }
 
+// URL of a pot's cover image, or undefined when none is set. The "cover"
+// field must not be "Protected" in PocketBase, or the browser cannot load it
+// in an <img>.
+export function potCoverURL(pot: PotRecord): string | undefined {
+  return pot.cover ? pb.files.getURL(pot, pot.cover) : undefined;
+}
+
 // Fetches every "pots" record, ordered by position.
 export async function fetchAllPots(): Promise<PotRecord[]> {
   return await pb

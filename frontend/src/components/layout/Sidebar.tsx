@@ -2,6 +2,7 @@ import { For, Show, type Component } from "solid-js";
 import { A } from "@solidjs/router";
 
 import { useVersion } from "@/lib/version";
+import Logo from "../Logo";
 import SidebarPotList from "./SidebarPotList";
 
 interface NavItem {
@@ -61,7 +62,11 @@ export default function Sidebar(props: SidebarProps) {
             floats over this column too, so its own top item needs the
             same offset to stay clear of the header. */}
         <div class="flex min-h-0 flex-1 flex-col overflow-y-auto pt-10">
-          <nav class="p-2 text-md">
+          {/* The way back to the pot list. */}
+          <div class="px-4 py-2">
+            <Logo linkable showTitle />
+          </div>
+          <nav class="px-2 text-md">
             <For each={NAV_ITEMS}>
               {(item) => (
                 <A

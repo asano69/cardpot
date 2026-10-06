@@ -1,7 +1,7 @@
 import { Show } from "solid-js";
 import { A } from "@solidjs/router";
-import { Menu, Plus, X } from "@/lib/icons";
-import Logo from "../Logo";
+import { Plus } from "@/lib/icons";
+import PotIcon from "../PotIcon";
 
 import ThemeToggle from "./ThemeToggle";
 import TitleSearch from "./TitleSearch";
@@ -33,19 +33,17 @@ export default function TopBar(props: TopBarProps) {
       <div class="grid w-full grid-cols-[1fr_auto_1fr] items-center px-2 md:px-8">
         <div class="flex items-center gap-3 justify-self-start">
           {/* The sidebar is always collapsed by default, so this
-              toggle is shown on every device. */}
+              toggle is shown on every device. Its icon is the current
+              pot's cover, mirroring the user icon on the right. */}
           <button
             type="button"
             onClick={() => props.onToggleSidebar()}
             aria-label="Toggle sidebar"
             aria-expanded={props.sidebarOpen}
-            class="icon-btn"
+            class="icon-btn flex items-center justify-center"
           >
-            {props.sidebarOpen ? <X size={22} /> : <Menu size={22} />}
+            <PotIcon src={topBarPotLink()?.cover} />
           </button>
-          {/* Version hidden on mobile: there isn't room for it next to
-              the hamburger toggle and title. */}
-          <Logo linkable />
           {/* Current pot's name, when the active page registered one
               (see CardList/CardForm's useTopBarPotLink call). Links
               back to that pot's card list. */}

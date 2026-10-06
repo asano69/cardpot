@@ -6,7 +6,7 @@ import {
 } from "solid-js";
 import { useParams } from "@solidjs/router";
 
-import { fetchPotByName } from "@/lib/api/pots";
+import { fetchPotByName, potCoverURL } from "@/lib/api/pots";
 import { useTopBarPotLink } from "@/lib/topBarSlot";
 import { ensurePotSynced, releasePot } from "@/lib/stores/cardsStore";
 import {
@@ -37,7 +37,14 @@ export default function PotLayout(props: ParentProps) {
   const [pot] = createResource(() => params.slug, fetchPotByName);
 
   useTopBarPotLink(() =>
-    pot() ? { name: pot()!.title, slug: params.slug, id: pot()!.id } : undefined,
+    pot()
+      ? {
+          name: pot()!.title,
+          slug: params.slug,
+          id: pot()!.id,
+          cover: potCoverURL(pot()!),
+        }
+      : undefined,
   );
 
   // Drops the pot's loaded cards once the user leaves it (another pot, or

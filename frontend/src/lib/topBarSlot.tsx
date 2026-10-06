@@ -31,6 +31,8 @@ export interface TopBarPotLink {
   slug: string;
   // The pot's id, used by the title search to query the pot's cards.
   id: string;
+  // URL of the pot's cover image, shown as the sidebar toggle's icon.
+  cover?: string;
 }
 
 const [topBarPotLink, setTopBarPotLink] = createSignal<TopBarPotLink>();

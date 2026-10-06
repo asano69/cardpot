@@ -19,22 +19,14 @@ export interface LogoProps {
   onClick?: () => void;
 }
 
-export default function Logo(props: LogoProps) {
-  // Shared with Sidebar's footer (see lib/version.ts), so both display
-  // the same value from one fetch implementation.
-  const version = useVersion();
-
-  const size = () => props.size ?? 30;
-  // Scales with the icon: at the old default size (40px), this works
-  // out to 24px, matching the previous fixed "text-2xl" class.
-  const titleFontSize = () => size() * 0.6;
-
-  const icon = (
+// The app's own icon. Also used as the fallback of PotIcon.
+export function LogoIcon(props: { size: number }) {
+  return (
     //Image: "Japan Flat Vectors" by maxicons (CC Attribution License)
     <svg
       viewBox="0 0 340 340"
       fill="#4B6F44"
-      style={{ width: `${size()}px`, height: `${size()}px` }}
+      style={{ width: `${props.size}px`, height: `${props.size}px` }}
       xmlns="http://www.w3.org/2000/svg"
     >
       <g id="SVGRepo_bgCarrier" stroke-width="0" />
@@ -120,6 +112,19 @@ export default function Logo(props: LogoProps) {
       </g>
     </svg>
   );
+}
+
+export default function Logo(props: LogoProps) {
+  // Shared with Sidebar's footer (see lib/version.ts), so both display
+  // the same value from one fetch implementation.
+  const version = useVersion();
+
+  const size = () => props.size ?? 30;
+  // Scales with the icon: at the old default size (40px), this works
+  // out to 24px, matching the previous fixed "text-2xl" class.
+  const titleFontSize = () => size() * 0.6;
+
+  const icon = <LogoIcon size={size()} />;
 
   const title = () =>
     props.showTitle && (
