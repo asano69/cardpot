@@ -56,6 +56,11 @@ type Node struct {
 	// one character is removed from each line; any deeper whitespace is part
 	// of the code and is kept.
 	Body []string
+
+	// Line, Start and End locate an inline node: its 0-based line in the card
+	// text and its byte range [Start, End) within that line. They are not set
+	// on block nodes.
+	Line, Start, End int
 }
 
 // String renders a node's tree shape.

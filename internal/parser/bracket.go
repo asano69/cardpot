@@ -45,7 +45,9 @@ func parseDecoration(s string, pos int) (*Node, int) {
 	if end < 0 || end == from {
 		return nil, 0
 	}
-	return &Node{Kind: KindDecoration, Children: parseInline(s[from:end])}, end + 1
+	children := parseInline(s[from:end])
+	shift(children, from)
+	return &Node{Kind: KindDecoration, Children: children}, end + 1
 }
 
 func parseBlank(s string, pos int) (*Node, int) {
@@ -65,6 +67,7 @@ func parseStrong(s string, pos int) (*Node, int) {
 	content := s[from:innerEnd]
 	decision := DecideBracket(content)
 	children := parseInline(content)
+	shift(children, from)
 	if decision.Kind == KindImage || decision.Kind == KindIcon {
 		children = []*Node{bracketNode(decision, content)}
 	}
@@ -77,7 +80,9 @@ func parseSingle(s string, pos int) (*Node, int) {
 		return nil, 0
 	}
 	content := s[pos+1 : end]
-	return bracketNode(DecideBracket(content), content), end + 1
+	n := bracketNode(DecideBracket(content), content)
+	shift(n.Children, pos+1) // the content starts right after "["
+	return n, end + 1
 }
 
 func bracketNode(decision Decision, content string) *Node {
@@ -89,6 +94,7 @@ func bracketNode(decision Decision, content string) *Node {
 	// a wiki link or hashtag inside it is found.
 	if decision.Label != "" {
 		n.Children = parseInline(decision.Label)
+		shift(n.Children, decision.LabelOffset)
 	}
 	return n
 }

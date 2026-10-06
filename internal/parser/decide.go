@@ -13,6 +13,8 @@ type Decision struct {
 	Src  string
 	// Label is the part of a labelled external link that is not its URL.
 	Label string
+	// LabelOffset is the byte offset of Label within the bracket content.
+	LabelOffset int
 }
 
 var (
@@ -65,10 +67,11 @@ func DecideBracket(content string) Decision {
 	// frontend rules/bracket.ts.
 	firstSpace := strings.IndexFunc(content, isJSSpace)
 	lastSpace := strings.LastIndexFunc(content, isJSSpace)
-	first, rest, last := content, "", ""
+	first, rest, last, restOffset := content, "", "", 0
 	if firstSpace >= 0 {
 		_, firstWidth := utf8.DecodeRuneInString(content[firstSpace:])
 		_, lastWidth := utf8.DecodeRuneInString(content[lastSpace:])
+		restOffset = firstSpace + firstWidth
 		first = content[:firstSpace]
 		rest = content[firstSpace+firstWidth:]
 		last = content[lastSpace+lastWidth:]
@@ -97,7 +100,7 @@ func DecideBracket(content string) Decision {
 		return Decision{Kind: KindLinkedImage, Src: src}
 	}
 	if firstKind == urlLink {
-		return Decision{Kind: KindExternalLink, Label: rest}
+		return Decision{Kind: KindExternalLink, Label: rest, LabelOffset: restOffset}
 	}
 	if lastKind != urlNone {
 		return Decision{Kind: KindExternalLink, Label: content[:lastSpace]}

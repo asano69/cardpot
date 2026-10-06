@@ -25,6 +25,7 @@ import {
 import { useTitle } from "@/lib/useTitle";
 import { useFooterSlot } from "@/lib/footerSlot";
 import { deriveCardGridTitle } from "@/lib/models/card";
+import { renameLinks } from "@/lib/api/cardApi";
 import { mergeTargetOf } from "@/lib/stores/mergeAlertStore";
 import {
   dismissRenameAlert,
@@ -63,6 +64,23 @@ export default function CardForm() {
       return undefined;
     }
     return { ...alert, newTitle: card.title as string };
+  };
+  const [updatingLinks, setUpdatingLinks] = createSignal(false);
+  const [updateLinksError, setUpdateLinksError] = createSignal("");
+  // Rewrites the links of the other cards from the old title to the card's
+  // current one. The alert goes away once the server has done it.
+  const handleUpdateLinks = async (id: string, oldTitle: string) => {
+    setUpdateLinksError("");
+    setUpdatingLinks(true);
+    try {
+      await renameLinks(id, oldTitle);
+      dismissRenameAlert(id);
+    } catch (err) {
+      console.error("[card-form] failed to update links:", err);
+      setUpdateLinksError("Failed to update the links.");
+    } finally {
+      setUpdatingLinks(false);
+    }
   };
   // Set only right before a draft's title resolves into a real card
   // (see handleCreated below), so the freshly mounted ExistingCardEditor
@@ -322,12 +340,20 @@ export default function CardForm() {
                   {alert().linkedFrom.length === 1 ? "page" : "pages"}:{" "}
                   {alert().linkedFrom.join(", ")}
                 </p>
-                {/* Updating the links is not implemented yet: the button
-                    only reserves its place in the layout. */}
-                <button type="button" class="btn">
+                <button
+                  type="button"
+                  class="btn"
+                  disabled={updatingLinks()}
+                  onClick={() =>
+                    handleUpdateLinks(alert().cardId, alert().oldTitle)
+                  }
+                >
                   Update links from [{alert().oldTitle}] to [
                   {alert().newTitle}]
                 </button>
+                <Show when={updateLinksError()}>
+                  <p>{updateLinksError()}</p>
+                </Show>
               </PageAlert>
             )}
           </Show>

@@ -65,9 +65,13 @@ generate:
 	go tool tygo generate
 
 .PHONY: test
-test:
-	cd frontend && bun run test
+test: test-front test-back
+
+test-back:
 	go test ./cmd/... ./internal/... ./scripts/...
+
+test-front:
+	cd frontend && bun run test
 
 lint: typecheck
 	golangci-lint run

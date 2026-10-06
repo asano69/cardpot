@@ -109,6 +109,20 @@ func Sync(app core.App, cardID, text string) error {
 	})
 }
 
+// linkKey returns the identity (titleLc) of a link title, or "" when the title
+// normalizes to no usable text. Shared by Sync and RenameEdits, so both always
+// agree on which links point at the same card.
+func linkKey(title string) string {
+	base := title
+	if strings.ContainsAny(base, "[]") {
+		base = slug.StripBracketLinks(base)
+	}
+	if base == "" {
+		return ""
+	}
+	return slug.ToLowerKey(base)
+}
+
 // target is one distinct link target of a card.
 type target struct {
 	titleLc string // identity, see internal/slug.ToLowerKey
@@ -127,14 +141,10 @@ func orderedTargets(titles []string) []target {
 	var targets []target
 	seen := make(map[string]bool, len(titles))
 	for _, title := range titles {
-		base := title
-		if strings.ContainsAny(base, "[]") {
-			base = slug.StripBracketLinks(base)
-		}
-		if base == "" {
+		key := linkKey(title)
+		if key == "" {
 			continue
 		}
-		key := slug.ToLowerKey(base)
 		if seen[key] {
 			continue
 		}

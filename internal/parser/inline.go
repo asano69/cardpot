@@ -13,6 +13,7 @@ func parseInline(s string) []*Node {
 			pos++
 			continue
 		}
+		n.Start, n.End = pos, end
 		nodes = append(nodes, n)
 		pos = end
 	}
@@ -45,6 +46,25 @@ func scanUntil(s string, from int, stop func(rune) bool) int {
 		from += width
 	}
 	return from
+}
+
+// shift moves the ranges of nodes, and of all their descendants, by delta
+// bytes. A rule that parses a substring uses it to bring the children into
+// the coordinates of the text the substring was cut from.
+func shift(nodes []*Node, delta int) {
+	for _, n := range nodes {
+		n.Start += delta
+		n.End += delta
+		shift(n.Children, delta)
+	}
+}
+
+// setLine records the line of nodes and of all their descendants.
+func setLine(nodes []*Node, line int) {
+	for _, n := range nodes {
+		n.Line = line
+		setLine(n.Children, line)
+	}
 }
 
 var (

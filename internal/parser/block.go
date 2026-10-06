@@ -49,7 +49,9 @@ func tryBlockRules(c *cursor) *Node {
 }
 
 func parseLine(c *cursor) *Node {
+	line := c.i
 	n := &Node{Kind: KindLine, Children: parseInline(c.line())}
+	setLine(n.Children, line)
 	c.next()
 	return n
 }
@@ -86,9 +88,16 @@ func parseTable(c *cursor) *Node {
 	c.next()
 
 	n := &Node{Kind: KindTable}
-	for _, line := range bodyLines(c, depth) {
-		for _, cell := range strings.Split(dropRunes(line, depth+1), "\t") {
-			n.Children = append(n.Children, parseInline(cell)...)
+	first := c.i
+	for i, line := range bodyLines(c, depth) {
+		rest := dropRunes(line, depth+1)
+		cellStart := len(line) - len(rest)
+		for _, cell := range strings.Split(rest, "\t") {
+			children := parseInline(cell)
+			shift(children, cellStart)
+			setLine(children, first+i)
+			n.Children = append(n.Children, children...)
+			cellStart += len(cell) + 1
 		}
 	}
 	return n
@@ -103,8 +112,13 @@ func parseQuote(c *cursor) *Node {
 	if !strings.HasPrefix(rest, ">") {
 		return nil
 	}
+	line, text := c.i, c.line()
 	c.next()
-	return &Node{Kind: KindQuote, Children: parseInline(strings.TrimPrefix(rest[1:], " "))}
+	content := strings.TrimPrefix(rest[1:], " ")
+	children := parseInline(content)
+	shift(children, len(text)-len(content))
+	setLine(children, line)
+	return &Node{Kind: KindQuote, Children: children}
 }
 
 func bodyLines(c *cursor, depth int) []string {

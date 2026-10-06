@@ -33,3 +33,14 @@ type Link2HopCard struct {
 	ViaTitle   string `json:"via_title"`
 	ViaTitleLc string `json:"via_titleLc"`
 }
+
+// RenameLinksRequest is the body of POST /api/admin/cards/{id}/rename-links.
+// The new title is not sent: the card's current title is used.
+type RenameLinksRequest struct {
+	OldTitle string `json:"oldTitle"`
+}
+
+// RenameLinksResponse reports how many cards had their links rewritten.
+type RenameLinksResponse struct {
+	Updated int `json:"updated"`
+}

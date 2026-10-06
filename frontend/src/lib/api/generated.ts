@@ -42,3 +42,16 @@ export interface Link2HopCard extends LinkedCard {
   via_title: string;
   via_titleLc: string;
 }
+/**
+ * RenameLinksRequest is the body of POST /api/admin/cards/{id}/rename-links.
+ * The new title is not sent: the card's current title is used.
+ */
+export interface RenameLinksRequest {
+  oldTitle: string;
+}
+/**
+ * RenameLinksResponse reports how many cards had their links rewritten.
+ */
+export interface RenameLinksResponse {
+  updated: number;
+}

@@ -1,7 +1,11 @@
 import { ClientResponseError } from "pocketbase";
 import pb from "./pb";
 import type { CardRecord, TitleCandidate } from "../models/card";
-import type { CreateCardRequest } from "./generated";
+import type {
+  CreateCardRequest,
+  RenameLinksRequest,
+  RenameLinksResponse,
+} from "./generated";
 import { titleToSlug } from "../models/slugify";
 
 // Response shape of createCard: the saved card. A duplicate title is not
@@ -24,6 +28,20 @@ export async function createCard(
     method: "POST",
     body,
   });
+}
+
+// Rewrites, in every other card that links to `oldTitle`, those links to the
+// current title of card `cardId` (see internal/serve/rename_links.go). The new
+// title is not sent: the server reads the card's current one.
+export async function renameLinks(
+  cardId: string,
+  oldTitle: string,
+): Promise<RenameLinksResponse> {
+  const body: RenameLinksRequest = { oldTitle };
+  return await pb.send<RenameLinksResponse>(
+    `/api/admin/cards/${cardId}/rename-links`,
+    { method: "POST", body },
+  );
 }
 
 // Resolves a single card by its URL slug, without fetching the rest

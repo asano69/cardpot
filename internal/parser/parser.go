@@ -31,13 +31,37 @@ func (n *Note) Walk(fn func(*Node) bool) bool {
 // LinkTitles returns the title of every wiki link and hashtag in document
 // order. A hashtag links to the title that follows its leading "#".
 func (n *Note) LinkTitles() (titles []string) {
+	for _, link := range n.Links() {
+		titles = append(titles, link.Title)
+	}
+	return titles
+}
+
+// Link is a wiki link or hashtag together with its place in the card text.
+type Link struct {
+	// Title is the title it links to (a hashtag's without its "#").
+	Title   string
+	HashTag bool
+	// Line is the 0-based line, Start and End the byte range [Start, End) of
+	// the whole notation ("[title]" or "#title") within that line.
+	Line, Start, End int
+}
+
+// Links returns every wiki link and hashtag in document order.
+func (n *Note) Links() (links []Link) {
 	n.Walk(func(node *Node) bool {
 		if node.Kind == KindWikiLink || node.Kind == KindHashTag {
-			titles = append(titles, node.Text)
+			links = append(links, Link{
+				Title:   node.Text,
+				HashTag: node.Kind == KindHashTag,
+				Line:    node.Line,
+				Start:   node.Start,
+				End:     node.End,
+			})
 		}
 		return true
 	})
-	return titles
+	return links
 }
 
 // FirstImageSrc returns the first image or linked-image source in document
