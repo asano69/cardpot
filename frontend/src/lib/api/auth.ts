@@ -31,9 +31,16 @@ export function avatarURL(): string | undefined {
 // who has no name), uppercased. Used as the avatar fallback. Array.from keeps
 // a non-BMP character (e.g. an emoji) in one piece.
 export function userInitial(): string {
-  const record = pb.authStore.record;
-  const label: string = record?.name || record?.email || "";
+  const label = currentUser()?.name ?? "";
   return Array.from(label)[0]?.toUpperCase() ?? "?";
+}
+
+// The logged-in user's id and display name (the name, falling back to the
+// email: a superuser has no name), or undefined without a session.
+export function currentUser(): { id: string; name: string } | undefined {
+  const record = pb.authStore.record;
+  if (!record) return undefined;
+  return { id: record.id, name: record.name || record.email || "" };
 }
 
 // Logs in a regular user, or a superuser: one form serves both. "users" is

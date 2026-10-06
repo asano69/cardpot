@@ -83,9 +83,9 @@ export default function NoteEditor(props: NoteEditorProps) {
     // The doc always starts from `ytext`'s current content here --
     // for a brand-new card that's empty, for an existing one it's
     // whatever the room already holds. yCollab keeps this view and
-    // `ytext` in sync afterward. Awareness (remote cursors) isn't
-    // wired up yet -- passing null keeps this skeleton minimal; see
-    // this file's own top comment.
+    // `ytext` in sync afterward, and draws the remote cursors from the
+    // provider's awareness. A draft has no provider, so it has no
+    // awareness (and no remote cursors) either.
     const state = EditorState.create({
       doc: ytext.toString(),
       extensions: [
@@ -107,7 +107,7 @@ export default function NoteEditor(props: NoteEditorProps) {
         // (see cardpotSyntax.ts's WikiLink) feel natural, with no
         // custom handling needed for the double-bracket case.
         closeBrackets(),
-        yCollab(ytext, null),
+        yCollab(ytext, props.provider?.awareness ?? null),
         titleCandidateExtension(handleSlugCandidate),
         titleLineHighlight,
         editorTheme,

@@ -9,8 +9,10 @@ import NoteEditor from "./index";
 import RelatedCards from "@/pages/cards/RelatedCards";
 import type { TitleCandidate } from "@/lib/models/card";
 import { extractLinks } from "@/lib/models/extractLinks";
+import { currentUser } from "@/lib/api/auth";
 import { cardsById } from "@/lib/stores/cardsStore";
 import { closeOwnLinks, setOwnLinks } from "@/lib/stores/relatedStore";
+import { setLocalUser } from "./awareness";
 
 // Wait this long after the last edit before the open card's links are
 // extracted again.
@@ -61,6 +63,10 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
     props.cardId,
     ydoc,
   );
+
+  // Lets the other peers draw this tab's cursor with the user's name.
+  const user = currentUser();
+  if (user) setLocalUser(provider.awareness, user);
 
   // Kept only because NoteEditor requires an onConfirmedTitle callback --
   // resolution itself now happens server-side (see the file comment above),

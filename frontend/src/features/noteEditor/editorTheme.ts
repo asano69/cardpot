@@ -45,6 +45,14 @@ export const editorTheme = EditorView.theme({
     pointerEvents: "none",
   },
 
+  // Remote cursors (y-codemirror.next): its base theme only shows the user
+  // name flag while the caret is hovered. It is always shown here, so a
+  // co-editor can be told apart at a glance.
+  ".cm-ySelectionInfo": {
+    opacity: "1",
+    fontFamily: "var(--font-sans)",
+  },
+
   ".cm-line": {
     lineHeight: "1.7",
     fontSize: "15px",
