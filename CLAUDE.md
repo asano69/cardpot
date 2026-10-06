@@ -67,3 +67,4 @@ import (
 - Kobalte v0.13+
 - Tailwind v4 / CSS Modules
 - clauderic/dnd-kit v0.5.0
+- jamiebuilds/tinykeys v4.0+
