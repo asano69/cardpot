@@ -21,6 +21,7 @@ import {
 import { usePot } from "@/pages/pots/PotContext";
 import { yCollab } from "y-codemirror.next";
 import { defaultKeymapGroups } from "./keymaps";
+import { caretOnly } from "./awareness";
 import * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
 import {
@@ -107,7 +108,10 @@ export default function NoteEditor(props: NoteEditorProps) {
         // (see cardpotSyntax.ts's WikiLink) feel natural, with no
         // custom handling needed for the double-bracket case.
         closeBrackets(),
-        yCollab(ytext, props.provider?.awareness ?? null),
+        yCollab(
+          ytext,
+          props.provider ? caretOnly(props.provider.awareness) : null,
+        ),
         titleCandidateExtension(handleSlugCandidate),
         titleLineHighlight,
         editorTheme,
