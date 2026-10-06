@@ -59,9 +59,9 @@
   --color-pined: #aaa;
   --color-field: #fefefe;
   --color-border: #d0d7de;
-  --color-hover-bg: #f0f0f0;
+  --color-hover-bg: rgba(0, 0, 0, 0.07);
   --color-hover-border: #777777;
-  --color-active-bg: #e4e4e4;
+  --color-active-bg: rgba(0, 0, 0, 0.12);
   --color-active-border: #666666;
   --color-nav: #ccccd1;
   --color-card-title-bg: #f2f2f3;
@@ -91,9 +91,9 @@
   --color-pined: #545860;
   --color-field: #333333;
   --color-border: #46494f;
-  --color-hover-bg: #3a3a3a;
+  --color-hover-bg: rgba(255, 255, 255, 0.1);
   --color-hover-border: #666666;
-  --color-active-bg: #444444;
+  --color-active-bg: rgba(255, 255, 255, 0.16);
   --color-active-border: #777777;
   --color-nav: #1a1b1e;
   --color-card-title-bg: #2b2e38;

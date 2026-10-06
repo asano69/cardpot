@@ -155,7 +155,7 @@ export default function Logo(props: LogoProps) {
     ) : props.linkable ? (
       <A
         href="/"
-        class="group flex items-center gap-2 transition-opacity hover:opacity-60 hover:scale-[1.02]"
+        class="group flex items-center gap-2 rounded-full px-2 py-1 transition-colors hover:bg-hover-bg"
       >
         {p.children}
       </A>
