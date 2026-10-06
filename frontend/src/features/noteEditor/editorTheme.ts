@@ -24,6 +24,11 @@ export const editorTheme = EditorView.theme({
   },
   ".cm-scroller": {
     fontFamily: "var(--font-editor)",
+    // The page scrolls, not the editor, so nothing needs clipping here. With
+    // the default "overflow: auto", a remote name flag at the right edge of a
+    // wrapped line (it extends rightwards from the caret) was cut off instead
+    // of showing in the page's padding.
+    overflow: "visible",
   },
   ".cm-content": {
     padding: "0",
