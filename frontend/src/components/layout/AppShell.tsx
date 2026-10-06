@@ -6,6 +6,7 @@ import { watchConnection } from "@/lib/stores/connectionStore";
 import { watchMergeAlerts } from "@/lib/stores/mergeAlertStore";
 import { watchRenameAlerts } from "@/lib/stores/renameAlertStore";
 import { watchDataReplicas } from "@/lib/dexie/dataReplicas";
+import { installHotkeys } from "@/lib/hotkeys";
 
 // Wraps every route so Header and Sidebar render once regardless of page.
 // Passed as Router's `root` prop (see lib/router.tsx) instead of wrapping
@@ -26,6 +27,7 @@ export default function AppShell(props: ParentProps) {
     onCleanup(watchConnection());
     onCleanup(watchMergeAlerts());
     onCleanup(watchRenameAlerts());
+    onCleanup(installHotkeys());
   });
 
   return <MainLayout>{props.children}</MainLayout>;

@@ -3,6 +3,7 @@ import { useNavigate } from "@solidjs/router";
 import { Search } from "@kobalte/core/search";
 import { Search as SearchIcon } from "@/lib/icons";
 import { suggestTitles } from "@/lib/dexie/titleSuggestQuery";
+import { useHotkeys } from "@/lib/hotkeys";
 import { titleToLowerKey, titleToSegment } from "@/lib/models/slugify";
 
 export interface TitleSearchProps {
@@ -20,6 +21,16 @@ export default function TitleSearch(props: TitleSearchProps) {
   const [titles, setTitles] = createSignal<string[]>([]);
   // Identifies the latest query, so a slow answer to an older input is dropped.
   let latest = 0;
+
+  // This component is only mounted while a pot is open (see TopBar), so the
+  // hotkey works on the card list and in the editor, and nowhere else.
+  let input: HTMLInputElement | undefined;
+  useHotkeys({
+    "search.focus": () => {
+      input?.focus();
+      input?.select();
+    },
+  });
 
   const handleInput = async (value: string) => {
     const request = ++latest;
@@ -61,6 +72,7 @@ export default function TitleSearch(props: TitleSearchProps) {
               the input. */}
           <Search.Control class="dropdown" aria-label="Search titles">
             <Search.Input
+              ref={input}
               class="form-control"
               autocomplete="off"
               spellcheck={false}
