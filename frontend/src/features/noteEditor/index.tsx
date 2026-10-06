@@ -13,6 +13,12 @@ import { codeBlockLines } from "./plugins/decorations/codeBlockLines";
 import { imageWidget } from "./plugins/decorations/imageWidget";
 import { mermaidBlock } from "./plugins/decorations/mermaidBlock";
 import { emptyLinks, setLinkAlive } from "./plugins/decorations/emptyLinks";
+import { telomere, setTelomere } from "./plugins/decorations/telomere";
+import {
+  startTelomereClock,
+  telomereNow,
+  telomereSnapshot,
+} from "@/lib/stores/telomereStore";
 import {
   linkAlive,
   linkAliveVersion,
@@ -139,6 +145,9 @@ export default function NoteEditor(props: NoteEditorProps) {
         imageWidget,
         mermaidBlock,
         emptyLinks,
+        // Edit-history bars left of each line (see
+        // plugins/decorations/telomere.ts).
+        telomere,
         // Suggests existing card titles while a wiki link is typed (see
         // plugins/interactions/titleCompletion.ts).
         titleCompletion(() => pot()?.id),
@@ -208,6 +217,18 @@ export default function NoteEditor(props: NoteEditorProps) {
               : null,
           ),
         }),
+      );
+    });
+
+    // Feeds the telomere store and its clock into the editor (see
+    // plugins/decorations/telomere.ts). Like the link-alive effect above,
+    // this re-runs on any store or clock change and sends a fresh snapshot.
+    onCleanup(startTelomereClock());
+    createEffect(() => {
+      const entries = telomereSnapshot();
+      const now = telomereNow();
+      untrack(() =>
+        view.dispatch({ effects: setTelomere.of({ entries, now }) }),
       );
     });
 

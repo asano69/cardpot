@@ -33,6 +33,32 @@ export const editorTheme = EditorView.theme({
   ".cm-content": {
     padding: "0",
   },
+  // Telomere gutter (see plugins/decorations/telomere.ts). Taken out of the
+  // flow and placed in the page's left padding (.page's 49px, see
+  // styles/components.css), so the text does not move. Colors follow
+  // Cosense's variables, with its own defaults.
+  ".cm-gutters": {
+    position: "absolute",
+    top: "0",
+    left: "-49px",
+    backgroundColor: "transparent",
+    border: "none",
+  },
+  ".cm-telomere": {
+    width: "20px",
+  },
+  ".telomere-border": {
+    boxSizing: "border-box",
+    height: "100%",
+    cursor: "pointer",
+    borderLeft: "5px solid var(--telomere-border, #e2e2e2)",
+  },
+  ".telomere-border.unread": {
+    borderLeftColor: "var(--telomere-unread, #89a3ff)",
+  },
+  ".telomere-border.updated": {
+    borderLeftColor: "var(--telomere-updated, #6b8cff)",
+  },
   // Selection color, drawn by drawSelection() (see index.tsx). The
   // focused selector is needed because CodeMirror's base theme sets
   // its own (purple) color for the focused state, which would
