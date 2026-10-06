@@ -35,6 +35,16 @@ from flask import Flask
 ```
 - ファイルを削除・移動するときはrm・mvコマンドで提示する。
 - 全コードを書き直すときは、古いファイルをSearch/Replaceせずに削除して、新規ファイルとして出力する。
+例)
+internal/parser/links_test.go (new file)
+```go
+package parser
+import (
+	"slices"
+	"testing"
+)
+```
+
 - Tailwindを使っており、marginのような親/兄弟レイアウトに影響を及ぼすスタイルは親コンポーネントから使うようにするべき。
 - jsxにおいて、return の先頭にコメント（{/*...*/} ）を置く場合は Fragment （<>...</>）で囲まなければならない。
 
