@@ -4,7 +4,7 @@ import { useSortable } from "@dnd-kit/solid/sortable";
 import { Pencil, Trash2 } from "@/lib/icons";
 import { potCoverURL } from "@/lib/api/pots";
 import ActionsMenu from "@/components/menus/ActionsMenu";
-import PotIcon from "@/components/PotIcon";
+import { LogoIcon } from "@/components/Logo";
 import PromptDialog from "@/components/dialogs/PromptDialog";
 import ConfirmDialog from "@/components/dialogs/ConfirmDialog";
 import { removePot, renamePot } from "@/lib/stores/potsStore";
@@ -21,8 +21,9 @@ export interface PotGridItemProps {
 
 // A single pot in PotList's grid, styled identically to CardItem's own
 // card-grid-item -- but with the pot's cover image in place of a
-// description (pots have no equivalent field; without a cover, PotIcon's
-// logo is shown instead) and no pin indicator. Clicking the card opens that pot's own
+// description (pots have no equivalent field; without a cover, the logo is
+// shown instead, fitted to the tile and faded) and no pin indicator.
+// Clicking the card opens that pot's own
 // card list; renaming and deleting -- which used to live inline on
 // PotItem's row -- now live behind an ActionsMenu ("...") overlaid on
 // the card, since there is no longer a separate "pot detail" page to
@@ -63,8 +64,10 @@ export default function PotGridItem(props: PotGridItemProps) {
           <Show
             when={potCoverURL(props.pot)}
             fallback={
-              <div class="flex flex-1 items-center justify-center">
-                <PotIcon />
+              // The logo stands in for a cover, so it fills the tile (not
+              // cropped to a circle like an avatar) and is faded.
+              <div class="flex min-h-0 flex-1 items-center justify-center p-3 opacity-40">
+                <LogoIcon class="h-full w-full" />
               </div>
             }
           >

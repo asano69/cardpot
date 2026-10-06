@@ -19,14 +19,21 @@ export interface LogoProps {
   onClick?: () => void;
 }
 
-// The app's own icon. Also used as the fallback of PotIcon.
-export function LogoIcon(props: { size: number }) {
+// The app's own icon. Also used as the fallback of PotIcon and of a pot's
+// cover in the pot grid. Without `size` it has no fixed pixel size, so the
+// caller sizes it through `class`.
+export function LogoIcon(props: { size?: number; class?: string }) {
   return (
     //Image: "Japan Flat Vectors" by maxicons (CC Attribution License)
     <svg
       viewBox="0 0 340 340"
       fill="#4B6F44"
-      style={{ width: `${props.size}px`, height: `${props.size}px` }}
+      class={props.class}
+      style={
+        props.size !== undefined
+          ? { width: `${props.size}px`, height: `${props.size}px` }
+          : undefined
+      }
       xmlns="http://www.w3.org/2000/svg"
     >
       <g id="SVGRepo_bgCarrier" stroke-width="0" />
