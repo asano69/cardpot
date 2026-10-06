@@ -9,7 +9,7 @@ import NoteEditor from "./index";
 import RelatedCards from "@/pages/cards/RelatedCards";
 import type { TitleCandidate } from "@/lib/models/card";
 import { extractLinks } from "@/lib/models/extractLinks";
-import { currentUser } from "@/lib/api/auth";
+import { authToken, currentUser } from "@/lib/api/auth";
 import { cardsById } from "@/lib/stores/cardsStore";
 import { closeOwnLinks, setOwnLinks } from "@/lib/stores/relatedStore";
 import { setLocalUser } from "./awareness";
@@ -62,7 +62,17 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
     `${wsProtocol}//${location.host}/yjs`,
     props.cardId,
     ydoc,
+    // A browser WebSocket cannot send an Authorization header, so the token
+    // goes in the query string (see internal/serve/yjs_auth.go).
+    { params: { token: authToken() } },
   );
+  // The token in the URL was fixed when the provider was created and may have
+  // expired since (the server also closes the connection at expiry). Every
+  // reconnect therefore presents the current one, which AuthGate keeps fresh
+  // (see refreshSession in lib/api/auth.ts).
+  provider.on("connection-close", () => {
+    provider.params.token = authToken();
+  });
 
   // Lets the other peers draw this tab's cursor with the user's name.
   const user = currentUser();

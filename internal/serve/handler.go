@@ -40,11 +40,10 @@ func registerRoutes(e *core.ServeEvent) error {
 		return re.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
 
-	// PoC: real-time Yjs sync (see docs/yjs-design.md). Intentionally
-	// unauthenticated for now -- {room} is any client-chosen room name,
-	// which also doubles as the "cards" record id (see NoteEditor.tsx).
-	// TODO: gate behind RequireAuth once the design is validated.
-	e.Router.GET("/yjs/{room}", apis.WrapStdHandler(yjsServer))
+	// Real-time Yjs sync (see docs/yjs-design.md). {room} is the "cards"
+	// record id. The auth token comes in the "token" query parameter and is
+	// checked before the upgrade (see yjs_auth.go).
+	e.Router.GET("/yjs/{room}", apis.WrapStdHandler(yjsAuth(e.App, yjsServer)))
 
 	// Realtime card events (see internal/realtime). Authentication happens
 	// inside the hub (any valid auth token), not via this router's middleware.

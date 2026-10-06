@@ -3,7 +3,6 @@ package realtime
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -69,17 +68,6 @@ func (h *Hub) PublishRenameAlert(cardID, oldTitle string, linkedFrom []string) e
 		return err
 	}
 	return h.publish(RenameAlertChannel, data)
-}
-
-// authenticate accepts any valid PocketBase auth token (a regular user or a
-// superuser). There is no per-pot filtering yet: every client receives the
-// events of all pots.
-func authenticate(app core.App, token string) (userID string, err error) {
-	record, err := app.FindAuthRecordByToken(token, core.TokenTypeAuth)
-	if err != nil {
-		return "", errors.New("invalid or expired auth token")
-	}
-	return record.Id, nil
 }
 
 // BindHooks publishes an event for every successful create, update and

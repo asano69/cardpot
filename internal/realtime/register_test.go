@@ -12,8 +12,6 @@ import (
 	_ "github.com/pocketbase/pocketbase/migrations"
 )
 
-const testPassword = "password123"
-
 func newTestApp(t *testing.T) core.App {
 	t.Helper()
 
@@ -183,48 +181,3 @@ func TestPublishMergeAlert(t *testing.T) {
 	}
 }
 
-// newAuthRecord saves a record with a password in collection and returns its
-// auth token.
-func newAuthRecord(t *testing.T, app core.App, collection *core.Collection, email string) (*core.Record, string) {
-	t.Helper()
-	record := core.NewRecord(collection)
-	record.SetEmail(email)
-	record.SetPassword(testPassword)
-	if err := app.Save(record); err != nil {
-		t.Fatalf("save auth record: %v", err)
-	}
-	token, err := record.NewAuthToken()
-	if err != nil {
-		t.Fatalf("new auth token: %v", err)
-	}
-	return record, token
-}
-
-func TestAuthenticate(t *testing.T) {
-	app := newTestApp(t)
-
-	superusers, err := app.FindCollectionByNameOrId(core.CollectionNameSuperusers)
-	if err != nil {
-		t.Fatalf("find superusers collection: %v", err)
-	}
-	superuser, superuserToken := newAuthRecord(t, app, superusers, "admin@example.com")
-
-	members := core.NewAuthCollection("members")
-	if err := app.Save(members); err != nil {
-		t.Fatalf("create members collection: %v", err)
-	}
-	member, memberToken := newAuthRecord(t, app, members, "member@example.com")
-
-	if got, err := authenticate(app, superuserToken); err != nil || got != superuser.Id {
-		t.Errorf("superuser: authenticate = (%q, %v), want (%q, nil)", got, err, superuser.Id)
-	}
-	if got, err := authenticate(app, memberToken); err != nil || got != member.Id {
-		t.Errorf("regular user: authenticate = (%q, %v), want (%q, nil)", got, err, member.Id)
-	}
-	if _, err := authenticate(app, "not-a-token"); err == nil {
-		t.Error("garbage token was accepted")
-	}
-	if _, err := authenticate(app, ""); err == nil {
-		t.Error("empty token was accepted")
-	}
-}

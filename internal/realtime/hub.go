@@ -7,6 +7,7 @@ import (
 	"github.com/centrifugal/centrifuge"
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/asano69/cardpot/internal/auth"
 	"github.com/asano69/cardpot/internal/replica"
 )
 
@@ -36,7 +37,7 @@ type Hub struct {
 }
 
 // New creates and starts the hub. Only authenticated users may connect (see
-// authenticate), and they may only subscribe to the channel of a replicated
+// auth.Verify), and they may only subscribe to the channel of a replicated
 // collection or to MergeAlertChannel; clients can never publish, because no
 // OnPublish handler is set.
 func New(app core.App) (*Hub, error) {
@@ -46,14 +47,30 @@ func New(app core.App) (*Hub, error) {
 	}
 
 	node.OnConnecting(func(_ context.Context, e centrifuge.ConnectEvent) (centrifuge.ConnectReply, error) {
-		userID, err := authenticate(app, e.Token)
+		session, err := auth.Verify(app, e.Token)
 		if err != nil {
 			return centrifuge.ConnectReply{}, centrifuge.DisconnectInvalidToken
 		}
-		return centrifuge.ConnectReply{Credentials: &centrifuge.Credentials{UserID: userID}}, nil
+		return centrifuge.ConnectReply{
+			// The connection must present a fresh token before this one
+			// expires (see OnRefresh below); the client SDK does that by
+			// calling getToken again.
+			Credentials:       &centrifuge.Credentials{UserID: session.UserID, ExpireAt: session.ExpiresAt.Unix()},
+			ClientSideRefresh: true,
+		}, nil
 	})
 
 	node.OnConnect(func(client *centrifuge.Client) {
+		client.OnRefresh(func(e centrifuge.RefreshEvent, cb centrifuge.RefreshCallback) {
+			session, err := auth.Verify(app, e.Token)
+			// A connection never changes hands: the new token must belong
+			// to the user who connected.
+			if err != nil || session.UserID != client.UserID() {
+				cb(centrifuge.RefreshReply{}, centrifuge.DisconnectInvalidToken)
+				return
+			}
+			cb(centrifuge.RefreshReply{ExpireAt: session.ExpiresAt.Unix()}, nil)
+		})
 		client.OnSubscribe(func(e centrifuge.SubscribeEvent, cb centrifuge.SubscribeCallback) {
 			if _, ok := replica.Find(e.Channel); !ok && e.Channel != MergeAlertChannel && e.Channel != RenameAlertChannel {
 				cb(centrifuge.SubscribeReply{}, centrifuge.ErrorPermissionDenied)

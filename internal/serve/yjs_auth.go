@@ -1,0 +1,77 @@
+// yjs_auth.go protects the Yjs websocket. A browser WebSocket cannot send an
+// Authorization header, so the PocketBase auth token comes in the "token"
+// query parameter. Everything is checked before the upgrade, so a rejected
+// client gets a plain HTTP status instead of an open socket.
+package serve
+
+import (
+	"bufio"
+	"errors"
+	"net"
+	"net/http"
+	"time"
+
+	"github.com/pocketbase/pocketbase/core"
+
+	"github.com/asano69/cardpot/internal/auth"
+)
+
+// yjsAuth lets a request through to next only when its token is valid and the
+// user may open the requested room.
+func yjsAuth(app core.App, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		session, err := auth.Verify(app, r.URL.Query().Get("token"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		// The room name is a card id (see ExistingCardEditor.tsx).
+		err = auth.CanAccessCard(app, session.UserID, r.PathValue("room"))
+		switch {
+		case errors.Is(err, auth.ErrCardNotFound):
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		case err != nil:
+			http.Error(w, "failed to check access to the card", http.StatusInternalServerError)
+			return
+		}
+
+		next.ServeHTTP(expiringWriter{ResponseWriter: w, expiresAt: session.ExpiresAt}, r)
+	})
+}
+
+// expiringWriter makes the websocket connection that is hijacked from it close
+// itself when the token it was opened with expires. The client reconnects with
+// its refreshed token (see ExistingCardEditor.tsx).
+type expiringWriter struct {
+	http.ResponseWriter
+	expiresAt time.Time
+}
+
+func (w expiringWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
+
+func (w expiringWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hijacker, ok := w.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, errors.New("response writer does not support hijacking")
+	}
+	conn, rw, err := hijacker.Hijack()
+	if err != nil {
+		return nil, nil, err
+	}
+	timer := time.AfterFunc(time.Until(w.expiresAt), func() { _ = conn.Close() })
+	return &expiringConn{Conn: conn, timer: timer}, rw, nil
+}
+
+// expiringConn stops the expiry timer when the connection is closed first, so
+// the timer does not keep a closed connection alive.
+type expiringConn struct {
+	net.Conn
+	timer *time.Timer
+}
+
+func (c *expiringConn) Close() error {
+	c.timer.Stop()
+	return c.Conn.Close()
+}

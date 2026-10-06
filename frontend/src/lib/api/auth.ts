@@ -4,6 +4,12 @@ import pb from "./pb";
 // Thin wrapper around PocketBase's auth state, so components never need
 // to know which backend they are talking to.
 
+// The current auth token, for connections that cannot use the PocketBase
+// client (the Yjs websocket). Empty without a session.
+export function authToken(): string {
+  return pb.authStore.token;
+}
+
 // Whether a valid (non-expired) session currently exists.
 export function isAuthenticated(): boolean {
   return pb.authStore.isValid;
