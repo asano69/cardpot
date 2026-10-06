@@ -10,6 +10,7 @@ export { default as ChevronsRight } from "lucide-solid/icons/chevrons-right";
 
 export { default as Wrench } from "lucide-solid/icons/wrench";
 export { default as Pot } from "lucide-solid/icons/amphora";
+export { default as GalleryVerticalEnd } from "lucide-solid/icons/gallery-vertical-end";
 export { default as Sun } from "lucide-solid/icons/sun";
 export { default as Moon } from "lucide-solid/icons/moon";
 export { default as SunMoon } from "lucide-solid/icons/sun-moon";

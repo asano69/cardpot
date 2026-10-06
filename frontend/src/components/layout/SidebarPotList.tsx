@@ -4,6 +4,7 @@ import { DragDropProvider } from "@dnd-kit/solid";
 import { useSortable, isSortable } from "@dnd-kit/solid/sortable";
 import { PointerSensor, KeyboardSensor } from "@dnd-kit/dom";
 
+import { GalleryVerticalEnd } from "@/lib/icons";
 import { orderedPots, reorderPot } from "@/lib/stores/potsStore";
 import type { PotRecord } from "@/lib/models/pot";
 
@@ -22,9 +23,8 @@ interface SidebarPotRowProps {
   index: number;
 }
 
-// A single low, single-column row -- unlike PotList's square
-// card-grid-item, but reusing the same color tokens (border/bg/hover/
-// shadow) so it still reads as part of the same design.
+// A plain text row: the pot icon followed by its title. No border,
+// background or shadow of its own, only a hover/active tint.
 function SidebarPotRow(props: SidebarPotRowProps) {
   // Getter syntax (not a plain destructure) so the hook re-reads
   // id/index reactively instead of only once at setup -- see
@@ -43,9 +43,10 @@ function SidebarPotRow(props: SidebarPotRowProps) {
       <A
         href={`/${props.pot.name}`}
         activeClass="bg-active-bg"
-        class="block truncate  border border-border bg-card p-3 m-0.5 text-md  shadow-card transition-colors hover:bg-hover-bg"
+        class="flex items-center gap-2 rounded-md px-2 py-1.5 text-base transition-colors hover:bg-hover-bg"
       >
-        {props.pot.title}
+        <GalleryVerticalEnd size={18} class="shrink-0" />
+        <span class="truncate">{props.pot.title}</span>
       </A>
     </li>
   );
