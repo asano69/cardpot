@@ -10,10 +10,6 @@ import type { WebsocketProvider } from "y-websocket";
 
 type Awareness = WebsocketProvider["awareness"];
 
-// Fixed UI covering the scroll area: TopBar (h-10) and Footer (20px).
-// Keep in sync with MainLayout and styles/components.css's .footer.
-const TOP_INSET_PX = 40;
-const BOTTOM_INSET_PX = 20;
 // Height of ".shared-cursors .cursor" (see editorTheme.ts).
 const CURSOR_HEIGHT_PX = 20;
 
@@ -25,22 +21,18 @@ interface Flag {
 }
 
 // The visible part of the scrolling ancestor (<main> in MainLayout), in
-// screen coordinates, without the fixed bars over it.
+// screen coordinates. The fixed TopBar and Footer are not subtracted: the
+// flags are drawn over them (they ignore pointer events), so a flag always
+// sits at the very edge of the screen.
 function visibleArea(el: HTMLElement): { top: number; bottom: number } {
   for (let p = el.parentElement; p; p = p.parentElement) {
     const { overflowY } = getComputedStyle(p);
     if (overflowY === "auto" || overflowY === "scroll") {
       const rect = p.getBoundingClientRect();
-      return {
-        top: rect.top + TOP_INSET_PX,
-        bottom: rect.bottom - BOTTOM_INSET_PX,
-      };
+      return { top: rect.top, bottom: rect.bottom };
     }
   }
-  return {
-    top: TOP_INSET_PX,
-    bottom: window.innerHeight - BOTTOM_INSET_PX,
-  };
+  return { top: 0, bottom: window.innerHeight };
 }
 
 // Shows the flag of every collaborator whose caret is above or below the
@@ -104,6 +96,24 @@ class OutsideCursors implements PluginValue {
     return Math.min(abs.index, this.view.state.doc.length);
   }
 
+  // x of the caret at `pos`. At a wrap boundary the remote caret widget sits
+  // at the end of the previous row, so coordsAtPos(pos) would report that
+  // row's right edge. The character after `pos` is measured instead: when it
+  // is on another row than `pos`, the caret really belongs to the start of
+  // that row.
+  private caretX(pos: number): number | null {
+    const { view } = this;
+    const here = view.coordsAtPos(pos, 1);
+    if (!here || pos >= view.state.doc.length) return here?.left ?? null;
+    const next = view.coordsAtPos(pos + 1, -1); // right edge of the next char
+    if (!next || next.top <= here.top + 1) return here.left;
+    // Left edge of the next char: its right edge minus one character width.
+    return Math.max(
+      next.left - view.defaultCharacterWidth,
+      view.contentDOM.getBoundingClientRect().left,
+    );
+  }
+
   private read(): Flag[] {
     const { view, awareness } = this;
     const area = visibleArea(view.dom);
@@ -117,8 +127,8 @@ class OutsideCursors implements PluginValue {
       const pos = this.headIndex(state.cursor.head);
       if (pos === null) continue;
 
-      const coords = view.coordsAtPos(pos);
-      if (coords) this.lastX.set(clientId, coords.left);
+      const x = this.caretX(pos);
+      if (x !== null) this.lastX.set(clientId, x);
 
       // lineBlockAt also works for lines that are not rendered.
       const block = view.lineBlockAt(pos);
