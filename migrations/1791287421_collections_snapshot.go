@@ -1166,7 +1166,7 @@ func init() {
 						"mimeTypes": null,
 						"name": "cover",
 						"presentable": false,
-						"protected": true,
+						"protected": false,
 						"required": false,
 						"system": false,
 						"thumbs": null,
