@@ -55,7 +55,10 @@ export const editorTheme = EditorView.theme({
   // hovered; it is always shown here.
   ".cm-ySelectionCaret": {
     opacity: "0.7",
+    // The caret line is the sum of both borders; the negative margins keep
+    // the text from shifting. 2px + 2px = a 4px line.
   },
+
   ".cm-ySelectionCaretDot": {
     display: "none",
   },

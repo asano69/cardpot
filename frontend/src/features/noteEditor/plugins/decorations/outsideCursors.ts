@@ -127,8 +127,8 @@ class OutsideCursors implements PluginValue {
       const pos = this.headIndex(state.cursor.head);
       if (pos === null) continue;
 
-      const x = this.caretX(pos);
-      if (x !== null) this.lastX.set(clientId, x);
+      const coords = view.coordsAtPos(pos);
+      if (coords) this.lastX.set(clientId, coords.left);
 
       // lineBlockAt also works for lines that are not rendered.
       const block = view.lineBlockAt(pos);
