@@ -36,11 +36,13 @@ export function userInitial(): string {
 }
 
 // The logged-in user's id and display name (the name, falling back to the
-// email: a superuser has no name), or undefined without a session.
+// local part of the email, i.e. the text before "@": a superuser has no
+// name), or undefined without a session.
 export function currentUser(): { id: string; name: string } | undefined {
   const record = pb.authStore.record;
   if (!record) return undefined;
-  return { id: record.id, name: record.name || record.email || "" };
+  const emailLocalPart = String(record.email ?? "").split("@")[0];
+  return { id: record.id, name: record.name || emailLocalPart };
 }
 
 // Logs in a regular user, or a superuser: one form serves both. "users" is

@@ -45,12 +45,35 @@ export const editorTheme = EditorView.theme({
     pointerEvents: "none",
   },
 
-  // Remote cursors (y-codemirror.next): its base theme only shows the user
-  // name flag while the caret is hovered. It is always shown here, so a
-  // co-editor can be told apart at a glance.
+  // Remote cursors (y-codemirror.next): a 2px green caret with a small green
+  // name flag above it. Its base theme only shows the flag while the caret is
+  // hovered; it is always shown here.
+  ".cm-ySelectionCaret": {
+    opacity: "0.7",
+  },
+  ".cm-ySelectionCaretDot": {
+    display: "none",
+  },
   ".cm-ySelectionInfo": {
     opacity: "1",
+    top: "-7px",
+    width: "50px",
+    height: "14px",
+    padding: "0 2px",
     fontFamily: "var(--font-sans)",
+    fontSize: "10px",
+    lineHeight: "14px",
+    color: "#fff",
+    backgroundColor: "green",
+    whiteSpace: "nowrap",
+    textOverflow: "ellipsis",
+    overflow: "hidden",
+    // The flag sits inside a ".cm-line", whose hanging indent
+    // (".cm-line.indent") sets a negative text-indent and whose baseline sets
+    // word-break: break-all. Both are inherited and would shift the name left
+    // (cutting off its first characters) or break it, so they are reset here.
+    textIndent: "0",
+    wordBreak: "normal",
   },
 
   ".cm-line": {
