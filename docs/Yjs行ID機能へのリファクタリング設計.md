@@ -164,3 +164,22 @@ lineMeta.set(lineIdAt(ytext, line.from), { note: "..." });
 2. **インポートの上書き(`replaceContent`)は全行が新IDになります。** 全削除→全挿入のためです。ルート単位の再インポートでは履歴が消える、という仕様で問題ないか確認させてください。`rename_links`は該当リンク内だけを編集するので、他の行のIDは保たれます。
 3. **Undoで行IDが変わる件は許容でよい** 将来、履歴をY.Mapに持たせる段階で再検討できます。
 
+
+## Progress Note
+
+### 手順2: 変更内容
+
+フロントのみで、サーバーのcard_linesは手順4まで併存します。
+
+- telomere.ts: lineMarkerがlineIdAt(ytext, line.from)でIDを計算します。そのためTelomereDataからlineIdsを外し、telomereをytextを受け取るファクトリにします。
+- index.tsx: lineEntries(Dexieのliveクエリ)が不要になるので、手順3まで待たずにここで外します。残すと未使用変数でlintに落ちます。
+- cardId propの削除: NoteEditorでprops.cardIdを使っていたのはlineEntriesだけでした。これも未使用になるので、NoteEditorPropsとExistingCardEditorの受け渡しから削除します。
+
+cardLinesCollection.ts、cardLine.ts、dataReplicas.tsの該当行は、手順3で消します。
+
+
+**注意点**
+- 懸念点は1つだけあります。手元で確認したいのは、ローカル編集の直後にIDが落ちないことです。yCollabがtelomereより前に並んでいるので、ytextの更新が先に走る想定です。万一Enter直後にツールチップのIDが一瞬消えて戻らない場合は、ytextの更新がガターより後になっているので知らせてください。その場合は順序の入れ替えかガードの見直しを検討します。
+
+
+
