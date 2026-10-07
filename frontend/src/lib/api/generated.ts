@@ -53,5 +53,5 @@ export interface RenameLinksRequest {
  * RenameLinksResponse reports how many cards had their links rewritten.
  */
 export interface RenameLinksResponse {
-  updated: number;
+  updated: number /* int */;
 }
