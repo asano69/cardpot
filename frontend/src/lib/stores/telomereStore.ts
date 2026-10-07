@@ -36,9 +36,9 @@ function dummyEntries(): Record<number, TelomereEntry> {
 // Edit history per line, keyed by the 0-based line number.
 //
 // TODO: dummy data. The real history will live in a Y.Map of the card's ydoc,
-// and needs a line identity that survives inserted and deleted lines (a line
-// number does not). Only this store's source changes then; the editor plugin
-// keeps reading it as it does now.
+// keyed by line id (see lib/models/lineId.ts) instead of a line number, which
+// does not survive inserted and deleted lines. Only this store's source
+// changes then; the editor plugin keeps reading it as it does now.
 const [entries, setEntries] = createStore<Record<number, TelomereEntry>>(
   dummyEntries(),
 );
