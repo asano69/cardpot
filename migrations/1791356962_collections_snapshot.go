@@ -1454,76 +1454,15 @@ func init() {
 						"type": "relation"
 					},
 					{
-						"help": "line number",
+						"help": "",
 						"hidden": false,
-						"id": "number1177347317",
-						"max": 9007199254740991,
-						"min": 0,
-						"name": "ln",
-						"onlyInt": false,
+						"id": "json1325501590",
+						"maxSize": 0,
+						"name": "lines",
 						"presentable": false,
 						"required": true,
 						"system": false,
-						"type": "number"
-					},
-					{
-						"autogeneratePattern": "",
-						"help": "",
-						"hidden": false,
-						"id": "text4274335913",
-						"max": 9007199254740991,
-						"min": 0,
-						"name": "content",
-						"pattern": "",
-						"presentable": false,
-						"primaryKey": false,
-						"required": false,
-						"system": false,
-						"type": "text"
-					},
-					{
-						"cascadeDelete": false,
-						"collectionId": "_pb_users_auth_",
-						"help": "",
-						"hidden": false,
-						"id": "relation2375276105",
-						"maxSelect": 0,
-						"minSelect": 0,
-						"name": "user",
-						"presentable": false,
-						"required": false,
-						"system": false,
-						"type": "relation"
-					},
-					{
-						"autogeneratePattern": "",
-						"help": "",
-						"hidden": false,
-						"id": "text3514781862",
-						"max": 0,
-						"min": 0,
-						"name": "uuid",
-						"pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
-						"presentable": false,
-						"primaryKey": false,
-						"required": false,
-						"system": false,
-						"type": "text"
-					},
-					{
-						"autogeneratePattern": "",
-						"help": "",
-						"hidden": false,
-						"id": "text2299167369",
-						"max": 0,
-						"min": 0,
-						"name": "content_hash",
-						"pattern": "",
-						"presentable": false,
-						"primaryKey": false,
-						"required": false,
-						"system": false,
-						"type": "text"
+						"type": "json"
 					},
 					{
 						"hidden": false,
@@ -1547,9 +1486,7 @@ func init() {
 					}
 				],
 				"id": "pbc_1277420920",
-				"indexes": [
-					"CREATE UNIQUE INDEX ` + "`" + `idx_10o0cgo38x` + "`" + ` ON ` + "`" + `card_lines` + "`" + ` (` + "`" + `uuid` + "`" + `)"
-				],
+				"indexes": [],
 				"listRule": null,
 				"name": "card_lines",
 				"system": false,
