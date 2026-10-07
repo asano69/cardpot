@@ -1449,7 +1449,7 @@ func init() {
 						"minSelect": 0,
 						"name": "card",
 						"presentable": false,
-						"required": false,
+						"required": true,
 						"system": false,
 						"type": "relation"
 					},
@@ -1486,7 +1486,9 @@ func init() {
 					}
 				],
 				"id": "pbc_1277420920",
-				"indexes": [],
+				"indexes": [
+					"CREATE UNIQUE INDEX ` + "`" + `idx_8sg62evgdb` + "`" + ` ON ` + "`" + `card_lines` + "`" + ` (` + "`" + `card` + "`" + `)"
+				],
 				"listRule": null,
 				"name": "card_lines",
 				"system": false,

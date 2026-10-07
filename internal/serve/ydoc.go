@@ -79,6 +79,7 @@ func initYjsServer(app core.App) {
 		// used to live here.
 		yjsServer.OnLoadDocument = func(_ context.Context, room string, doc *crdt.Doc) error {
 			titleWatcherInstance.observe(app, room, doc)
+			lineWatcherInstance.observe(app, room, doc)
 			return nil
 		}
 
@@ -399,6 +400,7 @@ func (p *ydocPersistence) compactIfNeeded(room string) error {
 // so only the in-memory room needs cleaning up here.
 func forgetRoom(room string) {
 	titleWatcherInstance.forget(room)
+	lineWatcherInstance.forget(room)
 	if yjsServer != nil {
 		_ = yjsServer.CloseRoom(room, true)
 	}
