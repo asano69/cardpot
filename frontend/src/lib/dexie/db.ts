@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable, type Table } from "dexie";
 import type { CardRecord } from "../models/card";
 import type { CardLinkRecord } from "../models/cardLink";
+import type { CardLinesRecord } from "../models/cardLine";
 
 // pin is stored as 0/1 rather than a real boolean, since whether
 // IndexedDB indexes can key on booleans varies by browser.
@@ -29,6 +30,7 @@ export interface CheckpointRecord {
 class ReplicaDB extends Dexie {
   cards!: EntityTable<CachedCard, "id">;
   card_links!: EntityTable<CardLinkRecord, "id">;
+  card_lines!: EntityTable<CardLinesRecord, "id">;
   checkpoints!: Table<CheckpointRecord, [string, string]>;
 
   constructor() {
@@ -42,6 +44,10 @@ class ReplicaDB extends Dexie {
     // Only the changed table is listed: Dexie keeps the others as they were.
     this.version(2).stores({
       cards: "id, pot, [pot+pin+position], [pot+titleLc]",
+    });
+    // Version 3 added card_lines (the line ids of each card).
+    this.version(3).stores({
+      card_lines: "id, card",
     });
   }
 }

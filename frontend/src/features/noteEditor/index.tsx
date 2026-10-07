@@ -25,6 +25,9 @@ import {
   requestLinkAlive,
 } from "@/lib/stores/linkAliveStore";
 import { usePot } from "@/pages/pots/PotContext";
+import { createLiveQuery } from "@/lib/dexie/liveQuery";
+import { readLineEntries } from "@/lib/dexie/cardLinesCollection";
+import type { LineEntry } from "@/lib/models/cardLine";
 import { yCollab } from "y-codemirror.next";
 import { defaultKeymapGroups } from "./keymaps";
 import { caretOnly } from "./awareness";
@@ -55,6 +58,8 @@ import { registerDebugView } from "./debug";
 
 export interface NoteEditorProps {
   ydoc: Y.Doc;
+  // Id of the card being edited, used to read its line ids. A draft has none.
+  cardId?: string;
   provider?: WebsocketProvider;
   potSlug: () => string;
   initialTitle?: string;
@@ -80,6 +85,13 @@ export default function NoteEditor(props: NoteEditorProps) {
 
   const navigate = useNavigate();
   const pot = usePot();
+  // The card's line ids, kept current from the Dexie replica (see
+  // lib/dexie/cardLinesCollection.ts).
+  const lineEntries = createLiveQuery(
+    () => props.cardId,
+    readLineEntries,
+    [] as LineEntry[],
+  );
   const ytext = props.ydoc.getText("content");
   const handleSlugCandidate = (candidate: TitleCandidate) => {
     props.onConfirmedTitle(candidate);
@@ -227,8 +239,11 @@ export default function NoteEditor(props: NoteEditorProps) {
     createEffect(() => {
       const entries = telomereSnapshot();
       const now = telomereNow();
+      const lineIds = lineEntries().map((line) => line.id);
       untrack(() =>
-        view.dispatch({ effects: setTelomere.of({ entries, now }) }),
+        view.dispatch({
+          effects: setTelomere.of({ entries, now, lineIds }),
+        }),
       );
     });
 

@@ -29,10 +29,24 @@ func newLineID() string { return security.RandomString(12) }
 // syncLines makes the stored line entries of a card match text, keeping the
 // ids of unchanged lines. The read and the write share one transaction, and
 // the unique index on "card" rejects a second record for the same card.
-// Nothing is written when the entries did not change.
+// The record also stores the card's pot, which the replication pull filters
+// by (see internal/replica). Nothing is written when neither the entries nor
+// the pot changed. A missing or deleted card keeps no lines (see
+// markLinesDeleted).
 func syncLines(app core.App, cardID, text string) error {
 	hashes := lineHashes(text)
 	return app.RunInTransaction(func(tx core.App) error {
+		card, err := tx.FindRecordById("cards", cardID)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil // card removed concurrently
+		}
+		if err != nil {
+			return err
+		}
+		if !card.GetDateTime("deleted").IsZero() {
+			return nil
+		}
+
 		record, err := tx.FindFirstRecordByFilter(
 			"card_lines", "card = {:card}", dbx.Params{"card": cardID},
 		)
@@ -58,13 +72,32 @@ func syncLines(app core.App, cardID, text string) error {
 		if err != nil {
 			return err
 		}
+		pot := card.GetString("pot")
 		// GetString on a JSON field returns its raw JSON text.
-		if record.GetString("lines") == string(encoded) {
+		if record.GetString("lines") == string(encoded) && record.GetString("pot") == pot {
 			return nil
 		}
+		record.Set("pot", pot)
 		record.Set("lines", types.JSONRaw(encoded))
 		return tx.Save(record)
 	})
+}
+
+// markLinesDeleted marks the lines record of a card as deleted instead of
+// removing it, so a client that was offline learns about it from its next
+// pull (see internal/replica). A card without a live record is ignored.
+func markLinesDeleted(app core.App, cardID string) error {
+	record, err := app.FindFirstRecordByFilter(
+		"card_lines", "card = {:card} && "+notDeleted, dbx.Params{"card": cardID},
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	record.Set("deleted", types.NowDateTime())
+	return app.Save(record)
 }
 
 // lineWatcher owns one debounce timer per room.

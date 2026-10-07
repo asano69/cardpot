@@ -16,6 +16,7 @@ import {
 // internal/replica on the server, is all it takes to replicate it.
 const dataReplicas: Replica<ReplicaRecord>[] = [
   tableReplica("card_links", db.card_links),
+  tableReplica("card_lines", db.card_lines),
 ];
 
 // Pots opened in this session. A pot is pulled when it opens (which also
