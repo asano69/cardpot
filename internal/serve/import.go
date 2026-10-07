@@ -28,7 +28,6 @@ import (
 	yjsws "github.com/reearth/ygo/provider/websocket"
 
 	"github.com/asano69/cardpot/internal/slug"
-	"github.com/asano69/cardpot/internal/wikilink"
 )
 
 // importFile is the JSON layout accepted by Import. Unknown fields are
@@ -140,13 +139,7 @@ func importImportedPage(app core.App, p *ydocPersistence, pot string, page impor
 	}
 
 	// Same derived data ydocPersistence.store keeps in sync for a live room.
-	if err := p.updatePreview(card.Id, text); err != nil {
-		return created, fmt.Errorf("update card preview: %w", err)
-	}
-	if err := wikilink.Sync(app, card.Id, text); err != nil {
-		return created, fmt.Errorf("sync card links: %w", err)
-	}
-	return created, nil
+	return created, p.syncDerived(card.Id, text)
 }
 
 // pageText joins a page's lines into the card's plain text. A page without

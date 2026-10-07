@@ -221,13 +221,7 @@ func saveRenamed(tx core.App, p *ydocPersistence, ydocs *core.Collection, r *ren
 	if err := tx.Save(record); err != nil {
 		return fmt.Errorf("save card document: %w", err)
 	}
-	if err := p.updatePreview(r.id, r.text); err != nil {
-		return fmt.Errorf("update card preview: %w", err)
-	}
-	if err := wikilink.Sync(tx, r.id, r.text); err != nil {
-		return fmt.Errorf("sync card links: %w", err)
-	}
-	return nil
+	return p.syncDerived(r.id, r.text)
 }
 
 // liveDoc returns the doc of room if it is loaded in memory, or nil.

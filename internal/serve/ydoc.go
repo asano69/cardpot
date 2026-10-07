@@ -44,7 +44,6 @@ import (
 	yjsws "github.com/reearth/ygo/provider/websocket"
 
 	"github.com/asano69/cardpot/internal/parser"
-	"github.com/asano69/cardpot/internal/wikilink"
 )
 
 // compactionThreshold is how many stored increments a room's update
@@ -249,15 +248,11 @@ func (p *ydocPersistence) store(ctx context.Context, room string, update []byte)
 		// text via the /api/admin/cards routes (see cards.go and
 		// slug.go's resolveSlugAndTitle), so it doesn't depend on
 		// this periodic snapshot.
-		if err := p.updatePreview(room, text); err != nil {
-			slog.Warn("update card preview", "room", room, "error", err)
-		}
-
-		// Wiki links feed the "card_links" collection (1-hop / 2-hop link
-		// views). Like the preview, a failure is only logged: it must
+		// The preview and the wiki links (the "card_links" collection) are
+		// derived from the same snapshot. A failure is only logged: it must
 		// never block persisting the document itself.
-		if err := wikilink.Sync(p.app, room, text); err != nil {
-			slog.Warn("sync card links", "room", room, "error", err)
+		if err := p.syncDerived(room, text); err != nil {
+			slog.Warn("sync derived data", "room", room, "error", err)
 		}
 	}
 
