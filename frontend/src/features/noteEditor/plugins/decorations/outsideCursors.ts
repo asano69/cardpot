@@ -1,7 +1,6 @@
 import {
   ViewPlugin,
   type EditorView,
-  type MeasureRequest,
   type PluginValue,
   type ViewUpdate,
 } from "@codemirror/view";
@@ -9,6 +8,11 @@ import * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
 
 type Awareness = WebsocketProvider["awareness"];
+
+// @codemirror/view declares MeasureRequest but does not export it, so the
+// type is taken from requestMeasure's own parameter.
+type MeasureRequest<T> = NonNullable<Parameters<EditorView["requestMeasure"]>[0]> &
+  { read: (view: EditorView) => T; write?: (measure: T, view: EditorView) => void };
 
 // Height of ".shared-cursors .cursor" (see editorTheme.ts).
 const CURSOR_HEIGHT_PX = 20;
