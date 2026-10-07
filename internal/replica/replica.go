@@ -25,7 +25,6 @@ type Collection struct {
 var Collections = []Collection{
 	{Name: "cards", PotField: "pot"},
 	{Name: "card_links", PotField: "target_pot"},
-	{Name: "card_lines", PotField: "pot"},
 }
 
 // Find returns the replicated collection with the given name.

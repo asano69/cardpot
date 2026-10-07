@@ -79,7 +79,6 @@ func initYjsServer(app core.App) {
 		// used to live here.
 		yjsServer.OnLoadDocument = func(_ context.Context, room string, doc *crdt.Doc) error {
 			titleWatcherInstance.observe(app, room, doc)
-			lineWatcherInstance.observe(app, room, doc)
 			return nil
 		}
 
@@ -235,12 +234,6 @@ func (p *ydocPersistence) store(ctx context.Context, room string, update []byte)
 	// here, right after our own StoreUpdate has returned, matches how
 	// compactIfNeeded already calls doc.EncodeStateAsUpdate() directly
 	// on the same live doc.
-	//
-	// TODO(codemirror-migration): card_lines (per-line "updated"
-	// tracking) is no longer populated here -- ProseMirror's per-node
-	// "id" attribute it relied on (see blockIdPlugin.ts) doesn't exist
-	// once the editor moves to CodeMirror's plain-text Y.Text. See
-	// lines.go for the deferred line-identity redesign.
 	if doc := yjsServer.GetDoc(room); doc != nil {
 		text := doc.GetText("content").ToString()
 		slog.Debug("card text", "room", room, "text", text)
@@ -400,7 +393,6 @@ func (p *ydocPersistence) compactIfNeeded(room string) error {
 // so only the in-memory room needs cleaning up here.
 func forgetRoom(room string) {
 	titleWatcherInstance.forget(room)
-	lineWatcherInstance.forget(room)
 	if yjsServer != nil {
 		_ = yjsServer.CloseRoom(room, true)
 	}
