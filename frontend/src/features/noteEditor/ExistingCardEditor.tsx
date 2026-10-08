@@ -120,6 +120,7 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
   return (
     <NoteEditor
       ydoc={ydoc}
+      cardId={props.cardId}
       provider={provider}
       potSlug={props.potSlug}
       onConfirmedTitle={confirm}

@@ -79,19 +79,21 @@ export function telomere(ytext: Y.Text) {
         const id = lineIdAt(ytext, line.from);
         if (!id) return null;
 
-        // A line with no recorded edit still gets the thinnest "read" bar.
+        // A line with no entry at all still gets the thinnest "read" bar.
         const entry = entries[id];
         if (!entry) {
           return new TelomereMarker(telomereThickness(Infinity), "read", "");
         }
         // The raw id is opaque (see lineId.ts), so it is only shown in
-        // development. An edit time ahead of this clock gives a negative age,
-        // which draws the thickest bar.
+        // development. A line without a recorded edit (e.g. an unread line
+        // written before line meta existed) gets the thinnest bar; an edit
+        // time ahead of this clock draws the thickest.
         const label = import.meta.env.DEV
           ? `${entry.user}\nid: ${id}`
           : entry.user;
+        const age = entry.updatedAt === null ? Infinity : now - entry.updatedAt;
         return new TelomereMarker(
-          telomereThickness(now - entry.updatedAt),
+          telomereThickness(age),
           entry.status,
           label,
         );

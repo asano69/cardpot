@@ -16,6 +16,7 @@ import { emptyLinks, setLinkAlive } from "./plugins/decorations/emptyLinks";
 import { telomere, setTelomere } from "./plugins/decorations/telomere";
 import { startTelomereClock, telomereNow } from "@/lib/stores/telomereStore";
 import { createLineMeta } from "@/lib/stores/lineMetaStore";
+import { unreadLineIdsOf } from "@/lib/stores/unreadStore";
 import { telomereEntries } from "@/lib/models/telomere";
 import { currentUser } from "@/lib/api/auth";
 import { lineMetaWriter } from "./plugins/interactions/lineMetaWriter";
@@ -53,6 +54,9 @@ import { registerDebugView } from "./debug";
 
 export interface NoteEditorProps {
   ydoc: Y.Doc;
+  // Id of the card, when it exists. Only used to look up its unread lines
+  // (see lib/stores/unreadStore.ts); a draft has none.
+  cardId?: string;
   provider?: WebsocketProvider;
   potSlug: () => string;
   initialTitle?: string;
@@ -220,13 +224,19 @@ export default function NoteEditor(props: NoteEditorProps) {
       );
     });
 
-    // Feeds the card's line meta and the clock into the editor (see
-    // plugins/decorations/telomere.ts). Like the link-alive effect above,
-    // this re-runs on any meta or clock change and sends a fresh snapshot.
-    const lineMeta = createLineMeta(props.ydoc);
+    // Feeds the card's line meta, its unread and updated lines and the clock
+    // into the editor (see plugins/decorations/telomere.ts). Like the
+    // link-alive effect above, this re-runs on any change of those and sends
+    // a fresh snapshot.
+    const lineMeta = createLineMeta(props.ydoc, props.provider);
     onCleanup(startTelomereClock());
     createEffect(() => {
-      const entries = telomereEntries(lineMeta());
+      const entries = telomereEntries(
+        lineMeta.meta(),
+        unreadLineIdsOf(props.cardId),
+        lineMeta.updated(),
+        currentUser()?.id,
+      );
       const now = telomereNow();
       untrack(() =>
         view.dispatch({
