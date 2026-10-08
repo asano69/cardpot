@@ -71,6 +71,17 @@ describe("linesWithUnseenChars", () => {
     expect(linesWithUnseenChars(a, baseline)).toEqual(idsOf(a, 1, 2));
   });
 
+  it("marks only the new line when another client presses Enter at the end of a line", () => {
+    // Regression test: the line above, whose text did not change, was marked
+    // too, unlike on the "updated" side.
+    const a = createText("t\nP\nQ");
+    const baseline = seenOf(a.doc!);
+    const b = replicate(a);
+    b.insert(3, "\n"); // "t\nP\n\nQ"
+    pull(b, a);
+    expect(linesWithUnseenChars(a, baseline)).toEqual(idsOf(a, 2));
+  });
+
   it("does not count deleted characters", () => {
     const a = createText("t\nabc\ndef");
     const baseline = seenOf(a.doc!);

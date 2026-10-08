@@ -1,5 +1,6 @@
 import * as Y from "yjs";
 import { lineIdAt, type LineId } from "./lineId";
+import { touchedLineStarts } from "./lineRange";
 
 // What a user has seen of a card: Yjs client id -> next clock of that client
 // (a state vector as a plain object, like the server's "seen" field).
@@ -49,11 +50,10 @@ function unseenRanges(ytext: Y.Text, baseline: Seen): [number, number][] {
   return ranges;
 }
 
-// The ids of the lines holding characters the baseline has not seen.
-//
-// A line owns the characters from the "\n" before it to the end of its text
-// (the same range its id is taken from). An unseen "\n" therefore marks both
-// the line it ends and the line it starts, since a split changes both.
+// The ids of the lines holding characters the baseline has not seen. Which
+// lines an unseen range touches is decided by touchedLineStarts, the same rule
+// the "updated" side uses (an Enter at the end of a line only marks the new
+// line).
 export function linesWithUnseenChars(
   ytext: Y.Text,
   baseline: Seen,
@@ -63,33 +63,11 @@ export function linesWithUnseenChars(
   if (ranges.length === 0) return ids;
 
   const text = ytext.toString();
-  const starts = [0];
-  for (let i = 0; i < text.length; i++) {
-    if (text[i] === "\n") starts.push(i + 1);
-  }
-
-  // Index of the line containing `pos` (the last start <= pos).
-  const lineOf = (pos: number) => {
-    let low = 0;
-    let high = starts.length - 1;
-    while (low < high) {
-      const mid = (low + high + 1) >> 1;
-      if (starts[mid] <= pos) low = mid;
-      else high = mid - 1;
-    }
-    return low;
-  };
-
-  const lines = new Set<number>();
   for (const [from, to] of ranges) {
-    let last = lineOf(to - 1);
-    if (text[to - 1] === "\n") last++; // the line the newline starts
-    for (let n = lineOf(from); n <= last; n++) lines.add(n);
-  }
-
-  for (const n of lines) {
-    const id = lineIdAt(ytext, starts[n]);
-    if (id) ids.add(id);
+    for (const start of touchedLineStarts(text, from, to)) {
+      const id = lineIdAt(ytext, start);
+      if (id) ids.add(id);
+    }
   }
   return ids;
 }

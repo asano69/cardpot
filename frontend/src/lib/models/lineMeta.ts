@@ -1,5 +1,6 @@
 import * as Y from "yjs";
 import { lineIdAt, type LineId } from "./lineId";
+import { touchedLineStarts } from "./lineRange";
 
 // Who edited a line last. Stored in the card's Y.Doc under LINE_META_MAP,
 // keyed by LineId (see lineId.ts). Self-reported and display-only: it is never
@@ -31,18 +32,10 @@ export function touchedLineIds(ytext: Y.Text, event: Y.YTextEvent): LineId[] {
   const text = ytext.toString();
   const ids = new Set<LineId>();
 
-  // Adds the line holding `from` and every line that starts before `to`.
-  // `skipFirst` leaves out the line holding `from`: it did not change.
-  const addLines = (from: number, to: number, skipFirst = false) => {
-    from = Math.min(from, text.length);
-    let start = from === 0 ? 0 : text.lastIndexOf("\n", from - 1) + 1;
-    if (skipFirst) start = text.indexOf("\n", start) + 1;
-    for (;;) {
+  const addLines = (from: number, to: number) => {
+    for (const start of touchedLineStarts(text, from, to)) {
       const id = lineIdAt(ytext, start);
       if (id) ids.add(id);
-      const newline = text.indexOf("\n", start);
-      if (newline === -1 || newline >= to) break;
-      start = newline + 1;
     }
   };
 
@@ -52,11 +45,7 @@ export function touchedLineIds(ytext: Y.Text, event: Y.YTextEvent): LineId[] {
       pos += op.retain;
     } else if (op.insert !== undefined) {
       const length = typeof op.insert === "string" ? op.insert.length : 1;
-      // Enter at the end of a line (the text after the insertion is empty)
-      // only adds lines below it; the line above keeps its text.
-      const after = text[pos + length];
-      const atLineEnd = text[pos] === "\n" && (after === undefined || after === "\n");
-      addLines(pos, pos + length, atLineEnd);
+      addLines(pos, pos + length);
       pos += length;
     } else if (op.delete !== undefined) {
       addLines(pos, pos);
