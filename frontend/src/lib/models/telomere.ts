@@ -48,9 +48,10 @@ export function telomereEntries(
 const HOUR_MS = 3_600_000;
 
 // Border width in pixels for a line last edited `ageMs` ago: 10px for a fresh
-// edit, thinning logarithmically down to 1px (Cosense's formula). An age
-// below zero (clock skew) counts as fresh; Infinity gives the thinnest bar.
+// edit, thinning logarithmically down to 1px. The width shrinks by 1px each
+// time (hours + 2) grows by a factor of e. An age below zero (clock skew)
+// counts as fresh; Infinity gives the thinnest bar.
 export function telomereThickness(ageMs: number): number {
   const hours = Math.max(0, ageMs) / HOUR_MS;
-  return Math.max(1, 10 - Math.floor(Math.log10(hours + 2) * 2.3));
+  return Math.max(1, 10 - Math.floor(Math.log(hours + 2)));
 }
