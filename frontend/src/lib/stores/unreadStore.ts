@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
-import type * as Y from "yjs";
-import type { IndexeddbPersistence } from "y-indexeddb";
+import * as Y from "yjs";
+import { IndexeddbPersistence } from "y-indexeddb";
 import type { WebsocketProvider } from "y-websocket";
 import { fetchSeen, postSeen } from "../api/cardApi";
 import type { LineId } from "../models/lineId";
@@ -34,6 +34,22 @@ export function unreadLineIdsOf(
   return current && current.cardId === cardId ? current.ids : NONE;
 }
 
+// What this device stored in IndexedDB under `name`. This is only the user's
+// own view of the card if nothing from the server has been written yet:
+// y-indexeddb stores every update the open doc receives, so the caller must
+// read it before connecting the websocket.
+async function readStoredSeen(name: string): Promise<Seen> {
+  const doc = new Y.Doc();
+  const idb = new IndexeddbPersistence(name, doc);
+  try {
+    await idb.whenSynced;
+    return seenOf(doc);
+  } finally {
+    await idb.destroy();
+    doc.destroy();
+  }
+}
+
 // Resolves once the websocket has completed its first sync.
 function whenSynced(provider: WebsocketProvider): Promise<void> {
   if (provider.synced) return Promise.resolve();
@@ -50,13 +66,16 @@ function whenSynced(provider: WebsocketProvider): Promise<void> {
 // Works out which lines of an open card are unread and keeps the server's
 // "seen" of the user up to date. Returns a function that stops it.
 //
-// The order matters: the snapshot is taken before anything is sent, since
-// sending marks everything as seen. Offline (the server's "seen" cannot be
-// read) nothing is tracked and nothing is sent.
+// The order matters: the stored state is read before the websocket is
+// connected (the provider must be created with connect: false), since the
+// server's text would otherwise end up in IndexedDB and count as seen. The
+// snapshot is taken before anything is sent, since sending marks everything
+// as seen. Offline (the server's "seen" cannot be read) nothing is tracked
+// and nothing is sent.
 export function trackUnread(
   cardId: string,
   ydoc: Y.Doc,
-  idb: IndexeddbPersistence,
+  idbName: string,
   provider: WebsocketProvider,
 ): () => void {
   let stopped = false;
@@ -74,9 +93,9 @@ export function trackUnread(
 
   const start = async () => {
     // What this device had before the network: offline edits are only here.
-    await idb.whenSynced;
+    const localSeen = await readStoredSeen(idbName);
     if (stopped) return;
-    const localSeen = seenOf(ydoc);
+    provider.connect();
 
     const serverSeen = await fetchSeen(cardId);
     await whenSynced(provider);

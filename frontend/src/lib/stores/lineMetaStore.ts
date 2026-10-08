@@ -78,11 +78,13 @@ export function createLineMeta(
   const ytext = ydoc.getText("content");
   const onText = (event: Y.YTextEvent) => {
     if (!live || event.transaction.local) return;
-    touch(touchedLineIds(ytext, event), {
-      userId: "",
-      name: "",
-      at: Date.now(),
-    });
+    // The ids must be read now, while the text is the one the event refers
+    // to. The report itself is deferred: it makes the editor dispatch, and
+    // the editor has not applied this change yet (its Yjs binding observes
+    // after this observer), so dispatching now hits stale positions.
+    const ids = touchedLineIds(ytext, event);
+    const at = Date.now();
+    queueMicrotask(() => touch(ids, { userId: "", name: "", at }));
   };
   ytext.observe(onText);
 

@@ -61,10 +61,8 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
   // The local copy is keyed by user as well as by card: trackUnread treats
   // everything in it as already seen by the user, so a copy left by another
   // user of this browser would hide the lines that are unread for this one.
-  const idbProvider = new IndexeddbPersistence(
-    `${user?.id ?? "anonymous"}:${props.cardId}`,
-    ydoc,
-  );
+  const idbName = `${user?.id ?? "anonymous"}:${props.cardId}`;
+  const idbProvider = new IndexeddbPersistence(idbName, ydoc);
   const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
   const provider = new WebsocketProvider(
     `${wsProtocol}//${location.host}/yjs`,
@@ -72,7 +70,10 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
     ydoc,
     // A browser WebSocket cannot send an Authorization header, so the token
     // goes in the query string (see internal/serve/yjs_auth.go).
-    { params: { token: authToken() } },
+    // connect: false because trackUnread must read what this device stored
+    // before the server can add anything to it, so it connects once that is
+    // done (see trackUnread).
+    { params: { token: authToken() }, connect: false },
   );
   // The token in the URL was fixed when the provider was created and may have
   // expired since (the server also closes the connection at expiry). Every
@@ -111,7 +112,7 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
 
   // Works out which lines are unread and keeps the server's "seen" current
   // (see lib/stores/unreadStore.ts).
-  const stopUnread = trackUnread(props.cardId, ydoc, idbProvider, provider);
+  const stopUnread = trackUnread(props.cardId, ydoc, idbName, provider);
 
   onCleanup(() => {
     stopUnread(); // before the doc is destroyed below: it sends the final state
