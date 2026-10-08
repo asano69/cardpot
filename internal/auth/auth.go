@@ -23,6 +23,8 @@ var (
 type Session struct {
 	UserID    string
 	ExpiresAt time.Time
+	// IsSuperuser is true for a superuser, false for a regular user.
+	IsSuperuser bool
 }
 
 // Verify accepts any valid PocketBase auth token (a regular user or a
@@ -41,7 +43,11 @@ func Verify(app core.App, token string) (Session, error) {
 	if !ok {
 		return Session{}, ErrInvalidToken
 	}
-	return Session{UserID: record.Id, ExpiresAt: time.Unix(int64(exp), 0)}, nil
+	return Session{
+		UserID:      record.Id,
+		ExpiresAt:   time.Unix(int64(exp), 0),
+		IsSuperuser: record.Collection().Name == core.CollectionNameSuperusers,
+	}, nil
 }
 
 // CanAccessCard reports whether the user may open the card's live room. It

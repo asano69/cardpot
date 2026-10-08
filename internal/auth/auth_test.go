@@ -63,11 +63,11 @@ func TestVerify(t *testing.T) {
 	}
 	member, memberToken := newAuthRecord(t, app, members, "member@example.com")
 
-	if got, err := Verify(app, superuserToken); err != nil || got.UserID != superuser.Id {
-		t.Errorf("superuser: Verify = (%+v, %v), want user %q", got, err, superuser.Id)
+	if got, err := Verify(app, superuserToken); err != nil || got.UserID != superuser.Id || !got.IsSuperuser {
+		t.Errorf("superuser: Verify = (%+v, %v), want superuser %q", got, err, superuser.Id)
 	}
-	if got, err := Verify(app, memberToken); err != nil || got.UserID != member.Id {
-		t.Errorf("regular user: Verify = (%+v, %v), want user %q", got, err, member.Id)
+	if got, err := Verify(app, memberToken); err != nil || got.UserID != member.Id || got.IsSuperuser {
+		t.Errorf("regular user: Verify = (%+v, %v), want regular user %q", got, err, member.Id)
 	}
 	if _, err := Verify(app, "not-a-token"); !errors.Is(err, ErrInvalidToken) {
 		t.Errorf("garbage token: err = %v, want ErrInvalidToken", err)

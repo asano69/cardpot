@@ -37,6 +37,12 @@ func yjsAuth(app core.App, next http.Handler) http.Handler {
 			return
 		}
 
+		// Superusers are not tracked: they are rarely used and can do
+		// anything anyway.
+		if !session.IsSuperuser {
+			recordCardView(app, session.UserID, r.PathValue("room"))
+		}
+
 		next.ServeHTTP(expiringWriter{ResponseWriter: w, expiresAt: session.ExpiresAt}, r)
 	})
 }
