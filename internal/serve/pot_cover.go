@@ -5,8 +5,11 @@ package serve
 
 import (
 	"bytes"
+	"fmt"
+	"hash/fnv"
 	"io"
 	"log/slog"
+	"math"
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
@@ -16,13 +19,61 @@ import (
 // coverSize is the width and height of the generated SVG, in pixels.
 const coverSize = 240
 
-// coverPalette is the bauhaus palette used for generated covers.
-var coverPalette = []string{"#264653", "#2a9d8f", "#e9c46a", "#f4a261", "#e76f51"}
+// coverLightness is the lightness of each of the five palette colors. The
+// alternation keeps neighboring shapes from blending into each other.
+var coverLightness = [5]float64{0.35, 0.70, 0.50, 0.80, 0.60}
+
+// coverPalette derives a five color palette from the pot title: the hash of
+// the title picks the first hue, how far the hue moves per color (a close to
+// a wide spread) and the saturation. It is deterministic, so the same title
+// always gives the same palette.
+func coverPalette(title string) []string {
+	hash := fnv.New32a()
+	_, _ = hash.Write([]byte(title))
+	sum := hash.Sum32()
+
+	base := float64(sum % 360)
+	step := 40 + float64((sum/360)%90)
+	saturation := 0.55 + float64((sum/32400)%25)/100
+
+	colors := make([]string, len(coverLightness))
+	for i, lightness := range coverLightness {
+		colors[i] = hslToHex(base+step*float64(i), saturation, lightness)
+	}
+	return colors
+}
+
+// hslToHex converts a color (hue in degrees, saturation and lightness in
+// 0..1) to "#rrggbb".
+func hslToHex(hue, saturation, lightness float64) string {
+	hue = math.Mod(hue, 360)
+	chroma := (1 - math.Abs(2*lightness-1)) * saturation
+	x := chroma * (1 - math.Abs(math.Mod(hue/60, 2)-1))
+	m := lightness - chroma/2
+
+	var r, g, b float64
+	switch int(hue / 60) {
+	case 0:
+		r, g, b = chroma, x, 0
+	case 1:
+		r, g, b = x, chroma, 0
+	case 2:
+		r, g, b = 0, chroma, x
+	case 3:
+		r, g, b = 0, x, chroma
+	case 4:
+		r, g, b = x, 0, chroma
+	default:
+		r, g, b = chroma, 0, x
+	}
+	channel := func(v float64) int { return int(math.Round((v + m) * 255)) }
+	return fmt.Sprintf("#%02x%02x%02x", channel(r), channel(g), channel(b))
+}
 
 // coverSVG returns the generated cover for a pot title. It is deterministic,
 // so the same title always gives the same bytes.
 func coverSVG(title string) []byte {
-	return []byte(avatars.Generate(avatars.Bauhaus, title, coverPalette, coverSize, true))
+	return []byte(avatars.Generate(avatars.Bauhaus, title, coverPalette(title), coverSize, true))
 }
 
 // newCoverFile wraps the generated cover of title as a file to store.
