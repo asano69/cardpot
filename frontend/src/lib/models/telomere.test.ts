@@ -26,10 +26,17 @@ describe("telomereEntries", () => {
     );
   });
 
-  it("keeps the user's own lines read", () => {
-    const both = new Set(["1:2"]);
-    expect(telomereEntries(meta, both, both, "alice")["1:2"].status).toBe(
+  it("keeps the user's own unread lines read", () => {
+    const unread = new Set(["1:2"]);
+    expect(telomereEntries(meta, unread, none, "alice")["1:2"].status).toBe(
       "read",
+    );
+  });
+
+  it("marks the user's own edit made after loading as updated", () => {
+    const updated = new Set(["1:2"]);
+    expect(telomereEntries(meta, none, updated, "alice")["1:2"].status).toBe(
+      "updated",
     );
   });
 });

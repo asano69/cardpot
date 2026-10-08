@@ -42,7 +42,7 @@ function mount(ydoc: Y.Doc, provider?: WebsocketProvider) {
 }
 
 describe("createLineMeta", () => {
-  it("collects only remote changes made after the first sync", () => {
+  it("collects only changes made after the first sync", () => {
     const ydoc = new Y.Doc();
     const { provider, sync } = fakeProvider();
     const { store, dispose } = mount(ydoc, provider);
@@ -57,15 +57,18 @@ describe("createLineMeta", () => {
     dispose();
   });
 
-  it("ignores the user's own writes", () => {
+  it("also collects the user's own writes after the first sync", () => {
     const ydoc = new Y.Doc();
     const { provider, sync } = fakeProvider();
     const { store, dispose } = mount(ydoc, provider);
-    sync();
 
-    lineMetaMap(ydoc).set("1:3", entry);
+    lineMetaMap(ydoc).set("1:5", entry); // before the sync: not collected
     expect(store.updated().size).toBe(0);
-    expect(Object.keys(store.meta())).toEqual(["1:3"]);
+
+    sync();
+    lineMetaMap(ydoc).set("1:3", entry);
+    expect([...store.updated()]).toEqual(["1:3"]);
+    expect(Object.keys(store.meta()).sort()).toEqual(["1:3", "1:5"]);
     dispose();
   });
 

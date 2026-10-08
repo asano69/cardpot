@@ -7,8 +7,8 @@ import { lineMetaMap, type LineMeta } from "../models/lineMeta";
 export interface LineMetaStore {
   // The line meta of the card as a plain object.
   meta: Accessor<Record<LineId, LineMeta>>;
-  // Lines whose meta another client changed after the first sync with the
-  // server, i.e. lines edited by others while this card is open.
+  // Lines whose meta changed after the first sync with the server, i.e. lines
+  // edited (by anyone) while this card is open.
   updated: Accessor<ReadonlySet<LineId>>;
 }
 
@@ -17,10 +17,11 @@ export interface LineMetaStore {
 // small entry per edited line. Must be called inside a reactive owner: the
 // observers are removed on cleanup.
 //
-// "updated" only collects remote changes made after the provider's first
-// sync: everything that arrives before (IndexedDB, the server's current
-// state) is what the card looked like when it was opened. Without a provider
-// (a draft) nothing is ever collected.
+// "updated" only collects changes made after the provider's first sync:
+// everything that arrives before (IndexedDB, the server's current state) is
+// what the card looked like when it was opened. The user's own edits count
+// too, like in Cosense. Without a provider (a draft) nothing is ever
+// collected.
 export function createLineMeta(
   ydoc: Y.Doc,
   provider?: WebsocketProvider,
@@ -37,7 +38,7 @@ export function createLineMeta(
 
   const refresh = (event: Y.YMapEvent<LineMeta>) => {
     setMeta(map.toJSON());
-    if (!live || event.transaction.local) return;
+    if (!live) return;
     setUpdated((prev) => new Set([...prev, ...event.keysChanged]));
   };
   map.observe(refresh);

@@ -5,7 +5,7 @@ import type { LineId } from "./lineId";
 import type { LineMeta } from "./lineMeta";
 
 // "read": nothing new. "unread": edited by someone else since this user last
-// looked. "updated": edited by someone else after this page was loaded.
+// looked. "updated": edited by anyone after this page was loaded.
 export type TelomereStatus = "read" | "unread" | "updated";
 
 export interface TelomereEntry {
@@ -19,8 +19,9 @@ export interface TelomereEntry {
 
 // Combines the three independent sources into the entries the gutter draws:
 // who edited a line when (meta), which lines were unread when the card was
-// opened (unread) and which lines others edited since (updated). A line
-// the user edited last is always "read", even if it also holds unseen text.
+// opened (unread) and which lines were edited since (updated). A line edited
+// after the page was loaded is "updated" whoever edited it. Otherwise a line
+// the user edited last is "read", even if it also holds unseen text.
 export function telomereEntries(
   meta: Record<LineId, LineMeta>,
   unread: ReadonlySet<LineId>,
@@ -32,10 +33,10 @@ export function telomereEntries(
   for (const id of ids) {
     const m = meta[id];
     const own = m !== undefined && m.userId === userId;
-    const status: TelomereStatus = own
-      ? "read"
-      : updated.has(id)
-        ? "updated"
+    const status: TelomereStatus = updated.has(id)
+      ? "updated"
+      : own
+        ? "read"
         : unread.has(id)
           ? "unread"
           : "read";
