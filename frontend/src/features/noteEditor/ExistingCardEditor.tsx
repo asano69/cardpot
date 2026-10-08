@@ -57,7 +57,14 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
   // Synchronous, not an effect: `ydoc` already exists by this point in
   // the component body, so there's nothing to wait on.
   props.onContentSnapshot?.(() => ydoc.getText("content").toString());
-  const idbProvider = new IndexeddbPersistence(props.cardId, ydoc);
+  const user = currentUser();
+  // The local copy is keyed by user as well as by card: trackUnread treats
+  // everything in it as already seen by the user, so a copy left by another
+  // user of this browser would hide the lines that are unread for this one.
+  const idbProvider = new IndexeddbPersistence(
+    `${user?.id ?? "anonymous"}:${props.cardId}`,
+    ydoc,
+  );
   const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
   const provider = new WebsocketProvider(
     `${wsProtocol}//${location.host}/yjs`,
@@ -76,7 +83,6 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
   });
 
   // Lets the other peers draw this tab's cursor with the user's name.
-  const user = currentUser();
   if (user) setLocalUser(provider.awareness, user);
 
   // Kept only because NoteEditor requires an onConfirmedTitle callback --
