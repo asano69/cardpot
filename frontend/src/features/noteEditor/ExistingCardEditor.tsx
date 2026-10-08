@@ -12,6 +12,7 @@ import { extractLinks } from "@/lib/models/extractLinks";
 import { authToken, currentUser } from "@/lib/api/auth";
 import { cardsById } from "@/lib/stores/cardsStore";
 import { closeOwnLinks, setOwnLinks } from "@/lib/stores/relatedStore";
+import { trackUnread } from "@/lib/stores/unreadStore";
 import { setLocalUser } from "./awareness";
 
 // Wait this long after the last edit before the open card's links are
@@ -102,7 +103,12 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
   ytext.observe(scheduleOwnLinks);
   scheduleOwnLinks(); // a handed-off draft already holds text
 
+  // Works out which lines are unread and keeps the server's "seen" current
+  // (see lib/stores/unreadStore.ts).
+  const stopUnread = trackUnread(props.cardId, ydoc, idbProvider, provider);
+
   onCleanup(() => {
+    stopUnread(); // before the doc is destroyed below: it sends the final state
     clearTimeout(linksTimer);
     ytext.unobserve(scheduleOwnLinks);
     closeOwnLinks(props.cardId);
