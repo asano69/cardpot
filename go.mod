@@ -7,6 +7,7 @@ require (
 	github.com/pocketbase/dbx v1.12.0
 	github.com/pocketbase/pocketbase v0.39.4
 	github.com/reearth/ygo v1.49.5
+	github.com/sig-0/boring-avatars-go v0.1.1
 	github.com/spf13/cobra v1.10.2
 )
 

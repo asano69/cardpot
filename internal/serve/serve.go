@@ -27,6 +27,7 @@ func Run(app *pocketbase.PocketBase, cfg *config.Config) error {
 	app.OnServe().BindFunc(registerRoutes)
 	registerValidationHooks(app)
 	registerLinkCleanupHooks(app)
+	registerPotCoverHooks(app)
 
 	slog.Info("listening", "addr", addr)
 	return apis.Serve(app, apis.ServeConfig{
