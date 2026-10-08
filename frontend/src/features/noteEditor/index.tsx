@@ -31,10 +31,8 @@ import { caretOnly } from "./awareness";
 import { outsideCursors } from "./plugins/decorations/outsideCursors";
 import * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
-import {
-  titleCandidateExtension,
-  syntheticAnnotation,
-} from "./titleCandidatePlugin";
+import { titleCandidateExtension } from "./titleCandidatePlugin";
+import { syntheticAnnotation } from "./userEdit";
 import { titleLineHighlight } from "./plugins/decorations/titleLineHighlight";
 import { editorTheme } from "./editorTheme";
 import {

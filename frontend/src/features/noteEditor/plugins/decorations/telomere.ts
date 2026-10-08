@@ -77,10 +77,11 @@ export function telomere(ytext: Y.Text) {
         const lineIndex = view.state.doc.lineAt(line.from).number - 1;
         const entry = entries[lineIndex];
         if (!entry) return null;
-        // Offsets only match while the editor and the Y.Text hold the same
-        // text, which can differ for a moment during an update.
+        // The raw id is opaque (see lineId.ts), so it is only shown in
+        // development. Offsets only match while the editor and the Y.Text
+        // hold the same text, which can differ for a moment during an update.
         const id =
-          ytext.length === view.state.doc.length
+          import.meta.env.DEV && ytext.length === view.state.doc.length
             ? lineIdAt(ytext, line.from)
             : null;
         return new TelomereMarker(

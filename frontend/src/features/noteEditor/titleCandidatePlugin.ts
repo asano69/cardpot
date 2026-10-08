@@ -1,12 +1,8 @@
-import {
-  Annotation,
-  type EditorState,
-  type Extension,
-} from "@codemirror/state";
+import type { EditorState, Extension } from "@codemirror/state";
 import type { PluginValue, ViewUpdate } from "@codemirror/view";
 import { ViewPlugin } from "@codemirror/view";
-import { ySyncAnnotation } from "y-codemirror.next";
 import { type TitleCandidate, makeTitleCandidate } from "@/lib/models/card";
+import { hasUserEdit } from "./userEdit";
 
 // How long to wait, after the last edit to the header (line 1), before
 // treating it as "confirmed" and firing the callback. Pressing Enter
@@ -14,11 +10,6 @@ import { type TitleCandidate, makeTitleCandidate } from "@/lib/models/card";
 // window (see headerJustCommitted below).
 const DEBOUNCE_MS = 2000;
 
-// Tags a transaction NoteEditor dispatches itself programmatically --
-// seeding a brand-new draft's header, or filling a blank "Untitled"
-// header -- so update() below excludes it from candidate detection,
-// the same way a real user edit would be excluded from firing twice.
-export const syntheticAnnotation = Annotation.define<boolean>();
 
 // The header is always line 1. CodeMirror's line-based document model
 // makes this a direct lookup, unlike ProseMirror's node-tree walk
@@ -35,20 +26,6 @@ function headerJustCommitted(update: ViewUpdate): boolean {
   return update.startState.doc.lines <= 1 && update.state.doc.lines >= 2;
 }
 
-// Whether any transaction in `update` reflects an actual user edit --
-// excludes this module's own synthetic transactions (see
-// syntheticAnnotation above) and y-codemirror.next's remote-sync
-// transactions (tagged with ySyncAnnotation whenever a change comes
-// from Yjs itself: another peer's edit, or the initial doc <- ytext
-// seed on mount).
-function hasUserEdit(update: ViewUpdate): boolean {
-  return update.transactions.some(
-    (tr) =>
-      tr.docChanged &&
-      tr.annotation(syntheticAnnotation) === undefined &&
-      tr.annotation(ySyncAnnotation) === undefined,
-  );
-}
 
 // Fires `onConfirmed` with a title candidate string whenever the
 // header (line 1) is "confirmed": either the user presses Enter to

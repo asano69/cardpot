@@ -13,6 +13,9 @@ import * as Y from "yjs";
 // - Undo re-inserts a deleted "\n" as a new character, so a line restored by
 //   undo gets a new id. Replacing the whole text (e.g. an import) renews every
 //   id as well.
+// A LineId is opaque: it is only compared for equality and used as a key. Never
+// parse it (e.g. split on ":"). The "client" part is a namespace that keeps ids
+// unique across clients, not the author of the line.
 export type LineId = string; // "head" or "client:clock"
 
 // The first line has no preceding newline, so it uses a fixed sentinel.
