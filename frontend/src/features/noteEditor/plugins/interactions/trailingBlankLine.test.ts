@@ -34,12 +34,28 @@ describe("trailingBlankLine", () => {
     expect(type("", 0, "x").doc.toString()).toBe("x");
   });
 
-  it("restores the blank line when the user deletes it", () => {
+  it("lets the user delete the blank line", () => {
     const state = create("T\nab\n").update({
       changes: { from: 4, to: 5 },
       userEvent: "delete.backward",
     }).state;
-    expect(state.doc.toString()).toBe("T\nab\n");
+    expect(state.doc.toString()).toBe("T\nab");
+  });
+
+  it("does not add a blank line when text is deleted from the last line", () => {
+    const state = create("T\nabc").update({
+      changes: { from: 4, to: 5 },
+      userEvent: "delete.backward",
+    }).state;
+    expect(state.doc.toString()).toBe("T\nab");
+  });
+
+  it("does not add a blank line when typing in a line above the last one", () => {
+    const state = create("T\nab\ncd").update({
+      changes: { from: 4, insert: "x" },
+      userEvent: "input",
+    }).state;
+    expect(state.doc.toString()).toBe("T\nabx\ncd");
   });
 
   it("leaves synthetic transactions alone", () => {
