@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, type Accessor } from "solid-js";
+import { createMemo, createSignal, onCleanup, type Accessor } from "solid-js";
 import type * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
 import type { LineId } from "../models/lineId";
@@ -10,6 +10,10 @@ export interface LineMetaStore {
   // Lines whose meta changed after the first sync with the server, i.e. lines
   // edited (by anyone) while this card is open.
   updated: Accessor<ReadonlySet<LineId>>;
+  // Marks lines the user has just edited, without waiting for their meta to
+  // be written to the Y.Map. The entry is shown until the Y.Map reports the
+  // same line.
+  touch: (ids: LineId[], entry: LineMeta) => void;
 }
 
 // Keeps the line meta of a card's Y.Doc current whenever the map changes
@@ -29,6 +33,8 @@ export function createLineMeta(
   const map = lineMetaMap(ydoc);
   const [meta, setMeta] = createSignal<Record<LineId, LineMeta>>(map.toJSON());
   const [updated, setUpdated] = createSignal<ReadonlySet<LineId>>(new Set());
+  // Meta of the user's recent edits that is not in the Y.Map yet.
+  const [local, setLocal] = createSignal<Record<LineId, LineMeta>>({});
 
   let live = provider?.synced ?? false;
   const onSync = (synced: boolean) => {
@@ -38,14 +44,29 @@ export function createLineMeta(
 
   const refresh = (event: Y.YMapEvent<LineMeta>) => {
     setMeta(map.toJSON());
+    // The Y.Map now holds these lines' meta, so the overlay is obsolete.
+    setLocal((prev) => {
+      const next = { ...prev };
+      for (const key of event.keysChanged) delete next[key];
+      return next;
+    });
     if (!live) return;
     setUpdated((prev) => new Set([...prev, ...event.keysChanged]));
   };
   map.observe(refresh);
 
+  const touch = (ids: LineId[], entry: LineMeta) => {
+    setLocal((prev) => ({
+      ...prev,
+      ...Object.fromEntries(ids.map((id) => [id, entry])),
+    }));
+    setUpdated((prev) => new Set([...prev, ...ids]));
+  };
+
   onCleanup(() => {
     map.unobserve(refresh);
     provider?.off("sync", onSync);
   });
-  return { meta, updated };
+  const merged = createMemo(() => ({ ...meta(), ...local() }));
+  return { meta: merged, updated, touch };
 }

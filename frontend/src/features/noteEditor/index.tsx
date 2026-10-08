@@ -90,6 +90,9 @@ export default function NoteEditor(props: NoteEditorProps) {
   // ref-cleanup convention does, so `view.destroy()` is wired to
   // onCleanup explicitly below.
   const mountEditor = (el: HTMLDivElement) => {
+    // Created before the editor: the line meta writer reports edits to it.
+    const lineMeta = createLineMeta(props.ydoc, props.provider);
+
     // The doc always starts from `ytext`'s current content here --
     // for a brand-new card that's empty, for an existing one it's
     // whatever the room already holds. yCollab keeps this view and
@@ -151,7 +154,7 @@ export default function NoteEditor(props: NoteEditorProps) {
         // plugins/decorations/telomere.ts). Line ids come from `ytext`.
         telomere(ytext),
         // Records who edited each line last (see lineMetaWriter.ts).
-        lineMetaWriter(props.ydoc, currentUser),
+        lineMetaWriter(props.ydoc, currentUser, lineMeta.touch),
         // Suggests existing card titles while a wiki link is typed (see
         // plugins/interactions/titleCompletion.ts).
         titleCompletion(() => pot()?.id),
@@ -228,7 +231,6 @@ export default function NoteEditor(props: NoteEditorProps) {
     // into the editor (see plugins/decorations/telomere.ts). Like the
     // link-alive effect above, this re-runs on any change of those and sends
     // a fresh snapshot.
-    const lineMeta = createLineMeta(props.ydoc, props.provider);
     onCleanup(startTelomereClock());
     createEffect(() => {
       const entries = telomereEntries(

@@ -6,7 +6,7 @@ import {
   type ViewUpdate,
 } from "@codemirror/view";
 import type * as Y from "yjs";
-import { lineIdAt } from "@/lib/models/lineId";
+import { lineIdAt, type LineId } from "@/lib/models/lineId";
 import {
   LINE_META_ORIGIN,
   lineMetaMap,
@@ -23,9 +23,28 @@ interface User {
   name: string;
 }
 
+// The ids of the lines starting at `positions` (offsets in `doc`). Returns
+// null while `doc` and the Y.Text hold different text: offsets would then
+// point at the wrong lines.
+function lineIdsAt(
+  ydoc: Y.Doc,
+  doc: Text,
+  positions: Iterable<number>,
+): LineId[] | null {
+  const ytext = ydoc.getText("content");
+  if (ytext.length !== doc.length) return null;
+
+  const ids: LineId[] = [];
+  for (const pos of positions) {
+    const id = lineIdAt(ytext, doc.lineAt(Math.min(pos, doc.length)).from);
+    if (id) ids.push(id);
+  }
+  return ids;
+}
+
 // Records `user` as the last editor of the lines starting at `positions`
 // (offsets in `doc`). Returns false, writing nothing, while `doc` and the
-// Y.Text hold different text: offsets would then point at the wrong lines.
+// Y.Text hold different text.
 export function writeLineMeta(
   ydoc: Y.Doc,
   doc: Text,
@@ -33,22 +52,21 @@ export function writeLineMeta(
   user: User,
   now: number,
 ): boolean {
-  const ytext = ydoc.getText("content");
-  if (ytext.length !== doc.length) return false;
+  const ids = lineIdsAt(ydoc, doc, positions);
+  if (!ids) return false;
 
   const meta: LineMeta = { userId: user.id, name: user.name, at: now };
   const map = lineMetaMap(ydoc);
   // A separate origin keeps these writes out of the undo stack.
   ydoc.transact(() => {
-    for (const pos of positions) {
-      const id = lineIdAt(ytext, doc.lineAt(Math.min(pos, doc.length)).from);
-      if (id) map.set(id, meta);
-    }
+    for (const id of ids) map.set(id, meta);
   }, LINE_META_ORIGIN);
   return true;
 }
 
 // Collects the lines the user edited and writes their meta after a pause.
+// The edit is also reported at once through `onTouched`, so the UI does not
+// have to wait for the write.
 class LineMetaWriter implements PluginValue {
   // Start offsets of the edited lines, kept up to date through later changes.
   private pending = new Set<number>();
@@ -58,6 +76,7 @@ class LineMetaWriter implements PluginValue {
     private readonly view: EditorView,
     private readonly ydoc: Y.Doc,
     private readonly user: () => User | undefined,
+    private readonly onTouched?: (ids: LineId[], meta: LineMeta) => void,
   ) {}
 
   update(update: ViewUpdate) {
@@ -69,12 +88,26 @@ class LineMetaWriter implements PluginValue {
     if (!hasUserEdit(update)) return;
 
     const { doc } = update.state;
+    const touched: number[] = [];
     update.changes.iterChangedRanges((_fromA, _toA, fromB, toB) => {
       for (let n = doc.lineAt(fromB).number; n <= doc.lineAt(toB).number; n++) {
         this.pending.add(doc.line(n).from);
+        touched.push(doc.line(n).from);
       }
     });
+    // Deferred: the callback may dispatch to this view, which is not allowed
+    // while an update is in progress. By then the Y.Text is in step too.
+    if (this.onTouched) queueMicrotask(() => this.touch(touched));
     this.schedule();
+  }
+
+  // Reports the lines just edited, without writing anything to the Y.Doc.
+  private touch(positions: number[]) {
+    const user = this.user();
+    if (!user) return;
+    const ids = lineIdsAt(this.ydoc, this.view.state.doc, positions);
+    if (!ids) return;
+    this.onTouched?.(ids, { userId: user.id, name: user.name, at: Date.now() });
   }
 
   // Writes what is pending, at the lines' current positions. Returns false
@@ -109,6 +142,12 @@ class LineMetaWriter implements PluginValue {
   }
 }
 
-export function lineMetaWriter(ydoc: Y.Doc, user: () => User | undefined) {
-  return ViewPlugin.define((view) => new LineMetaWriter(view, ydoc, user));
+export function lineMetaWriter(
+  ydoc: Y.Doc,
+  user: () => User | undefined,
+  onTouched?: (ids: LineId[], meta: LineMeta) => void,
+) {
+  return ViewPlugin.define(
+    (view) => new LineMetaWriter(view, ydoc, user, onTouched),
+  );
 }
