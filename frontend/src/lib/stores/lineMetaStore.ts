@@ -24,15 +24,21 @@ export interface LineMetaStore {
 // "updated" only collects changes made after the provider's first sync:
 // everything that arrives before (IndexedDB, the server's current state) is
 // what the card looked like when it was opened. The user's own edits count
-// too, like in Cosense. Without a provider (a draft) nothing is ever
-// collected.
+// too, like in Cosense. Without a provider (a draft) only the user's own
+// edits are collected.
+//
+// A doc handed over from a draft already holds the meta of those edits when
+// this runs, so they start as "updated". A fresh doc has an empty map here,
+// since IndexedDB and the server only fill it later.
 export function createLineMeta(
   ydoc: Y.Doc,
   provider?: WebsocketProvider,
 ): LineMetaStore {
   const map = lineMetaMap(ydoc);
   const [meta, setMeta] = createSignal<Record<LineId, LineMeta>>(map.toJSON());
-  const [updated, setUpdated] = createSignal<ReadonlySet<LineId>>(new Set());
+  const [updated, setUpdated] = createSignal<ReadonlySet<LineId>>(
+    new Set(map.keys()),
+  );
   // Meta of the user's recent edits that is not in the Y.Map yet.
   const [local, setLocal] = createSignal<Record<LineId, LineMeta>>({});
 

@@ -72,6 +72,19 @@ describe("createLineMeta", () => {
     dispose();
   });
 
+  it("starts with the lines whose meta the doc already holds", () => {
+    // Regression test: a doc handed over from a draft already holds the meta
+    // of the user's edits. The line 0 bar used to fall back from "updated"
+    // to "read" when the draft became an existing card.
+    const ydoc = new Y.Doc();
+    lineMetaMap(ydoc).set("head", entry);
+    const { provider } = fakeProvider();
+    const { store, dispose } = mount(ydoc, provider);
+
+    expect([...store.updated()]).toEqual(["head"]);
+    dispose();
+  });
+
   it("collects nothing without a provider", () => {
     const ydoc = new Y.Doc();
     const { store, dispose } = mount(ydoc);
