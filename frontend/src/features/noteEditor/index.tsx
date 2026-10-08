@@ -20,6 +20,7 @@ import { unreadLineIdsOf } from "@/lib/stores/unreadStore";
 import { telomereEntries } from "@/lib/models/telomere";
 import { currentUser } from "@/lib/api/auth";
 import { lineMetaWriter } from "./plugins/interactions/lineMetaWriter";
+import { trailingBlankLine } from "./plugins/interactions/trailingBlankLine";
 import {
   linkAlive,
   linkAliveVersion,
@@ -154,6 +155,9 @@ export default function NoteEditor(props: NoteEditorProps) {
         telomere(ytext),
         // Records who edited each line last (see lineMetaWriter.ts).
         lineMetaWriter(props.ydoc, currentUser, lineMeta.touch),
+        // Keeps a blank line at the end of the document (see
+        // plugins/interactions/trailingBlankLine.ts).
+        trailingBlankLine,
         // Suggests existing card titles while a wiki link is typed (see
         // plugins/interactions/titleCompletion.ts).
         titleCompletion(() => pot()?.id),
