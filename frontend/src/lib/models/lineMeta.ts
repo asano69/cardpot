@@ -32,9 +32,11 @@ export function touchedLineIds(ytext: Y.Text, event: Y.YTextEvent): LineId[] {
   const ids = new Set<LineId>();
 
   // Adds the line holding `from` and every line that starts before `to`.
-  const addLines = (from: number, to: number) => {
+  // `skipFirst` leaves out the line holding `from`: it did not change.
+  const addLines = (from: number, to: number, skipFirst = false) => {
     from = Math.min(from, text.length);
     let start = from === 0 ? 0 : text.lastIndexOf("\n", from - 1) + 1;
+    if (skipFirst) start = text.indexOf("\n", start) + 1;
     for (;;) {
       const id = lineIdAt(ytext, start);
       if (id) ids.add(id);
@@ -50,7 +52,11 @@ export function touchedLineIds(ytext: Y.Text, event: Y.YTextEvent): LineId[] {
       pos += op.retain;
     } else if (op.insert !== undefined) {
       const length = typeof op.insert === "string" ? op.insert.length : 1;
-      addLines(pos, pos + length);
+      // Enter at the end of a line (the text after the insertion is empty)
+      // only adds lines below it; the line above keeps its text.
+      const after = text[pos + length];
+      const atLineEnd = text[pos] === "\n" && (after === undefined || after === "\n");
+      addLines(pos, pos + length, atLineEnd);
       pos += length;
     } else if (op.delete !== undefined) {
       addLines(pos, pos);

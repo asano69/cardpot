@@ -1,4 +1,4 @@
-import type { Text } from "@codemirror/state";
+import type { ChangeDesc, Text } from "@codemirror/state";
 import {
   ViewPlugin,
   type EditorView,
@@ -40,6 +40,29 @@ function lineIdsAt(
     if (id) ids.push(id);
   }
   return ids;
+}
+
+// The start offsets (in `doc`) of the lines a change touched. Pressing Enter
+// at the very end of a line adds a line below it without changing the line
+// above, so only the new line counts (see touchedLineIds in
+// lib/models/lineMeta.ts for the same rule on the remote side).
+export function touchedLineStarts(
+  changes: ChangeDesc,
+  startDoc: Text,
+  doc: Text,
+): number[] {
+  const starts: number[] = [];
+  changes.iterChangedRanges((fromA, toA, fromB, toB) => {
+    const opensNewLine =
+      fromA === toA &&
+      fromA === startDoc.lineAt(fromA).to &&
+      doc.sliceString(fromB, fromB + 1) === "\n";
+    const first = doc.lineAt(fromB).number + (opensNewLine ? 1 : 0);
+    for (let n = first; n <= doc.lineAt(toB).number; n++) {
+      starts.push(doc.line(n).from);
+    }
+  });
+  return starts;
 }
 
 // Records `user` as the last editor of the lines starting at `positions`
@@ -87,14 +110,12 @@ class LineMetaWriter implements PluginValue {
     }
     if (!hasUserEdit(update)) return;
 
-    const { doc } = update.state;
-    const touched: number[] = [];
-    update.changes.iterChangedRanges((_fromA, _toA, fromB, toB) => {
-      for (let n = doc.lineAt(fromB).number; n <= doc.lineAt(toB).number; n++) {
-        this.pending.add(doc.line(n).from);
-        touched.push(doc.line(n).from);
-      }
-    });
+    const touched = touchedLineStarts(
+      update.changes,
+      update.startState.doc,
+      update.state.doc,
+    );
+    for (const pos of touched) this.pending.add(pos);
     // Deferred: the callback may dispatch to this view, which is not allowed
     // while an update is in progress. By then the Y.Text is in step too.
     if (this.onTouched) queueMicrotask(() => this.touch(touched));

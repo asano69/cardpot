@@ -26,6 +26,13 @@ describe("touchedLineIds", () => {
     expect(ids).toEqual(new Set([lineIdAt(ytext, 2), lineIdAt(ytext, 6)]));
   });
 
+  it("reports only the new line when Enter is pressed at the end of a line", () => {
+    // Regression test: the line above, whose text did not change, was
+    // reported too.
+    const { ids, ytext } = touchedBy("t\nP\nQ", (y) => y.insert(3, "\n"));
+    expect(ids).toEqual(new Set([lineIdAt(ytext, 4)]));
+  });
+
   it("reports the line a deletion happened in", () => {
     const { ids, ytext } = touchedBy("t\nabc\nz", (y) => y.delete(3, 1));
     expect(ids).toEqual(new Set([lineIdAt(ytext, 2)]));

@@ -3,7 +3,29 @@ import * as Y from "yjs";
 import { describe, expect, it } from "vitest";
 import { lineIdAt } from "@/lib/models/lineId";
 import { lineMetaMap } from "@/lib/models/lineMeta";
-import { writeLineMeta } from "./lineMetaWriter";
+import { EditorState } from "@codemirror/state";
+import { touchedLineStarts, writeLineMeta } from "./lineMetaWriter";
+
+function startsTouchedBy(doc: string, from: number, insert: string) {
+  const tr = EditorState.create({ doc }).update({
+    changes: { from, insert },
+  });
+  return touchedLineStarts(tr.changes, tr.startState.doc, tr.state.doc);
+}
+
+describe("touchedLineStarts", () => {
+  it("counts only the new line when Enter is pressed at the end of a line", () => {
+    expect(startsTouchedBy("t\nP\nQ", 3, "\n")).toEqual([4]);
+  });
+
+  it("counts both lines when a line is split in the middle", () => {
+    expect(startsTouchedBy("t\nabcdef\nQ", 5, "\n")).toEqual([2, 6]);
+  });
+
+  it("counts only the typed line for ordinary typing", () => {
+    expect(startsTouchedBy("t\nabc\nQ", 3, "X")).toEqual([2]);
+  });
+});
 
 const alice = { id: "u1", name: "alice" };
 
