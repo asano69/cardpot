@@ -9,6 +9,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -39,11 +40,18 @@ func yjsAuth(app core.App, next http.Handler) http.Handler {
 
 		// Superusers are not tracked: they are rarely used and can do
 		// anything anyway.
+		var onClose func()
 		if !session.IsSuperuser {
-			recordCardView(app, session.UserID, r.PathValue("room"))
+			room := r.PathValue("room")
+			recordCardView(app, session.UserID, room)
+			onClose = func() { recordCardLeft(app, session.UserID, room) }
 		}
 
-		next.ServeHTTP(expiringWriter{ResponseWriter: w, expiresAt: session.ExpiresAt}, r)
+		next.ServeHTTP(expiringWriter{
+			ResponseWriter: w,
+			expiresAt:      session.ExpiresAt,
+			onClose:        onClose,
+		}, r)
 	})
 }
 
@@ -53,6 +61,9 @@ func yjsAuth(app core.App, next http.Handler) http.Handler {
 type expiringWriter struct {
 	http.ResponseWriter
 	expiresAt time.Time
+	// onClose, when set, runs once when the hijacked connection is closed
+	// (the user left the room). It must not block.
+	onClose func()
 }
 
 func (w expiringWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
@@ -67,17 +78,25 @@ func (w expiringWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 		return nil, nil, err
 	}
 	timer := time.AfterFunc(time.Until(w.expiresAt), func() { _ = conn.Close() })
-	return &expiringConn{Conn: conn, timer: timer}, rw, nil
+	return &expiringConn{Conn: conn, timer: timer, onClose: w.onClose}, rw, nil
 }
 
 // expiringConn stops the expiry timer when the connection is closed first, so
-// the timer does not keep a closed connection alive.
+// the timer does not keep a closed connection alive. It also reports the
+// close (once) through onClose.
 type expiringConn struct {
 	net.Conn
-	timer *time.Timer
+	timer   *time.Timer
+	onClose func()
+	once    sync.Once
 }
 
 func (c *expiringConn) Close() error {
 	c.timer.Stop()
+	c.once.Do(func() {
+		if c.onClose != nil {
+			c.onClose()
+		}
+	})
 	return c.Conn.Close()
 }

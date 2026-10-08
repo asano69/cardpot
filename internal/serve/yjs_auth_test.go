@@ -86,6 +86,28 @@ func (w hijackableWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	return w.conn, nil, nil
 }
 
+func TestExpiringWriter_ReportsCloseOnce(t *testing.T) {
+	server, client := net.Pipe()
+	defer client.Close()
+
+	closed := 0
+	w := expiringWriter{
+		ResponseWriter: hijackableWriter{ResponseWriter: httptest.NewRecorder(), conn: server},
+		expiresAt:      time.Now().Add(time.Hour),
+		onClose:        func() { closed++ },
+	}
+	conn, _, err := w.Hijack()
+	if err != nil {
+		t.Fatalf("Hijack: %v", err)
+	}
+	_ = conn.Close()
+	_ = conn.Close()
+
+	if closed != 1 {
+		t.Errorf("onClose ran %d times, want 1", closed)
+	}
+}
+
 func TestExpiringWriter_ClosesTheHijackedConnectionAtExpiry(t *testing.T) {
 	server, client := net.Pipe()
 	defer client.Close()

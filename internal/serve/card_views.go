@@ -3,7 +3,10 @@
 // opened while offline are not recorded.
 //
 // Each (card, user) pair has one row in "card_views": how many times the
-// user opened the card and when they last did. The collection is not listed
+// user opened the card, when they last did, and when they last left it (the
+// "left" field, written when the websocket closes; see recordCardLeft). The
+// two are independent: opening is deduped and counted, leaving is never
+// deduped and only keeps the latest time. The collection is not listed
 // in internal/replica on purpose: updating it must never reach the realtime
 // channels or the clients' pull.
 //
@@ -74,26 +77,60 @@ func recordCardView(app core.App, userID, cardID string) {
 	}()
 }
 
-// upsertCardView adds one view to the (card, user) row, creating it on the
-// first view.
-func upsertCardView(app core.App, userID, cardID string) error {
+// recordCardLeft stores the time userID left cardID's room. Unlike
+// recordCardView it is never deduped: the latest leave always wins. With
+// several tabs open on the same card, the last tab closed decides only if it
+// is also the last to close, which is accepted for simplicity. A failure is
+// only logged.
+func recordCardLeft(app core.App, userID, cardID string) {
+	go func() {
+		if err := upsertCardLeft(app, userID, cardID); err != nil {
+			slog.Warn("record card leave", "user", userID, "card", cardID, "error", err)
+		}
+	}()
+}
+
+// cardViewRow returns the (card, user) row, or a new unsaved one.
+func cardViewRow(app core.App, userID, cardID string) (*core.Record, error) {
 	record, err := app.FindFirstRecordByFilter(
 		"card_views", "card = {:card} && user = {:user}",
 		dbx.Params{"card": cardID, "user": userID},
 	)
-	if errors.Is(err, sql.ErrNoRows) {
-		collection, err := app.FindCollectionByNameOrId("card_views")
-		if err != nil {
-			return err
-		}
-		record = core.NewRecord(collection)
-		record.Set("card", cardID)
-		record.Set("user", userID)
-	} else if err != nil {
+	if err == nil {
+		return record, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+	collection, err := app.FindCollectionByNameOrId("card_views")
+	if err != nil {
+		return nil, err
+	}
+	record = core.NewRecord(collection)
+	record.Set("card", cardID)
+	record.Set("user", userID)
+	return record, nil
+}
+
+// upsertCardView adds one view to the (card, user) row, creating it on the
+// first view.
+func upsertCardView(app core.App, userID, cardID string) error {
+	record, err := cardViewRow(app, userID, cardID)
+	if err != nil {
 		return err
 	}
-
 	record.Set("count", record.GetInt("count")+1)
 	record.Set("viewed", types.NowDateTime())
+	return app.Save(record)
+}
+
+// upsertCardLeft sets the "left" time of the (card, user) row to now,
+// creating the row if it does not exist yet.
+func upsertCardLeft(app core.App, userID, cardID string) error {
+	record, err := cardViewRow(app, userID, cardID)
+	if err != nil {
+		return err
+	}
+	record.Set("left", types.NowDateTime())
 	return app.Save(record)
 }

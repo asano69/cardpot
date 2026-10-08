@@ -1810,6 +1810,18 @@ func init() {
 						"type": "date"
 					},
 					{
+						"help": "",
+						"hidden": false,
+						"id": "date2053629800",
+						"max": "",
+						"min": "",
+						"name": "left",
+						"presentable": false,
+						"required": false,
+						"system": false,
+						"type": "date"
+					},
+					{
 						"hidden": false,
 						"id": "autodate2990389176",
 						"name": "created",

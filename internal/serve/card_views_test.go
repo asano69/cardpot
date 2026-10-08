@@ -20,6 +20,7 @@ func newViewsTestApp(t *testing.T) core.App {
 		&core.TextField{Name: "user"},
 		&core.NumberField{Name: "count"},
 		&core.DateField{Name: "viewed"},
+		&core.DateField{Name: "left"},
 	)
 	if err := app.Save(views); err != nil {
 		t.Fatalf("create card_views collection: %v", err)
@@ -60,6 +61,31 @@ func TestUpsertCardView_CountsPerCardAndUser(t *testing.T) {
 	}
 	if bob := viewRows(t, app, "card1", "bob"); len(bob) != 1 || bob[0].GetInt("count") != 1 {
 		t.Errorf("bob rows = %d, want 1 row with count 1", len(bob))
+	}
+}
+
+func TestUpsertCardLeft_IsIndependentOfTheViewCount(t *testing.T) {
+	app := newViewsTestApp(t)
+
+	if err := upsertCardView(app, "alice", "card1"); err != nil {
+		t.Fatalf("upsertCardView: %v", err)
+	}
+	if err := upsertCardLeft(app, "alice", "card1"); err != nil {
+		t.Fatalf("upsertCardLeft: %v", err)
+	}
+	// A leave without a recorded view still creates the row.
+	if err := upsertCardLeft(app, "bob", "card1"); err != nil {
+		t.Fatalf("upsertCardLeft: %v", err)
+	}
+
+	alice := viewRows(t, app, "card1", "alice")
+	if len(alice) != 1 || alice[0].GetInt("count") != 1 || alice[0].GetDateTime("left").IsZero() {
+		t.Errorf("alice = %d rows, count %d, left zero %v; want 1 row, count 1, left set",
+			len(alice), alice[0].GetInt("count"), alice[0].GetDateTime("left").IsZero())
+	}
+	bob := viewRows(t, app, "card1", "bob")
+	if len(bob) != 1 || bob[0].GetInt("count") != 0 || bob[0].GetDateTime("left").IsZero() {
+		t.Errorf("bob row = %v, want 1 row with count 0 and left set", bob)
 	}
 }
 
