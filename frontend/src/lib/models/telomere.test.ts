@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { telomereThickness } from "./telomere";
+import { telomereEntries, telomereThickness } from "./telomere";
+
+describe("telomereEntries", () => {
+  it("maps line meta to read entries keyed by the same line id", () => {
+    expect(
+      telomereEntries({ "1:2": { userId: "u", name: "alice", at: 5 } }),
+    ).toEqual({ "1:2": { updatedAt: 5, user: "alice", status: "read" } });
+  });
+});
 
 describe("telomereThickness", () => {
   it("gets thinner as the edit gets older", () => {

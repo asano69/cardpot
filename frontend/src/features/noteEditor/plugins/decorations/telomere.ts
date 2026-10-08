@@ -1,7 +1,7 @@
 import { StateEffect, StateField } from "@codemirror/state";
 import { GutterMarker, gutter, gutters } from "@codemirror/view";
 import type * as Y from "yjs";
-import { lineIdAt } from "@/lib/models/lineId";
+import { lineIdAt, type LineId } from "@/lib/models/lineId";
 import {
   telomereThickness,
   type TelomereEntry,
@@ -13,8 +13,7 @@ import {
 // gutter itself is moved into the page's left padding by editorTheme.ts.
 
 export interface TelomereData {
-  // Keyed by the 0-based line number.
-  entries: Record<number, TelomereEntry>;
+  entries: Record<LineId, TelomereEntry>;
   // Epoch milliseconds the thickness is computed against.
   now: number;
 }
@@ -74,20 +73,27 @@ export function telomere(ytext: Y.Text) {
       class: "cm-telomere",
       lineMarker(view, line) {
         const { entries, now } = view.state.field(telomereField);
-        const lineIndex = view.state.doc.lineAt(line.from).number - 1;
-        const entry = entries[lineIndex];
-        if (!entry) return null;
+        // Offsets only match while the editor and the Y.Text hold the same
+        // text, which can differ for a moment during an update.
+        if (ytext.length !== view.state.doc.length) return null;
+        const id = lineIdAt(ytext, line.from);
+        if (!id) return null;
+
+        // A line with no recorded edit still gets the thinnest "read" bar.
+        const entry = entries[id];
+        if (!entry) {
+          return new TelomereMarker(telomereThickness(Infinity), "read", "");
+        }
         // The raw id is opaque (see lineId.ts), so it is only shown in
-        // development. Offsets only match while the editor and the Y.Text
-        // hold the same text, which can differ for a moment during an update.
-        const id =
-          import.meta.env.DEV && ytext.length === view.state.doc.length
-            ? lineIdAt(ytext, line.from)
-            : null;
+        // development. An edit time ahead of this clock gives a negative age,
+        // which draws the thickest bar.
+        const label = import.meta.env.DEV
+          ? `${entry.user}\nid: ${id}`
+          : entry.user;
         return new TelomereMarker(
           telomereThickness(now - entry.updatedAt),
           entry.status,
-          id ? `${entry.user}\nid: ${id}` : entry.user,
+          label,
         );
       },
       // Document changes already refresh the markers; this covers new data.

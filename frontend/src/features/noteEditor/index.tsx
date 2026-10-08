@@ -14,11 +14,11 @@ import { imageWidget } from "./plugins/decorations/imageWidget";
 import { mermaidBlock } from "./plugins/decorations/mermaidBlock";
 import { emptyLinks, setLinkAlive } from "./plugins/decorations/emptyLinks";
 import { telomere, setTelomere } from "./plugins/decorations/telomere";
-import {
-  startTelomereClock,
-  telomereNow,
-  telomereSnapshot,
-} from "@/lib/stores/telomereStore";
+import { startTelomereClock, telomereNow } from "@/lib/stores/telomereStore";
+import { createLineMeta } from "@/lib/stores/lineMetaStore";
+import { telomereEntries } from "@/lib/models/telomere";
+import { currentUser } from "@/lib/api/auth";
+import { lineMetaWriter } from "./plugins/interactions/lineMetaWriter";
 import {
   linkAlive,
   linkAliveVersion,
@@ -146,6 +146,8 @@ export default function NoteEditor(props: NoteEditorProps) {
         // Edit-history bars left of each line (see
         // plugins/decorations/telomere.ts). Line ids come from `ytext`.
         telomere(ytext),
+        // Records who edited each line last (see lineMetaWriter.ts).
+        lineMetaWriter(props.ydoc, currentUser),
         // Suggests existing card titles while a wiki link is typed (see
         // plugins/interactions/titleCompletion.ts).
         titleCompletion(() => pot()?.id),
@@ -218,12 +220,13 @@ export default function NoteEditor(props: NoteEditorProps) {
       );
     });
 
-    // Feeds the telomere store and its clock into the editor (see
+    // Feeds the card's line meta and the clock into the editor (see
     // plugins/decorations/telomere.ts). Like the link-alive effect above,
-    // this re-runs on any store or clock change and sends a fresh snapshot.
+    // this re-runs on any meta or clock change and sends a fresh snapshot.
+    const lineMeta = createLineMeta(props.ydoc);
     onCleanup(startTelomereClock());
     createEffect(() => {
-      const entries = telomereSnapshot();
+      const entries = telomereEntries(lineMeta());
       const now = telomereNow();
       untrack(() =>
         view.dispatch({

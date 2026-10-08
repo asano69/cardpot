@@ -1,6 +1,9 @@
 // Telomere: the thin vertical bar left of each line that shows how recently
 // the line was edited (Cosense's edit-history bar). This module holds only
+// This module holds only
 // pure data types and rules, so it is testable without CodeMirror or Solid.
+import type { LineId } from "./lineId";
+import type { LineMeta } from "./lineMeta";
 
 // "read": nothing new. "unread": edited by someone else since this user last
 // looked. "updated": edited after this page was loaded.
@@ -12,6 +15,18 @@ export interface TelomereEntry {
   // Name of the user who made that edit.
   user: string;
   status: TelomereStatus;
+}
+
+// Turns the recorded line meta into the entries the gutter draws.
+// TODO: every line is "read" until the unread state exists (phase 4).
+export function telomereEntries(
+  meta: Record<LineId, LineMeta>,
+): Record<LineId, TelomereEntry> {
+  const entries: Record<LineId, TelomereEntry> = {};
+  for (const [id, m] of Object.entries(meta)) {
+    entries[id] = { updatedAt: m.at, user: m.name, status: "read" };
+  }
+  return entries;
 }
 
 const MINUTE_MS = 60_000;

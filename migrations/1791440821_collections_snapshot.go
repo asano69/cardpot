@@ -1798,6 +1798,21 @@ func init() {
 						"type": "number"
 					},
 					{
+						"autogeneratePattern": "",
+						"help": "base64",
+						"hidden": false,
+						"id": "text2756839960",
+						"max": 0,
+						"min": 0,
+						"name": "seen",
+						"pattern": "",
+						"presentable": false,
+						"primaryKey": false,
+						"required": false,
+						"system": false,
+						"type": "text"
+					},
+					{
 						"help": "",
 						"hidden": false,
 						"id": "date4152891652",
