@@ -11,8 +11,12 @@ type Awareness = WebsocketProvider["awareness"];
 
 // @codemirror/view declares MeasureRequest but does not export it, so the
 // type is taken from requestMeasure's own parameter.
-type MeasureRequest<T> = NonNullable<Parameters<EditorView["requestMeasure"]>[0]> &
-  { read: (view: EditorView) => T; write?: (measure: T, view: EditorView) => void };
+type MeasureRequest<T> = NonNullable<
+  Parameters<EditorView["requestMeasure"]>[0]
+> & {
+  read: (view: EditorView) => T;
+  write?: (measure: T, view: EditorView) => void;
+};
 
 // Height of ".shared-cursors .cursor" (see editorTheme.ts).
 const CURSOR_HEIGHT_PX = 20;
@@ -125,7 +129,11 @@ class OutsideCursors implements PluginValue {
     const flags: Flag[] = [];
 
     for (const [clientId, state] of awareness.getStates()) {
-      if (clientId === awareness.clientID || !state.user || !state.cursor?.head) {
+      if (
+        clientId === awareness.clientID ||
+        !state.user ||
+        !state.cursor?.head
+      ) {
         continue;
       }
       const pos = this.headIndex(state.cursor.head);

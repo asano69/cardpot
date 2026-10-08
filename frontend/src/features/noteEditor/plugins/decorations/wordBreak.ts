@@ -1,8 +1,4 @@
-import {
-  EditorView,
-  Decoration,
-  type DecorationSet,
-} from "@codemirror/view";
+import { EditorView, Decoration, type DecorationSet } from "@codemirror/view";
 import { decorationPlugin } from "./decorationPlugin";
 
 // Word-break strategy for the editor's body text, built from two

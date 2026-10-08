@@ -61,12 +61,12 @@ export interface RenameLinksResponse {
  * vector as JSON).
  */
 export interface SeenRequest {
-  seen: { [key: string]: number /* uint64 */};
+  seen: { [key: string]: number /* uint64 */ };
 }
 /**
  * SeenResponse is the body of GET /api/admin/cards/{id}/seen. It is empty
  * when the user has not seen the card yet.
  */
 export interface SeenResponse {
-  seen: { [key: string]: number /* uint64 */};
+  seen: { [key: string]: number /* uint64 */ };
 }

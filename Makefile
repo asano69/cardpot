@@ -24,16 +24,16 @@ init:
 
 
 
-.PHONY: frontend-deps
-frontend-deps:
+.PHONY: deps-front
+deps-front:
 	cd frontend && bun install
 
-.PHONY: build-frontend
-build-frontend: frontend-deps
+.PHONY: build-front
+build-front: deps-front
 	cd frontend && bun run build
 
 .PHONY: build
-build: build-frontend
+build: build-front
 	go build -ldflags="-X github.com/asano69/cardpot/internal/version.Version=$(VERSION)" -o $(BINARY) ./cmd/$(BINARY)
 
 .PHONY: server

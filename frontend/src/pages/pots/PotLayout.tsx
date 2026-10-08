@@ -52,7 +52,7 @@ export default function PotLayout(props: ParentProps) {
   // mounted, so both survive that. The pot's cards replica and its data-only
   // replicas (see lib/dexie/dataReplicas.ts) are synced for as long as it is
   // open, so a card opened directly by URL finds an up-to-date replica too.
-// Link results (see lib/stores/linkAliveStore.ts) are only computed once
+  // Link results (see lib/stores/linkAliveStore.ts) are only computed once
   // both replicas have synced, so a half-filled replica never marks a live
   // link as dead. Realtime is not handled here: AppShell watches the channels
   // for the whole session.

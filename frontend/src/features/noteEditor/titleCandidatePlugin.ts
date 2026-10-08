@@ -10,7 +10,6 @@ import { hasUserEdit } from "./userEdit";
 // window (see headerJustCommitted below).
 const DEBOUNCE_MS = 2000;
 
-
 // The header is always line 1. CodeMirror's line-based document model
 // makes this a direct lookup, unlike ProseMirror's node-tree walk
 // this replaced.
@@ -25,7 +24,6 @@ function extractCandidate(state: EditorState): TitleCandidate {
 function headerJustCommitted(update: ViewUpdate): boolean {
   return update.startState.doc.lines <= 1 && update.state.doc.lines >= 2;
 }
-
 
 // Fires `onConfirmed` with a title candidate string whenever the
 // header (line 1) is "confirmed": either the user presses Enter to

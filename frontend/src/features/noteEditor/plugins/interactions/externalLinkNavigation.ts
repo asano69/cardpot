@@ -47,8 +47,9 @@ export function externalLinkNavigation() {
       const href =
         node.type === BareUrl
           ? view.state.sliceDoc(node.from, node.to)
-          : decideBracketNodeType(view.state.sliceDoc(node.from + 1, node.to - 1))
-              .href;
+          : decideBracketNodeType(
+              view.state.sliceDoc(node.from + 1, node.to - 1),
+            ).href;
       if (!href) return false;
 
       event.preventDefault();

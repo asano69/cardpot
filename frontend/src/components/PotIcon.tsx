@@ -16,11 +16,7 @@ export default function PotIcon(props: PotIconProps) {
       fallbackDelay={0}
       class="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-hover-bg"
     >
-      <Image.Img
-        src={props.src}
-        alt=""
-        class="h-full w-full object-cover"
-      />
+      <Image.Img src={props.src} alt="" class="h-full w-full object-cover" />
       <Image.Fallback>
         <LogoIcon size={26} />
       </Image.Fallback>

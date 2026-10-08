@@ -1,4 +1,3 @@
- 
 import { createSignal } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import { computeAlive } from "../dexie/linkAliveQuery";

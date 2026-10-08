@@ -48,9 +48,7 @@ export async function renameLinks(
 
 // What the current user has seen of a card (see internal/serve/card_views.go):
 // Yjs client id -> next clock. Empty when the card was never opened.
-export async function fetchSeen(
-  cardId: string,
-): Promise<SeenResponse["seen"]> {
+export async function fetchSeen(cardId: string): Promise<SeenResponse["seen"]> {
   const res = await pb.send<SeenResponse>(`/api/admin/cards/${cardId}/seen`, {
     method: "GET",
     requestKey: null,

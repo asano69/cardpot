@@ -1,12 +1,7 @@
 import * as Y from "yjs";
 import { describe, expect, it } from "vitest";
 import { lineIdAt } from "./lineId";
-import {
-  linesWithUnseenChars,
-  mergeSeen,
-  seenOf,
-  type Seen,
-} from "./unseen";
+import { linesWithUnseenChars, mergeSeen, seenOf, type Seen } from "./unseen";
 
 function createText(text: string): Y.Text {
   const ytext = new Y.Doc().getText("content");

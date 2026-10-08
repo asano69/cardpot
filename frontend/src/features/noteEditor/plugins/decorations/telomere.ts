@@ -92,11 +92,7 @@ export function telomere(ytext: Y.Text) {
           ? `${entry.user}\nid: ${id}`
           : entry.user;
         const age = entry.updatedAt === null ? Infinity : now - entry.updatedAt;
-        return new TelomereMarker(
-          telomereThickness(age),
-          entry.status,
-          label,
-        );
+        return new TelomereMarker(telomereThickness(age), entry.status, label);
       },
       // Document changes already refresh the markers; this covers new data.
       lineMarkerChange: (update) =>

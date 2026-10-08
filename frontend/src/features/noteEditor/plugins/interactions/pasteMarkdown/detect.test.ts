@@ -22,7 +22,11 @@ const cases: [name: string, text: string, markdown: boolean][] = [
     "# x\n```\n[* y]\n# z\n```",
     true,
   ],
-  ["scrapbox notation outside a code span still vetoes", "`a` [* y]\n# x", false],
+  [
+    "scrapbox notation outside a code span still vetoes",
+    "`a` [* y]\n# x",
+    false,
+  ],
 ];
 
 describe("looksLikeMarkdown", () => {

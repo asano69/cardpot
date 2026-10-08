@@ -32,7 +32,6 @@ export default function TopBar(props: TopBarProps) {
     >
       <div class="grid w-full grid-cols-[1fr_auto_1fr] items-center px-2 md:px-8">
         <div class="flex items-center  justify-self-start">
-
           {/* The sidebar is always collapsed by default, so this
               toggle is shown on every device. Its icon is the current
               pot's cover, mirroring the user icon on the right. */}

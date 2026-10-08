@@ -102,11 +102,13 @@ function nextDiff(records: CardRecord[]) {
 function watch() {
   let onEvent: (event: CollectionEvent<CardRecord>) => void = () => {};
   let onResync: () => void = () => {};
-  vi.mocked(subscribeToCollection).mockImplementationOnce((_name, event, resync) => {
-    onEvent = event;
-    onResync = resync;
-    return () => {};
-  });
+  vi.mocked(subscribeToCollection).mockImplementationOnce(
+    (_name, event, resync) => {
+      onEvent = event;
+      onResync = resync;
+      return () => {};
+    },
+  );
   watchCards();
   return {
     emit: (action: string, record: CardRecord) => onEvent({ action, record }),

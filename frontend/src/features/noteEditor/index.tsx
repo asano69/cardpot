@@ -79,7 +79,6 @@ export interface NoteEditorProps {
 // Rendering-only CodeMirror adapter. The caller owns the Y.Doc and every
 // persistence/network provider, so lifecycle changes cannot alter its mode.
 export default function NoteEditor(props: NoteEditorProps) {
-
   const navigate = useNavigate();
   const pot = usePot();
   const ytext = props.ydoc.getText("content");
@@ -210,7 +209,7 @@ export default function NoteEditor(props: NoteEditorProps) {
     // and sends a fresh predicate. The predicate runs untracked: it asks for a
     // result the first time it sees a link, and treats "not answered yet" as
     // alive so links never flash red.
-   createEffect(() => {
+    createEffect(() => {
       linkAliveVersion();
       const potId = pot()?.id;
       untrack(() =>
@@ -284,7 +283,10 @@ export default function NoteEditor(props: NoteEditorProps) {
         const max = view.state.doc.length;
         const { anchor, head } = props.initialSelection!;
         view.dispatch({
-          selection: { anchor: Math.min(anchor, max), head: Math.min(head, max) },
+          selection: {
+            anchor: Math.min(anchor, max),
+            head: Math.min(head, max),
+          },
         });
         view.focus();
       }, 0);

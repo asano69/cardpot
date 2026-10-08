@@ -2,7 +2,7 @@ import { createMemo, createSignal, onCleanup, type Accessor } from "solid-js";
 import type * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
 import type { LineId } from "../models/lineId";
-import { lineMetaMap, type LineMeta } from "../models/lineMeta";
+import { lineMetaMap, touchedLineIds, type LineMeta } from "../models/lineMeta";
 
 export interface LineMetaStore {
   // The line meta of the card as a plain object.
@@ -63,8 +63,26 @@ export function createLineMeta(
     setUpdated((prev) => new Set([...prev, ...ids]));
   };
 
+  // Edits of other users show up at once through the text itself, without
+  // waiting for their meta (written after their debounce) to arrive. Who made
+  // the edit is not known yet: the overlay carries no name until the Y.Map
+  // reports the line (see refresh). Everything before the first sync is the
+  // card as it was opened, and the user's own edits are reported by the line
+  // meta writer.
+  const ytext = ydoc.getText("content");
+  const onText = (event: Y.YTextEvent) => {
+    if (!live || event.transaction.local) return;
+    touch(touchedLineIds(ytext, event), {
+      userId: "",
+      name: "",
+      at: Date.now(),
+    });
+  };
+  ytext.observe(onText);
+
   onCleanup(() => {
     map.unobserve(refresh);
+    ytext.unobserve(onText);
     provider?.off("sync", onSync);
   });
   const merged = createMemo(() => ({ ...meta(), ...local() }));

@@ -72,7 +72,9 @@ export async function refreshSession(): Promise<void> {
   const record = pb.authStore.record;
   if (!pb.authStore.isValid || !record) return;
   try {
-    await pb.collection(record.collectionName).authRefresh({ requestKey: null });
+    await pb
+      .collection(record.collectionName)
+      .authRefresh({ requestKey: null });
   } catch (err) {
     if (err instanceof ClientResponseError && err.status !== 0) {
       pb.authStore.clear();

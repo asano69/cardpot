@@ -43,21 +43,19 @@ export function titleCompletion(potId: () => string | undefined) {
       // The query already filtered. CodeMirror's own filter would drop
       // matches where the title differs from the typed text (case, "_").
       filter: false,
-      options: titles.map(
-        (title): Completion => ({
-          label: title,
-          // closeBrackets has usually inserted "]" already: step over it
-          // instead of duplicating it.
-          apply: (view, _completion, from, to) => {
-            const closed = view.state.sliceDoc(to, to + 1) === "]";
-            view.dispatch({
-              changes: { from, to, insert: closed ? title : `${title}]` },
-              selection: { anchor: from + title.length + 1 },
-              userEvent: "input.complete",
-            });
-          },
-        }),
-      ),
+      options: titles.map((title): Completion => ({
+        label: title,
+        // closeBrackets has usually inserted "]" already: step over it
+        // instead of duplicating it.
+        apply: (view, _completion, from, to) => {
+          const closed = view.state.sliceDoc(to, to + 1) === "]";
+          view.dispatch({
+            changes: { from, to, insert: closed ? title : `${title}]` },
+            selection: { anchor: from + title.length + 1 },
+            userEvent: "input.complete",
+          });
+        },
+      })),
     };
   };
 
@@ -72,14 +70,12 @@ export function titleCompletion(potId: () => string | undefined) {
     return {
       from: match.to - typed.length,
       filter: false,
-      options: titles.map(
-        (title): Completion => ({
-          label: title,
-          // A hashtag ends at whitespace, so spaces become "_", which has the
-          // same titleLc.
-          apply: title.replaceAll(" ", "_"),
-        }),
-      ),
+      options: titles.map((title): Completion => ({
+        label: title,
+        // A hashtag ends at whitespace, so spaces become "_", which has the
+        // same titleLc.
+        apply: title.replaceAll(" ", "_"),
+      })),
     };
   };
 

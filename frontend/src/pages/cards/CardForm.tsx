@@ -348,8 +348,7 @@ export default function CardForm() {
                     handleUpdateLinks(alert().cardId, alert().oldTitle)
                   }
                 >
-                  Update links from [{alert().oldTitle}] to [
-                  {alert().newTitle}]
+                  Update links from [{alert().oldTitle}] to [{alert().newTitle}]
                 </button>
                 <Show when={updateLinksError()}>
                   <p>{updateLinksError()}</p>

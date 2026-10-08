@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  cardpotSyntaxLanguage,
-  ExternalLinkMark,
-  Indent,
-  isIndent,
-} from ".";
+import { cardpotSyntaxLanguage, ExternalLinkMark, Indent, isIndent } from ".";
 
 // The first line of every document is its title (see rules/title.ts), so most
 // tests below describe body notation only. These helpers place a throwaway
@@ -194,9 +189,7 @@ describe("Cardpot Lezer syntax", () => {
     // No space after the asterisks -- Bold doesn't match, and the
     // content isn't whitespace-only either, so this still resolves to
     // a WikiLink, matching the old exact-"[* "-prefix behavior.
-    expect(tree("[**]")).toBe(
-      "Document(Paragraph(link(linkMark,linkMark)))",
-    );
+    expect(tree("[**]")).toBe("Document(Paragraph(link(linkMark,linkMark)))");
   });
 
   it("parses Italic through the same generic decoration dispatcher as Bold", () => {

@@ -18,7 +18,9 @@ export function caretOnly(awareness: Awareness): Awareness {
             const cursor = state.cursor;
             states.set(
               id,
-              cursor ? { ...state, cursor: { ...cursor, anchor: cursor.head } } : state,
+              cursor
+                ? { ...state, cursor: { ...cursor, anchor: cursor.head } }
+                : state,
             );
           }
           return states;

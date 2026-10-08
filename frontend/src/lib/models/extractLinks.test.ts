@@ -15,7 +15,10 @@ interface FixtureCase {
 // file: URL. vitest runs with frontend/ as the working directory, so the
 // fixture sits one level up.
 const fixture: FixtureCase[] = JSON.parse(
-  readFileSync(resolve(process.cwd(), "../testdata/link-extraction.json"), "utf8"),
+  readFileSync(
+    resolve(process.cwd(), "../testdata/link-extraction.json"),
+    "utf8",
+  ),
 );
 
 describe("link extraction fixture", () => {
