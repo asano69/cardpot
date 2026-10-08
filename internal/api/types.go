@@ -44,3 +44,16 @@ type RenameLinksRequest struct {
 type RenameLinksResponse struct {
 	Updated int `json:"updated"`
 }
+
+// SeenRequest is the body of POST /api/admin/cards/{id}/seen. Seen maps a Yjs
+// client id to the next clock of that client the user has seen (a state
+// vector as JSON).
+type SeenRequest struct {
+	Seen map[string]uint64 `json:"seen"`
+}
+
+// SeenResponse is the body of GET /api/admin/cards/{id}/seen. It is empty
+// when the user has not seen the card yet.
+type SeenResponse struct {
+	Seen map[string]uint64 `json:"seen"`
+}

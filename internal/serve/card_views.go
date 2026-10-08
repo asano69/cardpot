@@ -17,14 +17,19 @@ package serve
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"log/slog"
+	"net/http"
 	"sync"
 	"time"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/types"
+
+	"github.com/asano69/cardpot/internal/api"
+	"github.com/asano69/cardpot/internal/auth"
 )
 
 // viewDedupeWindow is how long after a counted view the same user opening
@@ -133,4 +138,116 @@ func upsertCardLeft(app core.App, userID, cardID string) error {
 	}
 	record.Set("left", types.NowDateTime())
 	return app.Save(record)
+}
+
+// mergeSeen returns the per-client maximum of a and b. Clocks only grow, so
+// merging in any order, any number of times, gives the same result and a
+// stale writer can never lower what another device already stored.
+func mergeSeen(a, b map[string]uint64) map[string]uint64 {
+	merged := make(map[string]uint64, len(a)+len(b))
+	for _, seen := range []map[string]uint64{a, b} {
+		for client, clock := range seen {
+			if clock > merged[client] {
+				merged[client] = clock
+			}
+		}
+	}
+	return merged
+}
+
+// readSeen decodes the "seen" field of a card_views row. A row that has none
+// yet gives an empty map, never nil.
+func readSeen(record *core.Record) (map[string]uint64, error) {
+	seen := map[string]uint64{}
+	raw := record.GetString("seen")
+	if raw == "" {
+		return seen, nil
+	}
+	if err := json.Unmarshal([]byte(raw), &seen); err != nil {
+		return nil, err
+	}
+	return seen, nil
+}
+
+// loadSeen returns what userID has seen of cardID.
+func loadSeen(app core.App, userID, cardID string) (map[string]uint64, error) {
+	record, err := cardViewRow(app, userID, cardID)
+	if err != nil {
+		return nil, err
+	}
+	return readSeen(record)
+}
+
+// mergeCardSeen merges incoming into the stored "seen" of the (card, user)
+// row, creating the row if needed, and returns the stored result. Reading and
+// writing share one transaction, so two devices posting at once cannot lose
+// each other's clocks.
+func mergeCardSeen(app core.App, userID, cardID string, incoming map[string]uint64) (map[string]uint64, error) {
+	var merged map[string]uint64
+	err := app.RunInTransaction(func(tx core.App) error {
+		record, err := cardViewRow(tx, userID, cardID)
+		if err != nil {
+			return err
+		}
+		current, err := readSeen(record)
+		if err != nil {
+			return err
+		}
+		merged = mergeSeen(current, incoming)
+		encoded, err := json.Marshal(merged)
+		if err != nil {
+			return err
+		}
+		record.Set("seen", types.JSONRaw(encoded))
+		return tx.Save(record)
+	})
+	return merged, err
+}
+
+// checkSeenTarget fails with 404 unless the requested card exists and is not
+// deleted.
+func checkSeenTarget(e *core.RequestEvent) error {
+	err := auth.CanAccessCard(e.App, e.Auth.Id, e.Request.PathValue("id"))
+	if errors.Is(err, auth.ErrCardNotFound) {
+		return e.NotFoundError("card not found", nil)
+	}
+	if err != nil {
+		return e.InternalServerError("check access to the card", err)
+	}
+	return nil
+}
+
+// getSeenHandler serves GET /api/admin/cards/{id}/seen. A superuser is not
+// tracked (see yjs_auth.go), so it always gets an empty result.
+func getSeenHandler(e *core.RequestEvent) error {
+	if err := checkSeenTarget(e); err != nil {
+		return err
+	}
+	seen := map[string]uint64{}
+	if !e.HasSuperuserAuth() {
+		var err error
+		seen, err = loadSeen(e.App, e.Auth.Id, e.Request.PathValue("id"))
+		if err != nil {
+			return e.InternalServerError("load what the user has seen", err)
+		}
+	}
+	return e.JSON(http.StatusOK, api.SeenResponse{Seen: seen})
+}
+
+// postSeenHandler serves POST /api/admin/cards/{id}/seen. A superuser's post
+// is accepted and ignored.
+func postSeenHandler(e *core.RequestEvent) error {
+	if err := checkSeenTarget(e); err != nil {
+		return err
+	}
+	var req api.SeenRequest
+	if err := e.BindBody(&req); err != nil {
+		return e.BadRequestError("invalid request body", err)
+	}
+	if !e.HasSuperuserAuth() {
+		if _, err := mergeCardSeen(e.App, e.Auth.Id, e.Request.PathValue("id"), req.Seen); err != nil {
+			return e.InternalServerError("store what the user has seen", err)
+		}
+	}
+	return e.NoContent(http.StatusNoContent)
 }
