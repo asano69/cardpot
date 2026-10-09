@@ -3,6 +3,9 @@ import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { Check, ChevronDown } from "@/lib/icons";
 
 interface QuickMenuProps {
+  // Class naming this particular menu (e.g. "page-sort-menu"). Applied to
+  // both the trigger and the opened menu, so either can be targeted from CSS.
+  menuClass: string;
   // Heading shown at the top of the opened menu.
   header: string;
   options: string[];
@@ -16,12 +19,18 @@ function QuickMenu(props: QuickMenuProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenu.Trigger class="flex items-center gap-3">
+      {/* The label and the arrow are one button: no border or fill, only a
+          background tint on hover. */}
+      <DropdownMenu.Trigger
+        class={`${props.menuClass} flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-hover-bg`}
+      >
         {selected()}
         <ChevronDown size={14} />
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content class="z-50 min-w-[160px] rounded-md border border-border bg-card p-1 shadow-popover outline-none font-sans">
+        <DropdownMenu.Content
+          class={`${props.menuClass} z-50 min-w-[160px] rounded-md border border-border bg-card p-1 shadow-popover outline-none font-sans`}
+        >
           <DropdownMenu.GroupLabel class="px-2 py-1 text-xs text-border">
             {props.header}
           </DropdownMenu.GroupLabel>
@@ -48,8 +57,13 @@ export default function QuickLaunch() {
   return (
     <div class="quick-launch">
       <div class="flex-box">
-        <QuickMenu header="Display by" options={["Card", "Table"]} />
         <QuickMenu
+          menuClass="page-list-mode-menu"
+          header="Display by"
+          options={["Card", "Table"]}
+        />
+        <QuickMenu
+          menuClass="page-sort-menu"
           header="Sort by"
           options={[
             "Modified",
@@ -61,8 +75,9 @@ export default function QuickLaunch() {
           ]}
         />
         <QuickMenu
+          menuClass="page-filter-menu"
           header="Filter by"
-          options={["All", "yaeda.icon", "test.icon"]}
+          options={["All"]}
         />
       </div>
     </div>
