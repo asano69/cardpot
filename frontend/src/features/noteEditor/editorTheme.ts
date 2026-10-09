@@ -59,7 +59,14 @@ export const editorTheme = EditorView.theme({
   ".telomere-border.updated": {
     borderLeftColor: "var(--telomere-updated, #6b8cff)",
   },
-  // Selection color, drawn by drawSelection() (see index.tsx). The
+  // Caret, drawn by drawSelection() (see index.tsx). CodeMirror's base theme
+  // makes it black and only lightens it under "&dark", which this theme does
+  // not declare, so it is unreadable in dark mode. The text color token
+  // follows the current mode.
+  ".cm-cursor, .cm-dropCursor": {
+    borderLeftColor: "var(--color-text)",
+  },
+  // Selection color, drawn by drawSelection() (see index.tsx). The focused
   // focused selector is needed because CodeMirror's base theme sets
   // its own (purple) color for the focused state, which would
   // otherwise win over the plain selector.
