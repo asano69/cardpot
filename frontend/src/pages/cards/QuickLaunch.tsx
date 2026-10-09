@@ -31,20 +31,22 @@ function QuickMenu(props: QuickMenuProps) {
         <DropdownMenu.Content
           class={`${props.menuClass} z-50 min-w-[160px] rounded-md border border-border bg-card p-1 shadow-popover outline-none font-sans`}
         >
-          <DropdownMenu.GroupLabel class="px-2 py-1 text-xs text-border">
-            {props.header}
-          </DropdownMenu.GroupLabel>
-          <For each={props.options}>
-            {(option) => (
-              <DropdownMenu.Item
-                onSelect={() => setSelected(option)}
-                class="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-text outline-none transition-colors hover:bg-hover-bg data-[highlighted]:bg-hover-bg"
-              >
-                <span class="flex-1">{option}</span>
-                {selected() === option && <Check size={16} />}
-              </DropdownMenu.Item>
-            )}
-          </For>
+          <DropdownMenu.Group>
+            <DropdownMenu.GroupLabel class="px-2 py-1 text-xs text-border">
+              {props.header}
+            </DropdownMenu.GroupLabel>
+            <For each={props.options}>
+              {(option) => (
+                <DropdownMenu.Item
+                  onSelect={() => setSelected(option)}
+                  class="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-text outline-none transition-colors hover:bg-hover-bg data-[highlighted]:bg-hover-bg"
+                >
+                  <span class="flex-1">{option}</span>
+                  {selected() === option && <Check size={16} />}
+                </DropdownMenu.Item>
+              )}
+            </For>
+          </DropdownMenu.Group>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu>
