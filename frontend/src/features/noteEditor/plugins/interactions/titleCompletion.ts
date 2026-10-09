@@ -79,5 +79,11 @@ export function titleCompletion(potId: () => string | undefined) {
     };
   };
 
-  return autocompletion({ override: [linkSource, tagSource], icons: false });
+  return autocompletion({
+    override: [linkSource, tagSource],
+    icons: false,
+    // Same look as the selection menu (see editorTheme.ts), above the caret.
+    aboveCursor: true,
+    tooltipClass: () => "title-completion",
+  });
 }

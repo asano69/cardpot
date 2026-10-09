@@ -247,6 +247,33 @@ export const editorTheme = EditorView.theme({
     cursor: "not-allowed",
   },
 
+  // Title suggestions while a wiki link or hashtag is typed (see
+  // plugins/interactions/titleCompletion.ts). The box matches
+  // ".cm-tooltip.selection-menu" above; the options are a vertical list. The
+  // ".cm-tooltip-autocomplete" part is needed to win over CodeMirror's base
+  // theme, which colors the selected option blue.
+  ".cm-tooltip.cm-tooltip-autocomplete.title-completion": {
+    padding: "2px",
+    border: "1px solid var(--color-border)",
+    borderRadius: "6px",
+    backgroundColor: "var(--color-card)",
+    boxShadow: "var(--shadow-popover)",
+  },
+  ".cm-tooltip.cm-tooltip-autocomplete.title-completion > ul": {
+    fontFamily: "var(--font-sans)",
+    fontSize: "13px",
+  },
+  ".cm-tooltip.cm-tooltip-autocomplete.title-completion > ul > li": {
+    padding: "4px 8px",
+    borderRadius: "4px",
+    color: "var(--color-text)",
+  },
+  ".cm-tooltip.cm-tooltip-autocomplete.title-completion > ul > li[aria-selected]":
+    {
+      backgroundColor: "var(--color-hover-bg)",
+      color: "var(--color-text)",
+    },
+
   // "[[x]]" (Strong node).
   ".strong": {
     fontWeight: "bold",
