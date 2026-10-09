@@ -1,6 +1,7 @@
-import { Show } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { Plus } from "@/lib/icons";
+import { titleToSegment } from "@/lib/models/slugify";
 import PotIcon from "../PotIcon";
 
 import ThemeToggle from "./ThemeToggle";
@@ -22,6 +23,18 @@ export interface TopBarProps {
 // MainLayout, passed in as sidebarOpen/onToggleSidebar). There is no
 // separate mobile-only menu anymore.
 export default function TopBar(props: TopBarProps) {
+  // The text typed in the title search. The "add card" button opens the card
+  // with this title, exactly like following a wiki link: an existing card
+  // opens, otherwise a draft with that title starts (see CardForm).
+  const [query, setQuery] = createSignal("");
+  const addCardHref = () => {
+    const slug = topBarPotLink()!.slug;
+    const title = query().trim();
+    return title
+      ? `/${slug}/${titleToSegment(title)}`
+      : `/${slug}/new`;
+  };
+
   return (
     <header
       // fixed (not sticky): TopBar must float above the scrollable
@@ -66,7 +79,7 @@ export default function TopBar(props: TopBarProps) {
         <div class="col-search justify-self-center">
           <Show when={topBarPotLink()}>
             <A
-              href={`/${topBarPotLink()!.slug}/new`}
+              href={addCardHref()}
               aria-label="Add card"
               title="New"
               class="new-button flex h-8 w-8 items-center justify-center rounded-full bg-[hsl(144,30%,50%)] text-white transition-colors hover:bg-[hsl(153,10%,50%)]"
@@ -76,6 +89,7 @@ export default function TopBar(props: TopBarProps) {
             <TitleSearch
               potId={topBarPotLink()!.id}
               potSlug={topBarPotLink()!.slug}
+              onQueryChange={setQuery}
             />
           </Show>
         </div>

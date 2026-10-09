@@ -9,6 +9,9 @@ import { titleToLowerKey, titleToSegment } from "@/lib/models/slugify";
 export interface TitleSearchProps {
   potId: string;
   potSlug: string;
+  // Called with the text of the input on every change, so the parent can
+  // use it (TopBar's "add card" button opens a card with this title).
+  onQueryChange?: (value: string) => void;
 }
 
 // TopBar's title search: suggests the pot's card titles by titleLc prefix,
@@ -33,6 +36,7 @@ export default function TitleSearch(props: TitleSearchProps) {
   });
 
   const handleInput = async (value: string) => {
+    props.onQueryChange?.(value);
     const request = ++latest;
     if (value.trim() === "") {
       setTitles([]);
