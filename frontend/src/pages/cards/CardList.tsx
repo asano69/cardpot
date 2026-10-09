@@ -13,6 +13,7 @@ import { PointerSensor, KeyboardSensor } from "@dnd-kit/dom";
 
 import Loading from "@/components/Loading";
 import CardItem from "./CardItem";
+import QuickLaunch from "./QuickLaunch";
 import {
   cardsById,
   loadNextCardsPage,
@@ -188,6 +189,8 @@ export default function CardList() {
 
   return (
     <Show when={potWindow(pot()?.id)?.loaded} fallback={<Loading />}>
+      <>
+      <QuickLaunch />
       <DragDropProvider sensors={sensors} onDragEnd={handleDragEnd}>
         <ul class="card-grid">
           <For each={cards()}>
@@ -205,6 +208,7 @@ export default function CardList() {
           />
         </ul>
       </DragDropProvider>
+      </>
     </Show>
   );
 }

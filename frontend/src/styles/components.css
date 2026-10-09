@@ -45,6 +45,23 @@
     gap: clamp(8px, 1.5svw, 16px);
   }
 
+  /* Bar of dropdown menus right above .card-grid (see
+   * pages/cards/QuickLaunch.tsx). The gap between menus is set here, by
+   * the parent, so .btn itself stays layout-neutral. */
+  .quick-launch {
+    color: var(--tool-color, #363c49);
+    font-size: 14px;
+    margin-bottom: 12px;
+
+    .flex-box {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+  }
+
   .card-grid-item {
     position: relative;
     aspect-ratio: 1 / 1.1;
