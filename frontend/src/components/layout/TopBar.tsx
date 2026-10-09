@@ -42,7 +42,7 @@ export default function TopBar(props: TopBarProps) {
       // MainLayout's matching pt-10 on <main>/Sidebar's nav).
       class={`fixed inset-x-0 top-0 z-40 flex items-center border-b border-border bg-nav/70 backdrop-blur-[10px] ${props.class}`}
     >
-      <div class="grid w-full grid-cols-[1fr_auto_1fr] items-center px-2 md:px-8">
+      <div class="grid w-full grid-cols-[1fr_auto_1fr] items-center px-2">
         <div class="flex items-center  justify-self-start">
           {/* The sidebar is always collapsed by default, so this
               toggle is shown on every device. Its icon is the current
