@@ -1,4 +1,11 @@
-import { createEffect, createMemo, For, onCleanup, Show } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  onCleanup,
+  Show,
+} from "solid-js";
 import { A } from "@solidjs/router";
 import { cardsById } from "@/lib/stores/cardsStore";
 import {
@@ -103,6 +110,16 @@ export default function RelatedCards(props: RelatedCardsProps) {
   // until the editor reports it.
   const ownLinks = createOwnLinks(() => props.cardId);
 
+  // Whether the 1 hop / 2 hop rows have been computed at least once. "New
+  // Links" waits for it, so it appears after those rows instead of before
+  // them. It is reset whenever the card changes (see the effect below).
+  const [relatedLoaded, setRelatedLoaded] = createSignal(false);
+  const computeAndMark = async (input: RelatedInput) => {
+    const result = await computeRelated(input);
+    setRelatedLoaded(true);
+    return result;
+  };
+
   const related = createLiveQuery(
     (): RelatedInput | undefined => {
       const potId = pot()?.id;
@@ -117,9 +134,16 @@ export default function RelatedCards(props: RelatedCardsProps) {
         })),
       };
     },
-    computeRelated,
+    computeAndMark,
     { oneHop: [], twoHop: [] },
   );
+
+  // A different card starts over: its rows are not computed yet.
+  createEffect(() => {
+    void props.cardId;
+    void props.title;
+    setRelatedLoaded(false);
+  });
 
   // The datalog query is evaluated by the server, once per card and saved
   // query. A card without a saved query has nothing to load. The cleanup
@@ -202,7 +226,7 @@ export default function RelatedCards(props: RelatedCardsProps) {
       {/* The rows always appear in this order: Links, the 2-hop rows, New
           Links, Query. A row with no cards is simply not rendered, so
           New Links never jumps ahead of the others. */}
-      <Show when={newLinks().length}>
+      <Show when={relatedLoaded() && newLinks().length}>
         <RelationRow
           rowClass="links-new"
           labelClass="empty-links"
