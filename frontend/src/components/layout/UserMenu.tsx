@@ -1,10 +1,45 @@
 // frontend/src/components/layout/UserMenu.tsx
+import { For, Show } from "solid-js";
+import { Dynamic } from "solid-js/web";
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { Image } from "@kobalte/core/image";
-import { LogOut, Settings, Help, About } from "@/lib/icons";
+import {
+  LogOut,
+  Settings,
+  Help,
+  About,
+  Sun,
+  Moon,
+  SunMoon,
+  Check,
+  ChevronRight,
+} from "@/lib/icons";
 import { avatarURL, logout, userInitial } from "@/lib/api/auth";
+import { currentMode, setMode, type Mode } from "@/lib/theme";
 
-// Dropdown menu in the top-right corner, currently holding just logout.
+interface ThemeOption {
+  value: Mode;
+  label: string;
+  icon: typeof Sun;
+}
+
+// Options in the order they're listed in the theme submenu. Each pairs a
+// mode value with the icon shown next to its own item (and on the submenu's
+// trigger when active), so there's a single source of truth for the
+// icon/label/value mapping.
+const THEME_OPTIONS: ThemeOption[] = [
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+  { value: "system", label: "System", icon: SunMoon },
+];
+
+const ITEM_CLASS =
+  "flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-text outline-none transition-colors hover:bg-hover-bg data-[highlighted]:bg-hover-bg";
+
+const CONTENT_CLASS =
+  "z-50 min-w-[160px] rounded-md border border-border bg-card p-1 shadow-popover outline-none font-sans";
+
+// Dropdown menu in the top-right corner: settings, help, theme and logout.
 // Split out of TopBar so TopBar stays focused on layout (toggle + logo)
 // and this file can grow its own menu items without bloating TopBar.
 export default function UserMenu() {
@@ -16,6 +51,11 @@ export default function UserMenu() {
   // does nothing when selected. Wire this up once a real settings
   // page/dialog is built.
   const handleSettings = () => {};
+
+  // The trigger icon always reflects the current setting, so the submenu
+  // doubles as a status indicator.
+  const activeTheme = () =>
+    THEME_OPTIONS.find((o) => o.value === currentMode()) ?? THEME_OPTIONS[2];
 
   return (
     <DropdownMenu>
@@ -64,6 +104,32 @@ export default function UserMenu() {
             <Help size={16} />
             Help
           </DropdownMenu.Item>
+
+          <DropdownMenu.Sub gutter={4} shift={-4}>
+            <DropdownMenu.SubTrigger class={ITEM_CLASS}>
+              <Dynamic component={activeTheme().icon} size={16} />
+              <span class="flex-1">Theme</span>
+              <ChevronRight size={16} />
+            </DropdownMenu.SubTrigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.SubContent class={CONTENT_CLASS}>
+                <For each={THEME_OPTIONS}>
+                  {(option) => (
+                    <DropdownMenu.Item
+                      onSelect={() => setMode(option.value)}
+                      class={ITEM_CLASS}
+                    >
+                      <option.icon size={16} />
+                      <span class="flex-1">{option.label}</span>
+                      <Show when={currentMode() === option.value}>
+                        <Check size={16} />
+                      </Show>
+                    </DropdownMenu.Item>
+                  )}
+                </For>
+              </DropdownMenu.SubContent>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Sub>
 
           <DropdownMenu.Item
             onSelect={handleLogout}

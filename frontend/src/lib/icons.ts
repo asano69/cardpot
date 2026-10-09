@@ -7,6 +7,7 @@ export { default as Check } from "lucide-solid/icons/check";
 export { default as ChevronDown } from "lucide-solid/icons/chevron-down";
 export { default as ChevronsLeft } from "lucide-solid/icons/chevrons-left";
 export { default as ChevronsRight } from "lucide-solid/icons/chevrons-right";
+export { default as ChevronRight } from "lucide-solid/icons/chevron-right";
 
 export { default as Wrench } from "lucide-solid/icons/wrench";
 export { default as Pot } from "lucide-solid/icons/amphora";

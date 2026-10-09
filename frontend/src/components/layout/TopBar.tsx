@@ -4,7 +4,6 @@ import { Plus } from "@/lib/icons";
 import { titleToSegment } from "@/lib/models/slugify";
 import PotIcon from "../PotIcon";
 
-import ThemeToggle from "./ThemeToggle";
 import TitleSearch from "./TitleSearch";
 
 import UserMenu from "./UserMenu";
@@ -101,7 +100,6 @@ export default function TopBar(props: TopBarProps) {
               Empty on pages that register nothing. */}
           {topBarActions()}
 
-          <ThemeToggle />
           <UserMenu />
         </nav>
       </div>
