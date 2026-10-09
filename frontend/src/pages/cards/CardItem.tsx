@@ -95,14 +95,9 @@ export function CardItemView(props: CardItemViewProps) {
               </div>
             </Match>
             <Match when={props.card.image}>
-              <div
-                class="thumbnail m-1.5"
-                // JSON.stringify quotes and escapes the URL as a CSS string,
-                // so characters such as "(" or ")" cannot end url() early.
-                style={{
-                  "background-image": `url(${JSON.stringify(props.card.image)})`,
-                }}
-              />
+              <div class="icon">
+                <img loading="lazy" src={props.card.image} alt="" />
+              </div>
             </Match>
           </Switch>
         </div>

@@ -59,8 +59,8 @@ export default function PotGridItem(props: PotGridItemProps) {
           <div class="header">
             <h3 class="title">{props.pot.title}</h3>
           </div>
-          {/* Same cover-fit thumbnail as CardItem's (see
-              styles/components.css's .card-grid-item .thumbnail). */}
+          {/* Same top-aligned thumbnail as CardItem's (see
+              styles/components.css's .card-grid-item .icon). */}
           <Show
             when={potCoverURL(props.pot)}
             fallback={
@@ -72,14 +72,9 @@ export default function PotGridItem(props: PotGridItemProps) {
             }
           >
             {(src) => (
-              <div
-                class="thumbnail m-1.5"
-                // JSON.stringify quotes and escapes the URL as a CSS string,
-                // so characters such as "(" or ")" cannot end url() early.
-                style={{
-                  "background-image": `url(${JSON.stringify(src())})`,
-                }}
-              />
+              <div class="icon">
+                <img loading="lazy" src={src()} alt="" />
+              </div>
             )}
           </Show>
         </div>

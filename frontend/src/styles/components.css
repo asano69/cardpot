@@ -221,14 +221,23 @@
     width: 70%;
   }
 
-  /* Cover-fit preview for a card whose document contains an image
-   * (see CardItem.tsx). Replaces .description entirely rather than
-   * sharing space with it -- the card is too small for both. */
-  .card-grid-item .thumbnail {
+  /* Preview for a card whose document contains an image (see
+   * CardItem.tsx). Replaces .description entirely rather than sharing
+   * space with it -- the card is too small for both. The image is
+   * full width and pinned to the top; a tall image is cut off by
+   * .content's overflow: hidden. Class names follow Cosense's own
+   * `.grid li.page-list-item a .icon img`. */
+  .card-grid-item .icon {
     flex: 1 1 auto;
     min-height: 0;
-    background-size: cover;
-    background-position: center;
+  }
+
+  .card-grid-item .icon img {
+    display: block;
+    width: 100%;
+    margin: 0 auto;
+    border-radius: 2px;
+    padding: 0 5px;
   }
 
   /* Folded-corner indicator for pinned cards (see CardForm's pin
