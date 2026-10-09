@@ -221,6 +221,32 @@ export const editorTheme = EditorView.theme({
     backgroundColor: "var(--color-line-text)",
   },
 
+  // Menu shown above a selection (see plugins/interactions/selectionMenu.ts).
+  ".cm-tooltip.selection-menu": {
+    display: "flex",
+    gap: "2px",
+    padding: "2px",
+    border: "1px solid var(--color-border)",
+    borderRadius: "6px",
+    backgroundColor: "var(--color-card)",
+    boxShadow: "var(--shadow-popover)",
+  },
+  ".selection-menu button": {
+    padding: "4px 8px",
+    borderRadius: "4px",
+    fontFamily: "var(--font-sans)",
+    fontSize: "13px",
+    color: "var(--color-text)",
+    cursor: "pointer",
+  },
+  ".selection-menu button:hover:not(:disabled)": {
+    backgroundColor: "var(--color-hover-bg)",
+  },
+  ".selection-menu button:disabled": {
+    opacity: "0.4",
+    cursor: "not-allowed",
+  },
+
   // "[[x]]" (Strong node).
   ".strong": {
     fontWeight: "bold",

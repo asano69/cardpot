@@ -49,6 +49,7 @@ import { externalLinkNavigation } from "./plugins/interactions/externalLinkNavig
 import { pasteUrlDecode } from "./plugins/interactions/pasteUrlDecode";
 import { pasteMarkdown } from "./plugins/interactions/pasteMarkdown";
 import { pasteCodeBlockIndent } from "./plugins/interactions/pasteCodeBlockIndent";
+import { selectionMenu } from "./plugins/interactions/selectionMenu";
 import { titleCompletion } from "./plugins/interactions/titleCompletion";
 import type { TitleCandidate } from "@/lib/models/card";
 import { registerDebugView } from "./debug";
@@ -72,6 +73,9 @@ export interface NoteEditorProps {
   // live selection later (see DraftCardEditor).
   onView?: (view: EditorView) => void;
   onConfirmedTitle: (candidate: TitleCandidate) => void;
+  // Called with the selected text when the user picks "Merge into existing
+  // page" in the selection menu. Without it that menu item is disabled.
+  onMergeSelection?: (text: string) => void;
   // Rendered below the editor, in the related-page-list section. The
   // caller decides what goes there, so the editor needs no card id.
   children?: JSX.Element;
@@ -182,6 +186,9 @@ export default function NoteEditor(props: NoteEditorProps) {
         // Keeps a multi-line paste inside a `code:` block from ending the
         // block (see pasteCodeBlockIndent.ts).
         pasteCodeBlockIndent(),
+        // Menu above a selection: merge into another page, or copy as plain
+        // text (see plugins/interactions/selectionMenu.ts).
+        selectionMenu(props.onMergeSelection),
         // A single real tab character per indent level, not spaces --
         // indentMore/indentLess (bound below) both insert/remove
         // whatever this unit is. The parser itself accepts any
