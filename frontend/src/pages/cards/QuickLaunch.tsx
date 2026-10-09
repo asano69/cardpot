@@ -22,7 +22,7 @@ function QuickMenu(props: QuickMenuProps) {
       {/* The label and the arrow are one button: no border or fill, only a
           background tint on hover. */}
       <DropdownMenu.Trigger
-        class={`${props.menuClass} flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-hover-bg`}
+        class={`${props.menuClass} flex cursor-pointer items-center gap-1 rounded-md px-3 py-1 transition-colors hover:bg-hover-bg`}
       >
         {selected()}
         <ChevronDown size={14} />
