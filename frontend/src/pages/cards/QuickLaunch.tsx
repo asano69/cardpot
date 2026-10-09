@@ -16,7 +16,7 @@ function QuickMenu(props: QuickMenuProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenu.Trigger class="btn tool-btn flex items-center gap-1">
+      <DropdownMenu.Trigger class="flex items-center gap-3">
         {selected()}
         <ChevronDown size={14} />
       </DropdownMenu.Trigger>
