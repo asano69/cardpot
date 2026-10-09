@@ -2,6 +2,7 @@ import Dexie from "dexie";
 import type { CardRecord } from "../models/card";
 import { db, type CachedCard } from "./db";
 import type { Replica } from "./replica";
+import { indexCards, unindexCard } from "./titleIndex";
 
 // Cards-specific reads and writes on the IndexedDB replica (see db.ts),
 // which is kept fully up to date via the checkpoint pull protocol (see
@@ -99,14 +100,20 @@ export async function countCards(potId: string): Promise<number> {
   return db.cards.where("pot").equals(potId).count();
 }
 
-// The write side of the cards replica. Used by the generic sync code (see
+// directly -- the write side of the cards replica. Used by the generic sync code (see
 // replica.ts) and by cardsStore.ts's write-through of realtime events and
 // local changes. Fire-and-forget from the store's point of view -- a failure
 // here must never block whoever called this.
+// Every write also updates the title index (see titleIndex.ts), which is why
+// all writes must go through here.
 export const cardsReplica: Replica<CardRecord> = {
   name: "cards",
   put: async (records) => {
     await db.cards.bulkPut(records.map(toCached));
+    indexCards(records);
   },
-  remove: (id) => db.cards.delete(id),
+  remove: async (id) => {
+    await db.cards.delete(id);
+    unindexCard(id);
+  },
 };

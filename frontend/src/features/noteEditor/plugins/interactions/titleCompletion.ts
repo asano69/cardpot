@@ -3,8 +3,7 @@ import {
   type Completion,
   type CompletionSource,
 } from "@codemirror/autocomplete";
-import { suggestTitles } from "@/lib/dexie/titleSuggestQuery";
-import { titleToLowerKey } from "@/lib/models/slugify";
+import { suggestTitles } from "@/lib/dexie/titleIndex";
 import { skipContexts } from "./pasteMarkdown/context";
 
 // An unclosed "[" followed by text without brackets, up to the cursor. In a
@@ -37,7 +36,7 @@ export function titleCompletion(potId: () => string | undefined) {
     if (DECORATION_RE.test(typed)) return null;
     if (typed === "" && !context.explicit) return null;
 
-    const titles = await suggestTitles(pot, titleToLowerKey(typed));
+    const titles = await suggestTitles(pot, typed);
     return {
       from: match.from + 1,
       // The query already filtered. CodeMirror's own filter would drop
@@ -66,7 +65,7 @@ export function titleCompletion(potId: () => string | undefined) {
 
     // The group is the typed text after "#"; it is always at the match's end.
     const typed = match.text.slice(match.text.lastIndexOf("#") + 1);
-    const titles = await suggestTitles(pot, titleToLowerKey(typed));
+    const titles = await suggestTitles(pot, typed);
     return {
       from: match.to - typed.length,
       filter: false,

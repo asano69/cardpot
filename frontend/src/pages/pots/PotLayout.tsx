@@ -14,6 +14,7 @@ import {
   releaseLinkAlive,
 } from "@/lib/stores/linkAliveStore";
 import { closePotReplicas, openPotReplicas } from "@/lib/dexie/dataReplicas";
+import { releaseTitleIndex } from "@/lib/dexie/titleIndex";
 import PotContext from "./PotContext";
 
 // Wraps every route scoped to a single pot (CardList, CardForm) so the
@@ -67,6 +68,7 @@ export default function PotLayout(props: ParentProps) {
       open = false;
       releasePot(id);
       closePotReplicas(id);
+      releaseTitleIndex(id);
       releaseLinkAlive(id);
     });
   });

@@ -2,9 +2,9 @@ import { createSignal } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { Search } from "@kobalte/core/search";
 import { Search as SearchIcon } from "@/lib/icons";
-import { suggestTitles } from "@/lib/dexie/titleSuggestQuery";
+import { suggestTitles } from "@/lib/dexie/titleIndex";
 import { useHotkeys } from "@/lib/hotkeys";
-import { titleToLowerKey, titleToSegment } from "@/lib/models/slugify";
+import { titleToSegment } from "@/lib/models/slugify";
 
 export interface TitleSearchProps {
   potId: string;
@@ -14,9 +14,9 @@ export interface TitleSearchProps {
   onQueryChange?: (value: string) => void;
 }
 
-// TopBar's title search: suggests the pot's card titles by titleLc prefix,
-// from the same source as the editor's "[" completion (see
-// lib/dexie/titleSuggestQuery.ts), and opens the chosen card. Class names
+// TopBar's title search: suggests the pot's card titles that contain the typed
+// words, from the same source as the editor's "[" completion (see
+// lib/dexie/titleIndex.ts), and opens the chosen card. Class names
 // follow Cosense's navbar (.navbar-form > .search-form > .form-group >
 // .dropdown > .form-control, plus .btn-search for the icon).
 export default function TitleSearch(props: TitleSearchProps) {
@@ -43,7 +43,7 @@ export default function TitleSearch(props: TitleSearchProps) {
       return;
     }
     try {
-      const found = await suggestTitles(props.potId, titleToLowerKey(value));
+      const found = await suggestTitles(props.potId, value);
       if (request === latest) setTitles(found);
     } catch (err) {
       console.error("[title-search] failed to search:", err);
