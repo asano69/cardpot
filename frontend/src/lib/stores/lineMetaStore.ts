@@ -33,11 +33,15 @@ export interface LineMetaStore {
 export function createLineMeta(
   ydoc: Y.Doc,
   provider?: WebsocketProvider,
+  // True for a doc handed over from a draft, whose meta is all the user's own
+  // edits. Otherwise the meta already in the doc is how the card looked when
+  // it was opened.
+  startUpdated = false,
 ): LineMetaStore {
   const map = lineMetaMap(ydoc);
   const [meta, setMeta] = createSignal<Record<LineId, LineMeta>>(map.toJSON());
   const [updated, setUpdated] = createSignal<ReadonlySet<LineId>>(
-    new Set(map.keys()),
+    new Set(startUpdated ? map.keys() : []),
   );
   // Meta of the user's recent edits that is not in the Y.Map yet.
   const [local, setLocal] = createSignal<Record<LineId, LineMeta>>({});

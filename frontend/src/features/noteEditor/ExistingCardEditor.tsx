@@ -1,11 +1,12 @@
 /* eslint-disable solid/reactivity --
    This component is keyed by cardId (see CardForm), so it is remounted per
    card and its props are intentionally read once during setup. */
-import { onCleanup } from "solid-js";
+import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 import { IndexeddbPersistence } from "y-indexeddb";
 import NoteEditor from "./index";
+import Loading from "@/components/Loading";
 import RelatedCards from "@/pages/cards/RelatedCards";
 import type { TitleCandidate } from "@/lib/models/card";
 import { extractLinks } from "@/lib/models/extractLinks";
@@ -18,6 +19,10 @@ import { setLocalUser } from "./awareness";
 // Wait this long after the last edit before the open card's links are
 // extracted again.
 const LINKS_DEBOUNCE_MS = 300;
+
+// How long to wait for the server's text when this device has none stored,
+// so an offline user is not left waiting forever.
+const READY_TIMEOUT_MS = 1500;
 
 export interface ExistingCardEditorProps {
   cardId: string;
@@ -37,6 +42,9 @@ export interface ExistingCardEditorProps {
   // the returned string reflects whatever the doc holds at the
   // moment the getter is actually invoked, not at registration time.
   onContentSnapshot?: (getContent: () => string) => void;
+  // Reports whether the editor is shown yet. Reported false again when this
+  // editor goes away, so the caller never keeps a stale "ready".
+  onReady?: (ready: boolean) => void;
 }
 
 // Existing cards own the network lifecycle. Reusing the draft's own Y.Doc
@@ -86,6 +94,28 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
   // Lets the other peers draw this tab's cursor with the user's name.
   if (user) setLocalUser(provider.awareness, user);
 
+  // The editor is mounted only once the doc holds the card's text, so it is
+  // created with its final content instead of being filled in piece by piece
+  // (which showed bullets and an empty page before the text). A doc handed
+  // over from a draft already has its text.
+  const [ready, setReady] = createSignal(props.initialYdoc !== undefined);
+  let readyTimer: ReturnType<typeof setTimeout> | undefined;
+  const onFirstSync = (synced: boolean) => {
+    if (synced) setReady(true);
+  };
+  createEffect(() => props.onReady?.(ready()));
+  if (!ready()) {
+    idbProvider.whenSynced.then(() => {
+      if (ydoc.getText("content").length > 0) {
+        setReady(true);
+        return;
+      }
+      // Nothing stored on this device: wait for the server, but not forever.
+      provider.on("sync", onFirstSync);
+      readyTimer = setTimeout(() => setReady(true), READY_TIMEOUT_MS);
+    });
+  }
+
   // Kept only because NoteEditor requires an onConfirmedTitle callback --
   // resolution itself now happens server-side (see the file comment above),
   // so there's nothing left to do here on confirm.
@@ -117,6 +147,9 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
   onCleanup(() => {
     stopUnread(); // before the doc is destroyed below: it sends the final state
     clearTimeout(linksTimer);
+    clearTimeout(readyTimer);
+    provider.off("sync", onFirstSync);
+    props.onReady?.(false);
     ytext.unobserve(scheduleOwnLinks);
     closeOwnLinks(props.cardId);
     provider.destroy();
@@ -125,20 +158,22 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
   });
 
   return (
-    <NoteEditor
-      ydoc={ydoc}
-      cardId={props.cardId}
-      provider={provider}
-      potSlug={props.potSlug}
-      onConfirmedTitle={confirm}
-      existingTitle={props.existingTitle}
-      initialSelection={props.initialSelection}
-    >
-      <RelatedCards
+    <Show when={ready()} fallback={<Loading />}>
+      <NoteEditor
+        ydoc={ydoc}
         cardId={props.cardId}
-        title={props.existingTitle}
-        potSlug={props.potSlug()}
-      />
-    </NoteEditor>
+        provider={provider}
+        potSlug={props.potSlug}
+        onConfirmedTitle={confirm}
+        existingTitle={props.existingTitle}
+        initialSelection={props.initialSelection}
+      >
+        <RelatedCards
+          cardId={props.cardId}
+          title={props.existingTitle}
+          potSlug={props.potSlug()}
+        />
+      </NoteEditor>
+    </Show>
   );
 }

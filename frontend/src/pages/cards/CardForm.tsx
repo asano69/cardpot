@@ -98,6 +98,11 @@ export default function CardForm() {
   // (keyed Show below) -- never stale across a card switch.
   const [contentSnapshot, setContentSnapshot] = createSignal<() => string>();
   const [queryOpen, setQueryOpen] = createSignal(false);
+  // Whether an existing card's editor is shown yet (see ExistingCardEditor's
+  // onReady). The page menu waits for it, so it does not sit in a column that
+  // is still narrow and then jump when the editor appears.
+  const [editorReady, setEditorReady] = createSignal(false);
+  const menuReady = () => (cardId() ? editorReady() : true);
   // The slug (decoded) of the card the editor currently reflects. Updated
   // whenever a lookup settles or the address bar is rewritten, so it never
   // drifts from what is actually open.
@@ -379,6 +384,7 @@ export default function CardForm() {
                 initialYdoc={draftYdoc()}
                 existingTitle={cardsById[id]?.title}
                 onContentSnapshot={(fn) => setContentSnapshot(() => fn)}
+                onReady={setEditorReady}
                 initialSelection={focusSelection()}
               />
             )}
@@ -388,7 +394,10 @@ export default function CardForm() {
             card's pin/delete actions. Always rendered so the layout
             does not shift when a draft becomes a real card; while
             there is no card yet (a draft), the buttons are disabled. */}
-        <div class="page-menu flex flex-col gap-0.5">
+        <div
+          class="page-menu flex flex-col gap-0.5"
+          classList={{ invisible: !menuReady() }}
+        >
           <button
             type="button"
             aria-label={pinned() ? "Unpin" : "Pin"}
