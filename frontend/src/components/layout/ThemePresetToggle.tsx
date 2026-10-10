@@ -27,12 +27,12 @@ export default function ThemePresetToggle() {
         <SunMoon size={22} />
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content class="z-50 min-w-[160px] rounded-md border border-border bg-card p-1 shadow-popover outline-none font-sans">
+        <DropdownMenu.Content class="menu-content">
           <For each={OPTIONS}>
             {(option) => (
               <DropdownMenu.Item
                 onSelect={() => setPreset(option.value)}
-                class="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-text outline-none transition-colors hover:bg-hover-bg data-[highlighted]:bg-hover-bg"
+                class="menu-item"
               >
                 <span class="flex-1">{option.label}</span>
                 {currentPreset() === option.value && <Check size={16} />}

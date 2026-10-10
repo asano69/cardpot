@@ -1,4 +1,3 @@
-// frontend/src/components/layout/UserMenu.tsx
 import { For, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
@@ -32,12 +31,6 @@ const THEME_OPTIONS: ThemeOption[] = [
   { value: "dark", label: "Dark", icon: Moon },
   { value: "system", label: "System", icon: SunMoon },
 ];
-
-const ITEM_CLASS =
-  "flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-text outline-none transition-colors hover:bg-hover-bg data-[highlighted]:bg-hover-bg";
-
-const CONTENT_CLASS =
-  "z-50 min-w-[160px] rounded-md border border-border bg-card p-1 shadow-popover outline-none font-sans";
 
 // Dropdown menu in the top-right corner: settings, help, theme and logout.
 // Split out of TopBar so TopBar stays focused on layout (toggle + logo)
@@ -81,43 +74,34 @@ export default function UserMenu() {
         </Image>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content class="z-50 min-w-[160px] rounded-md border border-border bg-card p-1 shadow-popover outline-none font-sans">
-          <DropdownMenu.Item
-            onSelect={handleSettings}
-            class="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-text outline-none transition-colors hover:bg-hover-bg data-[highlighted]:bg-hover-bg"
-          >
+        <DropdownMenu.Content class="menu-content">
+          <DropdownMenu.Item onSelect={handleSettings} class="menu-item">
             <Settings size={16} />
             User Settings
           </DropdownMenu.Item>
 
-          <DropdownMenu.Item
-            onSelect={handleSettings}
-            class="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-text outline-none transition-colors hover:bg-hover-bg data-[highlighted]:bg-hover-bg"
-          >
+          <DropdownMenu.Item onSelect={handleSettings} class="menu-item">
             <About size={16} />
             About Cardpot
           </DropdownMenu.Item>
-          <DropdownMenu.Item
-            onSelect={handleSettings}
-            class="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-text outline-none transition-colors hover:bg-hover-bg data-[highlighted]:bg-hover-bg"
-          >
+          <DropdownMenu.Item onSelect={handleSettings} class="menu-item">
             <Help size={16} />
             Help
           </DropdownMenu.Item>
 
           <DropdownMenu.Sub gutter={4} shift={-4}>
-            <DropdownMenu.SubTrigger class={ITEM_CLASS}>
+            <DropdownMenu.SubTrigger class="menu-item">
               <Dynamic component={activeTheme().icon} size={16} />
               <span class="flex-1">Theme</span>
               <ChevronRight size={16} />
             </DropdownMenu.SubTrigger>
             <DropdownMenu.Portal>
-              <DropdownMenu.SubContent class={CONTENT_CLASS}>
+              <DropdownMenu.SubContent class="menu-content">
                 <For each={THEME_OPTIONS}>
                   {(option) => (
                     <DropdownMenu.Item
                       onSelect={() => setMode(option.value)}
-                      class={ITEM_CLASS}
+                      class="menu-item"
                     >
                       <option.icon size={16} />
                       <span class="flex-1">{option.label}</span>
@@ -131,10 +115,7 @@ export default function UserMenu() {
             </DropdownMenu.Portal>
           </DropdownMenu.Sub>
 
-          <DropdownMenu.Item
-            onSelect={handleLogout}
-            class="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-text outline-none transition-colors hover:bg-hover-bg data-[highlighted]:bg-hover-bg"
-          >
+          <DropdownMenu.Item onSelect={handleLogout} class="menu-item">
             <LogOut size={16} />
             Log out
           </DropdownMenu.Item>

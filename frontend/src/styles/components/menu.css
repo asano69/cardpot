@@ -35,6 +35,11 @@
     background-color: var(--color-hover-bg);
   }
 
+  /* Marks an action that destroys data (e.g. "Delete"). */
+  .menu-item[data-destructive] {
+    color: #dc3545;
+  }
+
   .menu-group-label {
     padding: 4px 8px;
     font-size: 12px;
