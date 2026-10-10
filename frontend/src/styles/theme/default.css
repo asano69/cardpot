@@ -52,9 +52,15 @@
     --telomere-updated: #6b8cff;
 
     --tool-color: light-dark(#848484, #535863);
+    --tool-light-color: light-dark(#a9aaaf, #545863);
+    --tool-text-color: light-dark(#666874, #a0a3b0);
 
     /* Destructive actions and error messages. */
     --danger-color: #dc3545;
+
+    /* Error box of the status bar (see status-bar.css). */
+    --status-error-bg: #fd4;
+    --status-error-text: #000;
 
     /* Placeholder bars of an empty card (see card-grid.css). */
     --color-skeleton: light-dark(#e9eaeb, #4a4d55);

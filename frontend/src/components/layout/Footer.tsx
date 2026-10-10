@@ -9,23 +9,30 @@ import { reconnect } from "@/lib/api/realtime";
 // styles/components.css for the actual .footer/.status-bar styling --
 // the outer two layers here carry no border/background of their own,
 // so an empty slot renders nothing visible instead of a stray bar.
+//
+// The connection is only mentioned when it is not online: being connected
+// is the normal case and needs no indicator.
 export default function Footer() {
   return (
     <div class="footer">
       <div class="status-bar">
         {footerContent()}
-        <div class="connection-status">
-          <Show
-            when={connection() === "offline"}
-            fallback={<span class="item">{connection()}</span>}
-          >
-            {/* Terminal disconnects are not retried by the SDK, so offer
-                a manual retry. */}
-            <button type="button" class="item" onClick={reconnect}>
-              offline (retry)
-            </button>
-          </Show>
-        </div>
+        <Show when={connection() !== "online"}>
+          <div class="page-status error">
+            <span class="item-group">
+              <Show
+                when={connection() === "offline"}
+                fallback={<span class="item">Connecting…</span>}
+              >
+                {/* Terminal disconnects are not retried by the SDK, so
+                    offer a manual retry. */}
+                <button type="button" class="item" onClick={reconnect}>
+                  No connection (retry)
+                </button>
+              </Show>
+            </span>
+          </div>
+        </Show>
       </div>
     </div>
   );
