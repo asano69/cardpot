@@ -29,11 +29,12 @@ export default function Sidebar(props: SidebarProps) {
   return (
     <>
       {/* The sidebar always floats above the page instead of sitting in
-          the flex layout. The overlay stays mounted so its opacity can
-          transition in/out instead of popping in/out with the sidebar. */}
+          the flex layout. This transparent layer does not dim the page; it
+          only catches clicks outside the sidebar to close it. It is
+          disabled while the sidebar is closed. */}
       <div
-        class="absolute inset-0 z-20 bg-black/40 transition-opacity duration-200"
-        classList={{ "pointer-events-none opacity-0": !props.open }}
+        class="absolute inset-0 z-20"
+        classList={{ "pointer-events-none": !props.open }}
         onClick={() => props.onClose()}
       />
 
