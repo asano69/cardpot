@@ -33,7 +33,10 @@
     --card-description-color: light-dark(#808080, #c4c4c4);
     --card-description-link-color: light-dark(#396bdd, #80c9fe);
     --card-description-code-color: #342d9c;
-    --card-box-shadow-color: light-dark(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.2));
+    --card-box-shadow-color: light-dark(
+      rgba(0, 0, 0, 0.12),
+      rgba(0, 0, 0, 0.2)
+    );
     --card-box-shadow: 0 2px 0 var(--card-box-shadow-color);
     --card-box-hover-shadow: 0 2px 0 rgba(0, 0, 0, 0.23);
     --card-pin-overhang-color: light-dark(#aaaaaa, #545860);
@@ -51,9 +54,9 @@
     --telomere-unread: #89a3ff;
     --telomere-updated: #6b8cff;
 
-    --tool-color: light-dark(#848484, #535863);
-    --tool-light-color: light-dark(#a9aaaf, #545863);
-    --tool-text-color: light-dark(#666874, #a0a3b0);
+    --tool-color: light-dark(#363c49, #535863);
+    --tool-light-color: light-dark(#a9aaaf, #353b48);
+    --tool-text-color: light-dark(#363c49, #dddede);
 
     /* Destructive actions and error messages. */
     --danger-color: #dc3545;
@@ -92,7 +95,10 @@
     --color-border: light-dark(#d0d7de, #46494f);
     --color-hover-bg: light-dark(rgba(0, 0, 0, 0.07), rgba(255, 255, 255, 0.1));
     --color-hover-border: light-dark(#777777, #666666);
-    --color-active-bg: light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.16));
+    --color-active-bg: light-dark(
+      rgba(0, 0, 0, 0.12),
+      rgba(255, 255, 255, 0.16)
+    );
     --color-active-border: light-dark(#666666, #777777);
 
     /* Height of the fixed TopBar. Everything that must clear it uses this. */
@@ -116,7 +122,8 @@
 
     /* Shadows. They only vary between light and dark, so they are plain
      * light-dark() calls instead of per-preset overrides. */
-    --shadow-card: 0 1px 0 light-dark(rgba(31, 35, 40, 0.04), rgba(0, 0, 0, 0.3));
+    --shadow-card: 0 1px 0
+      light-dark(rgba(31, 35, 40, 0.04), rgba(0, 0, 0, 0.3));
     --shadow-popover:
       0 1px 3px light-dark(rgba(31, 35, 40, 0.12), rgba(0, 0, 0, 0.4)),
       0 8px 24px light-dark(rgba(66, 74, 83, 0.12), rgba(0, 0, 0, 0.4));
@@ -132,7 +139,6 @@
   --ifm-background-surface-color: var(--color-field);
   --ifm-font-color-base: var(--page-text-color);
 }
-
 
 /* data-mode is the single source of truth for light/dark: it drives
  * both the token overrides above and color-scheme, so every existing
