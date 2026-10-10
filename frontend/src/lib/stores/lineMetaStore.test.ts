@@ -32,11 +32,15 @@ function remoteWrite(ydoc: Y.Doc, key: string) {
   Y.applyUpdate(ydoc, Y.encodeStateAsUpdate(other));
 }
 
-function mount(ydoc: Y.Doc, provider?: WebsocketProvider) {
+function mount(
+  ydoc: Y.Doc,
+  provider?: WebsocketProvider,
+  startUpdated = false,
+) {
   let dispose!: () => void;
   const store = createRoot((d) => {
     dispose = d;
-    return createLineMeta(ydoc, provider);
+    return createLineMeta(ydoc, provider, startUpdated);
   });
   return { store, dispose };
 }
@@ -79,9 +83,21 @@ describe("createLineMeta", () => {
     const ydoc = new Y.Doc();
     lineMetaMap(ydoc).set("head", entry);
     const { provider } = fakeProvider();
-    const { store, dispose } = mount(ydoc, provider);
+    const { store, dispose } = mount(ydoc, provider, true);
 
     expect([...store.updated()]).toEqual(["head"]);
+    dispose();
+  });
+
+  it("does not count meta already in an opened card as updated", () => {
+    // The doc of an existing card is filled from IndexedDB before the editor
+    // mounts: that is how the card looked when it was opened.
+    const ydoc = new Y.Doc();
+    lineMetaMap(ydoc).set("head", entry);
+    const { provider } = fakeProvider();
+    const { store, dispose } = mount(ydoc, provider);
+
+    expect(store.updated().size).toBe(0);
     dispose();
   });
 

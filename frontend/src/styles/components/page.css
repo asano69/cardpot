@@ -58,7 +58,7 @@
     text-align: center;
     display: inline-flex;
     cursor: pointer;
-    color: var(--tool-color, #848484);
+    color: var(--tool-color);
     border-radius: 23px;
     justify-content: center;
     align-items: center;

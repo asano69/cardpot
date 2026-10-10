@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -9,11 +9,24 @@ const read = (file: string) => readFileSync(resolve(root, file), "utf8");
 // The public tokens, copied from token.txt.
 const PUBLIC_TOKENS = read("tokens.txt").split("\n").map((t) => t.trim()).filter(Boolean);
 
+// Source files that may read a token (everything under src/ except this test).
+function sourceFiles(): string[] {
+  return readdirSync(resolve(root, ".."), { recursive: true, encoding: "utf8" })
+    .filter((f) => /\.(css|ts|tsx)$/.test(f) && !f.endsWith("tokens.test.ts"))
+    .map((f) => resolve(root, "..", f));
+}
+
 describe("design tokens", () => {
   const defaults = read("theme/default.css");
 
-  it("declares every public token in the default preset", () => {
-    const missing = PUBLIC_TOKENS.filter(
+  // Tokens nothing reads yet are only reserved (see default.css), so they
+  // need no value.
+  it("declares every public token that a component reads", () => {
+    const sources = sourceFiles().map((f) => readFileSync(f, "utf8"));
+    const used = PUBLIC_TOKENS.filter((name) =>
+      sources.some((text) => text.includes(`var(${name}`)),
+    );
+    const missing = used.filter(
       (name) => !new RegExp(`^\\s*${name}:`, "m").test(defaults),
     );
     expect(missing).toEqual([]);

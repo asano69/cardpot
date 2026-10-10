@@ -60,6 +60,9 @@ export interface NoteEditorProps {
   // (see lib/stores/unreadStore.ts); a draft has none.
   cardId?: string;
   provider?: WebsocketProvider;
+  // True when ydoc was handed over from a draft: the line meta it already
+  // holds is the user's own edits, so those lines start as "updated".
+  draftHandoff?: boolean;
   potSlug: () => string;
   initialTitle?: string;
   autofocus?: boolean;
@@ -95,7 +98,11 @@ export default function NoteEditor(props: NoteEditorProps) {
   // onCleanup explicitly below.
   const mountEditor = (el: HTMLDivElement) => {
     // Created before the editor: the line meta writer reports edits to it.
-    const lineMeta = createLineMeta(props.ydoc, props.provider);
+    const lineMeta = createLineMeta(
+      props.ydoc,
+      props.provider,
+      props.draftHandoff,
+    );
 
     // The doc always starts from `ytext`'s current content here --
     // for a brand-new card that's empty, for an existing one it's

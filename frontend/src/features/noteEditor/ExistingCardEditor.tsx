@@ -163,6 +163,7 @@ export default function ExistingCardEditor(props: ExistingCardEditorProps) {
         ydoc={ydoc}
         cardId={props.cardId}
         provider={provider}
+        draftHandoff={props.initialYdoc !== undefined}
         potSlug={props.potSlug}
         onConfirmedTitle={confirm}
         existingTitle={props.existingTitle}

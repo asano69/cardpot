@@ -97,8 +97,8 @@
       text-align: center;
       overflow: hidden;
       text-overflow: ellipsis;
-      background-color: var(--relation-label-bg, #9babc1);
-      color: var(--relation-label-text, #fff);
+      background-color: var(--relation-label-bg);
+      color: var(--relation-label-text);
       border-radius: 3px;
       padding: 8px;
       word-break: break-word;
@@ -128,35 +128,35 @@
       border-style: solid;
       border-width: 7px 5px;
       border-color: rgba(0, 0, 0, 0);
-      border-left-color: var(--relation-label-bg, #9babc1);
+      border-left-color: var(--relation-label-bg);
     }
 
     .relation-label.links a {
-      background-color: var(--relation-label-links-bg, #3d72f5);
-      color: var(--relation-label-links-text, #fff);
+      background-color: var(--relation-label-links-bg);
+      color: var(--relation-label-links-text);
     }
 
     .relation-label.links .arrow {
-      border-left-color: var(--relation-label-links-bg, #3d72f5);
+      border-left-color: var(--relation-label-links-bg);
     }
 
     .relation-label.empty-links a {
-      background-color: var(--relation-label-empty-bg, #fd7373);
-      color: var(--relation-label-empty-text, #fff);
+      background-color: var(--relation-label-empty-bg);
+      color: var(--relation-label-empty-text);
     }
 
     .relation-label.empty-links .arrow {
-      border-left-color: var(--relation-label-empty-bg, #fd7373);
+      border-left-color: var(--relation-label-empty-bg);
     }
 
     div.links-2-hop ul.grid:hover .relation-label a {
-      background-color: var(--relation-label-links-bg, #5e8af7);
-      color: var(--relation-label-links-text, #fff);
+      background-color: var(--relation-label-links-bg);
+      color: var(--relation-label-links-text);
       transition: background-color 0.1s;
     }
 
     div.links-2-hop ul.grid:hover .relation-label .arrow {
-      border-left-color: var(--relation-label-links-bg, #5e8af7);
+      border-left-color: var(--relation-label-links-bg);
       transition: border-left-color 0.1s;
     }
   }
