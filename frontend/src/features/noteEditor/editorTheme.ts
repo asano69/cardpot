@@ -51,13 +51,13 @@ export const editorTheme = EditorView.theme({
     boxSizing: "border-box",
     height: "100%",
     cursor: "pointer",
-    borderLeft: "5px solid var(--telomere-border, #e2e2e2)",
+    borderLeft: "5px solid var(--telomere-border)",
   },
   ".telomere-border.unread": {
-    borderLeftColor: "var(--telomere-unread, #89a3ff)",
+    borderLeftColor: "var(--telomere-unread)",
   },
   ".telomere-border.updated": {
-    borderLeftColor: "var(--telomere-updated, #6b8cff)",
+    borderLeftColor: "var(--telomere-updated)",
   },
   // Caret, drawn by drawSelection() (see index.tsx). CodeMirror's base theme
   // makes it black and only lightens it under "&dark", which this theme does
@@ -402,7 +402,7 @@ export const editorTheme = EditorView.theme({
   // autolinks (see components.css's ".ProseMirror a") so it reads as
   // clickable.
   ".page-link, .link": {
-    color: "light-dark(#396bdd, #80c9fe)",
+    color: "var(--page-link-color)",
     cursor: "pointer",
   },
   // External URLs (labelled, bracketed and bare) are underlined so they
@@ -415,7 +415,7 @@ export const editorTheme = EditorView.theme({
   // descendant selector covers the case where this mark ends up wrapping
   // the ".page-link" span instead of sitting inside it.
   ".empty-page-link, .empty-page-link .page-link": {
-    color: "light-dark(#fd7373, #fd7373)",
+    color: "var(--empty-page-link-color)",
   },
 
   // HashTag shares ".page-link" above. Blank is an always visible syntax

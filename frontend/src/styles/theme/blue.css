@@ -1,0 +1,10 @@
+/* Blue preset: only the tokens that differ from default.css. */
+@layer preset {
+  [data-theme="blue"] {
+    --body-bg: light-dark(#d9e2f1, #16202e);
+    --card-bg: light-dark(#ffffff, #1f2c40);
+    --card-title-bg: light-dark(#e8eefb, #26354d);
+    --page-link-color: light-dark(#1d4ed8, #93c5fd);
+    --navbar-bg: light-dark(#c3d0e8, #121b28);
+  }
+}

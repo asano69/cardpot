@@ -24,47 +24,93 @@
  * (see --shadow-card below). Kept here so it's available once needed. */
 @custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
 
+/* Tailwind utilities (bg-bg, bg-card, ...) read the public tokens below.
+ * Only app tokens that have no public counterpart yet are declared
+ * directly (see the "App tokens" block). */
 @theme inline {
-  --color-bg: var(--color-bg);
-  --color-text: var(--color-text);
-
-  --color-line-title: var(--color-line-title);
-  --color-line-text: var(--color-line-text);
+  --color-bg: var(--body-bg);
+  --color-text: var(--page-text-color);
+  --color-line-title: var(--line-title-color);
+  --color-line-text: var(--page-text-color);
+  --color-card: var(--card-bg);
+  --color-card-title-bg: var(--card-title-bg);
+  --color-pined: var(--card-pin-overhang-color);
+  --color-nav: var(--navbar-bg);
 
   --color-panel: var(--color-panel);
   --color-surface: var(--color-surface);
-  --color-card: var(--color-card);
   --color-field: var(--color-field);
   --color-border: var(--color-border);
   --color-hover-bg: var(--color-hover-bg);
   --color-hover-border: var(--color-hover-border);
   --color-active-bg: var(--color-active-bg);
   --color-active-border: var(--color-active-border);
-  --color-nav: var(--color-nav);
-  --color-card-title-bg: var(--color-card-title-bg);
 }
 
-/* Default preset, light mode -- the fallback used by any
- * [data-theme][data-mode] combination that has no override block. */
-:root {
-  --color-bg: #dcdde0;
-  --color-text: #4a4a4a;
+/* Public design tokens: the only values user.css and presets are meant to
+ * override. Names follow Cosense's theme variables, so a Cosense theme can
+ * be ported by renaming its selector. Every value is light-dark(light, dark).
+ *
+ * Declared in a cascade layer so unlayered user.css always wins, whatever
+ * the selectors' specificity. */
+@layer preset {
+  :root {
+    /* --- Used by components --- */
+    --body-bg: light-dark(#dcdde0, #1e1f20);
+    --page-bg: light-dark(#fefefe, #333333);
+    --page-text-color: light-dark(#4a4a4a, #e0e0e0);
+    --line-title-color: light-dark(#000000, #e0e0e0);
+    --page-link-color: light-dark(#396bdd, #80c9fe);
+    --empty-page-link-color: #fd7373;
+    --code-color: #342d9c;
+    --code-bg: light-dark(rgba(175, 184, 193, 0.2), rgba(110, 118, 129, 0.4));
+    --cursor-color: light-dark(#4a4a4a, #e0e0e0);
 
-  --color-line-title: #000000;
-  --color-line-text: #4a4a4a;
+    --card-bg: light-dark(#ffffff, #2a2a2a);
+    --card-title-bg: light-dark(#f2f2f3, #2b2e38);
+    --card-description-color: light-dark(#808080, #c4c4c4);
+    --card-description-link-color: light-dark(#396bdd, #80c9fe);
+    --card-description-code-color: #342d9c;
+    --card-box-shadow-color: light-dark(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.2));
+    --card-box-shadow: 0 2px 0 var(--card-box-shadow-color);
+    --card-box-hover-shadow: 0 2px 0 rgba(0, 0, 0, 0.23);
+    --card-pin-overhang-color: light-dark(#aaaaaa, #545860);
 
-  --color-panel: #ffffff;
-  --color-surface: #fcfcfc;
-  --color-card: #ffffff;
-  --color-pined: #aaa;
-  --color-field: #fefefe;
-  --color-border: #d0d7de;
-  --color-hover-bg: rgba(0, 0, 0, 0.07);
-  --color-hover-border: #777777;
-  --color-active-bg: rgba(0, 0, 0, 0.12);
-  --color-active-border: #666666;
-  --color-nav: #ccccd1;
-  --color-card-title-bg: #f2f2f3;
+    --navbar-bg: light-dark(#ccccd1, #1a1b1e);
+
+    --relation-label-bg: #9babc1;
+    --relation-label-text: #ffffff;
+    --relation-label-links-bg: #3d72f5;
+    --relation-label-links-text: #ffffff;
+    --relation-label-empty-bg: #fd7373;
+    --relation-label-empty-text: #ffffff;
+
+    --telomere-border: light-dark(#e2e2e2, #545863);
+    --telomere-unread: #89a3ff;
+    --telomere-updated: #6b8cff;
+
+    --tool-color: light-dark(#848484, #535863);
+
+    /* --- Reserved: declared so presets and user.css can set them, but no
+     *     component reads them yet. Move a token up when it gets wired. --- */
+    --card-backside: light-dark(#e5e5e5, #545860);
+    --card-hover-bg: light-dark(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.1));
+    --card-active-bg: light-dark(rgba(0, 0, 0, 0.08), rgba(229, 229, 229, 0.1));
+    --navbar-icon-color: light-dark(#4a4a4a, #ffffff);
+    --navbar-icon-active-color: #338c46;
+    --navbar-icon-hovered-color: var(--navbar-icon-active-color);
+    /* ... the remaining tokens of token.txt ... */
+
+    /* --- App tokens: not in Cosense, same override rules --- */
+    --color-panel: light-dark(#ffffff, #252525);
+    --color-surface: light-dark(#fcfcfc, #1e1e1e);
+    --color-field: light-dark(#fefefe, #333333);
+    --color-border: light-dark(#d0d7de, #46494f);
+    --color-hover-bg: light-dark(rgba(0, 0, 0, 0.07), rgba(255, 255, 255, 0.1));
+    --color-hover-border: light-dark(#777777, #666666);
+    --color-active-bg: light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.16));
+    --color-active-border: light-dark(#666666, #777777);
+  }
 }
 
 /* Maps the variables mermaid-diagram-pan-zoom reads (it falls back to
@@ -77,27 +123,6 @@
   --ifm-font-color-base: var(--color-text);
 }
 
-/* Default preset, dark mode. */
-[data-theme="default"][data-mode="dark"] {
-  --color-bg: #1e1f20;
-  --color-text: #e0e0e0;
-
-  --color-line-title: #e0e0e0;
-  --color-line-text: #c4c4c4;
-
-  --color-panel: #252525;
-  --color-surface: #1e1e1e;
-  --color-card: #2a2a2a;
-  --color-pined: #545860;
-  --color-field: #333333;
-  --color-border: #46494f;
-  --color-hover-bg: rgba(255, 255, 255, 0.1);
-  --color-hover-border: #666666;
-  --color-active-bg: rgba(255, 255, 255, 0.16);
-  --color-active-border: #777777;
-  --color-nav: #1a1b1e;
-  --color-card-title-bg: #2b2e38;
-}
 
 /* data-mode is the single source of truth for light/dark: it drives
  * both the token overrides above and color-scheme, so every existing

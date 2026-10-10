@@ -30,7 +30,7 @@
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     background-color: var(--color-card);
-    box-shadow: 0 2px 0 light-dark(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.2));
+    box-shadow: var(--card-box-shadow);
     border-radius: 2px;
     color: var(--color-text);
     word-break: break-word;
@@ -39,7 +39,7 @@
   }
 
   .card-grid-item a:hover {
-    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.23);
+    box-shadow: var(--card-box-hover-shadow);
   }
 
   /* Whole-card hover tint. It is stacked above .content (see below) so
@@ -117,7 +117,7 @@
     column-gap: 2em;
     column-width: 10em;
     overflow: hidden;
-    color: light-dark(#808080, #c4c4c4);
+    color: var(--card-description-color);
   }
 
   /* Notation inside a card's description (see
@@ -127,7 +127,7 @@
   .card-grid-item .description .grid-wikilink,
   .card-grid-item .description .grid-external-link,
   .card-grid-item .description .grid-hashtag {
-    color: light-dark(#396bdd, #80c9fe);
+    color: var(--card-description-link-color);
   }
 
   .card-grid-item .description .grid-external-link {
@@ -150,7 +150,7 @@
    * stay after the .grid-wikilink rules above, which have the same
    * specificity. */
   .card-grid-item .description .grid-empty {
-    color: #fd7373;
+    color: var(--empty-page-link-color);
   }
 
   /* Skeleton lines shown in place of the description of an empty card
