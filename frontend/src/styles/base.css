@@ -1,4 +1,10 @@
 @layer base {
+  /* Every element inherits this family, so the card grid and UI labels
+     never fall back to the editor's Roboto (--font-editor). */
+  html {
+    font-family: var(--font-sans);
+  }
+
   body {
     @apply h-screen w-screen font-sans bg-bg text-text;
     font-size: 14px;
