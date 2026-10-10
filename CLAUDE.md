@@ -73,5 +73,6 @@ import (
 - CodeMirror6
 - googlechrome/workbox
 - Kobalte v0.13+
+- CSS Modules
 - clauderic/dnd-kit v0.5.0
 - jamiebuilds/tinykeys v4.0+

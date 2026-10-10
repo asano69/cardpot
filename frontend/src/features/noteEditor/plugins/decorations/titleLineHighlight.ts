@@ -21,34 +21,6 @@ function buildDecoration(view: EditorView): DecorationSet {
   ]);
 }
 
-// Editor-wide style overrides via EditorView.theme(), not plain CSS in
-// components.css: CodeMirror injects its own base theme as unlayered
-// runtime <style>, and per the CSS Cascade Layers spec, unlayered
-// rules always beat rules inside Tailwind's `@layer components`
-// regardless of selector specificity -- that's why these previously
-// needed !important there. EditorView.theme() is CodeMirror's own
-// supported mechanism for overriding its base theme, so it wins
-// without !important. Only rules that actually conflicted with
-// CodeMirror's base theme (outline, font-family, the title line) live
-// here -- .cm-content's padding and .cm-line's line-height are left
-// as plain CSS in components.css since they aren't contested by any
-// base theme rule and don't need this.
-export const editorTheme = EditorView.theme({
-  "&.cm-focused": {
-    outline: "none",
-  },
-  ".cm-scroller": {
-    fontFamily: "var(--font-sans)",
-  },
-  ".cm-line.line-title": {
-    fontFamily: "var(--font-sans)",
-    fontSize: "1.73rem",
-    color: "var(--line-title-color)",
-    lineHeight: "42px",
-    paddingBottom: "21px",
-  },
-});
-
 export const titleLineHighlight = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;

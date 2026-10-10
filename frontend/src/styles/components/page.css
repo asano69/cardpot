@@ -20,6 +20,22 @@
     opacity: 0.7;
   }
 
+  /* The sheet fills the editor column (see noteEditor/index.tsx). */
+  .col-page > .page {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* The CodeMirror mount point inside .page. */
+  .editor {
+    color: var(--page-text-color);
+  }
+
+  /* DraftCardEditor's save error sits above the sheet. */
+  .col-page > .form-error {
+    margin-bottom: 16px;
+  }
+
   /* Two-column layout for a card's detail view: the note editor on
    * the left, a sticky vertical page-menu on the right (ported from
    * Cosense/Scrapbox's own .page-column/.col-page/.page-menu). No

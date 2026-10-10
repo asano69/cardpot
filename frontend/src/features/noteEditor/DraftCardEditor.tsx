@@ -73,7 +73,7 @@ export default function DraftCardEditor(props: DraftCardEditorProps) {
   return (
     <>
       {saveError() && (
-        <p class="mb-4 text-sm text-[#dc3545]">
+        <p class="form-error">
           Failed to create this card. Your text is preserved in this session --
           edit the title again to retry.
         </p>

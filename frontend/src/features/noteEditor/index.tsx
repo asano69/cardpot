@@ -353,10 +353,10 @@ export default function NoteEditor(props: NoteEditorProps) {
   return (
     <>
       <div
-        class="page min-w-0 flex-1"
+        class="page"
         classList={{ "not-persistent": !props.provider }}
       >
-        <div ref={mountEditor} class="editor text-text outline-none" />
+        <div ref={mountEditor} class="editor" />
       </div>
       {/* Reserves space below the editor so a long note's last line
           never lands flush against the bottom of the viewport --

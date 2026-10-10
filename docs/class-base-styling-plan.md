@@ -101,6 +101,13 @@ src/styles/components/quick-launch.css
 - `titleLineHighlight.ts` に `editorTheme` が**重複定義**されている（`index.tsx` が import するのは `editorTheme.ts` 側）。この移行のついでに片方を削除。
 - `var(--color-*)` を使っている箇所が、エイリアス整理（Phase 0-4）後も解決されること。
 
+=> 完了。
+- `titleLineHighlight.ts` の重複 `editorTheme` を削除（`editorTheme.ts` が唯一の定義）。
+- `editorTheme.ts` が読む `--color-border` / `--color-hover-bg` は `:root` に直接宣言された app トークンで、別名ではない。Phase 5 後も解決される。`@theme inline` 内の `--color-border: var(--color-border)` のような自己参照は、Phase 5 で `:root` に書き換えるときに**移さない**（移すと循環参照になる）。
+- Phase 3 の残りを置換: `noteEditor/index.tsx`（`.page` / `.editor`）と `DraftCardEditor.tsx`（エラー文は `.form-error`）。`flex-1 min-w-0` と `mb-4` は親の `.col-page` 側（`page.css`）に置いた。`outline-none` はフォーカスされない要素への指定で、CodeMirror 側は `editorTheme.ts` の `&.cm-focused` が処理済みのため削除。
+- 未対応: `editorTheme.ts` の色リテラル（`#342d9c` は `--code-color`、`#dc3545` は `--danger-color` に対応）。Stylelint の対象外（TS）なので、必要になったらトークン化する。
+- 確認: `scripts/tailwind_inventory.sh` が 0 件になること（Phase 5 の前提）。
+
 ## Phase 5: Tailwind撤去
 
 すべてのtsxからユーティリティが消えたことを確認してから実施する。
