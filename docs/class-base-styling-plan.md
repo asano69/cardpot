@@ -17,6 +17,56 @@
 4. **CSS変数ブリッジの整理**: `@theme inline` の `--color-*` は、プレーンCSSでは `var(--color-border)` で直接使える。まず `--color-bg: var(--body-bg)` 系のエイリアスの扱いを決める（公開トークンを直接使うか、アプリ内エイリアスを `:root` に残すか）。
 5. **ファイル配置の決定**: `styles/components/<部品>.css`、1部品1ファイル。`index.css` にimportを足していく。
 
+19:22 % scripts/tailwind_inventory.sh
+   77 src/components/dialogs/ComboboxDialog.tsx
+   56 src/components/dialogs/QueryDialog.tsx
+   54 src/components/dialogs/PromptDialog.tsx
+   47 src/components/layout/Sidebar.tsx
+   46 src/components/layout/TopBar.tsx
+   45 src/features/md2sb/Md2sb.tsx
+   37 src/pages/admin/ApiDocs.tsx
+   37 src/pages/Login.tsx
+   31 src/components/dialogs/ConfirmDialog.tsx
+   28 src/components/layout/MainLayout.tsx
+   21 src/pages/pots/PotForm.tsx
+   20 src/components/Logo.tsx
+   18 src/components/layout/UserMenu.tsx
+   17 src/components/layout/SidebarPotList.tsx
+   14 src/pages/pots/PotGridItem.tsx
+   14 src/components/Loading.tsx
+   11 src/components/PotIcon.tsx
+    5 src/pages/cards/CardForm.tsx
+    4 src/pages/pots/PotList.tsx
+    4 src/features/noteEditor/index.tsx
+    3 src/features/noteEditor/DraftCardEditor.tsx
+    2 src/pages/cards/CardList.tsx
+    2 src/components/layout/TitleSearch.tsx
+    1 src/pages/cards/RelatedCards.tsx
+    1 src/pages/cards/QuickLaunch.tsx
+    1 src/pages/cards/CardItem.tsx
+    1 src/components/layout/ThemePresetToggle.tsx
+    1 src/components/PageAlert.tsx
+19:25 % cd frontend && bun run lint:css
+$ stylelint "src/**/*.css"
+
+src/styles/components/alert.css
+  33:14  ⚠  Disallowed hex color "#000"     color-no-hex
+  60:23  ⚠  Disallowed hex color "#d9edf7"  color-no-hex
+  62:12  ⚠  Disallowed hex color "#31708f"  color-no-hex
+  66:23  ⚠  Disallowed hex color "#dff0d8"  color-no-hex
+  68:12  ⚠  Disallowed hex color "#3c763d"  color-no-hex
+
+src/styles/components/card-grid.css
+  139:12  ⚠  Disallowed hex color "#342d9c"  color-no-hex
+  162:34  ⚠  Disallowed hex color "#e9eaeb"  color-no-hex
+  162:43  ⚠  Disallowed hex color "#4a4d55"  color-no-hex
+
+src/styles/components/menu.css
+  40:12  ⚠  Disallowed hex color "#dc3545"  color-no-hex
+
+src/styles/components/quick-launch.css
+  7:30  ⚠  Disallowed hex color "#363c49"  color-no-hex
+
 ## Phase 1: すでに混在している共通部品（効果が最大）
 
 何度も使われる部品を先に直すと、後続の置換が楽になる。

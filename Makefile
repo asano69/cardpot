@@ -76,6 +76,7 @@ test-front:
 lint: typecheck
 	golangci-lint run
 	cd frontend && bun run lint --fix
+	cd frontend && bun run lint:css
 
 .PHONY: typecheck
 typecheck: generate
