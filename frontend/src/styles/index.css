@@ -13,6 +13,8 @@
 @import "./components/controls.css";
 @import "./components/loading.css";
 @import "./components/card-grid.css";
+@import "./components/menu.css";
+@import "./components/quick-launch.css";
 @import "./components/page.css";
 @import "./components/related.css";
 @import "./components/search.css";

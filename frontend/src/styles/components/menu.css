@@ -1,0 +1,43 @@
+/* Public classes: .menu-content, .menu-item, .menu-group-label.
+ * The shared look of every dropdown menu popup (Kobalte's DropdownMenu). The
+ * popup is rendered in a portal, so it cannot be styled through its trigger's
+ * parent. Per-menu hooks such as .page-sort-menu are added next to these
+ * classes by the component. */
+@layer components {
+  .menu-content {
+    z-index: 50;
+    min-width: 160px;
+    padding: 4px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background-color: var(--color-card);
+    box-shadow: var(--shadow-popover);
+    font-family: var(--font-sans);
+    outline: none;
+  }
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--color-text);
+    cursor: pointer;
+    outline: none;
+    transition: background-color 0.15s;
+  }
+
+  .menu-item[data-highlighted],
+  .menu-item:hover {
+    background-color: var(--color-hover-bg);
+  }
+
+  .menu-group-label {
+    padding: 4px 8px;
+    font-size: 12px;
+    color: var(--color-border);
+  }
+}

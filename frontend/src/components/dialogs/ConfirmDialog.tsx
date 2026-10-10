@@ -54,16 +54,13 @@ export default function ConfirmDialog(props: ConfirmDialogProps) {
             </AlertDialog.Description>
             {error() && <p class="mt-2 text-sm text-[#dc3545]">{error()}</p>}
             <div class="mt-6 flex justify-end gap-2">
-              <AlertDialog.CloseButton
-                type="button"
-                class="btn flex items-center gap-1.5"
-              >
+              <AlertDialog.CloseButton type="button" class="btn">
                 <X size={16} />
                 Cancel
               </AlertDialog.CloseButton>
               <button
                 type="button"
-                class="btn flex items-center gap-1.5"
+                class="btn"
                 disabled={submitting()}
                 onClick={handleConfirm}
               >

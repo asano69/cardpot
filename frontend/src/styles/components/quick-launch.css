@@ -1,0 +1,35 @@
+/* Public classes: .quick-launch, .quick-launch-trigger. */
+@layer components {
+  /* Bar of dropdown menus right above .card-grid (see
+   * pages/cards/QuickLaunch.tsx). The gap between menus is set here, by
+   * the parent, so the triggers themselves stay layout-neutral. */
+  .quick-launch {
+    color: var(--tool-color, #363c49);
+    font-size: 14px;
+    margin-bottom: 12px;
+
+    .flex-box {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+  }
+
+  /* The label and the arrow are one button: no border or fill, only a
+   * background tint on hover. */
+  .quick-launch-trigger {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+
+  .quick-launch-trigger:hover {
+    background-color: var(--color-hover-bg);
+  }
+}
