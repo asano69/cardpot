@@ -136,7 +136,7 @@ export default function Logo(props: LogoProps) {
   const title = () =>
     props.showTitle && (
       <div
-        class="logo font-display"
+        class="logo"
         style={{ "font-size": `${titleFontSize()}px` }}
       >
         {__APP_NAME__}
@@ -149,22 +149,19 @@ export default function Logo(props: LogoProps) {
   // linkable, or a plain flex container otherwise (Login's case).
   const Wrap = (p: ParentProps) =>
     props.onClick ? (
-      <button type="button" onClick={props.onClick} class="contents">
+      <button type="button" onClick={props.onClick} class="logo-button">
         {p.children}
       </button>
     ) : props.linkable ? (
-      <A
-        href="/"
-        class="group flex items-center gap-2 rounded-full px-2 py-1 transition-colors hover:bg-hover-bg"
-      >
+      <A href="/" class="logo-group logo-link">
         {p.children}
       </A>
     ) : (
-      <div class="flex items-center gap-2">{p.children}</div>
+      <div class="logo-group">{p.children}</div>
     );
 
   return (
-    <div class="flex items-center gap-2">
+    <div class="logo-box">
       <Wrap>
         {icon}
         {title()}
@@ -173,7 +170,7 @@ export default function Logo(props: LogoProps) {
           logo (button/link). Only shown when showVersion is set (e.g.
           TopBar hides it on mobile to save space), not by default. */}
       <Show when={props.showVersion && version()}>
-        <span class="font-mono text-xs">v{version()}</span>
+        <span class="logo-version">v{version()}</span>
       </Show>
     </div>
   );

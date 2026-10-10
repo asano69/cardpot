@@ -1,0 +1,142 @@
+/* Public classes: .app, .app-body, .app-main, .app-content, .topbar,
+ * .topbar-grid, .topbar-left, .topbar-pot-link, .topbar-actions,
+ * .new-button.
+ * The page skeleton (see components/layout/MainLayout.tsx and TopBar.tsx).
+ *
+ * Breakpoints: this app has two, 768px and 1024px (Tailwind's md and lg).
+ * Media queries cannot use custom properties, so the values are written out
+ * here and in search.css; keep them in step. */
+@layer components {
+  /* Bounded to the viewport height, so the sidebar and main scroll on their
+   * own. */
+  .app {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    background-color: var(--body-bg);
+  }
+
+  /* min-height: 0 lets its flex children shrink to this row's height instead
+   * of growing to fit their content, which is what makes their own scrolling
+   * work. It is also the positioning context of the sidebar overlay. */
+  .app-body {
+    position: relative;
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .app-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 28px;
+    overflow-y: auto;
+  }
+
+  /* Horizontal padding shrinks to almost nothing on narrow (phone-width)
+   * screens, since every pixel of width matters there. The top padding keeps
+   * a gap below the fixed TopBar. */
+  .app-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    width: 100%;
+    max-width: 80rem;
+    margin: 0 auto;
+    padding: 32px 4px 0;
+  }
+
+  @media (min-width: 768px) {
+    .app-content {
+      padding-right: 24px;
+      padding-left: 24px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .app-content {
+      padding-right: 32px;
+      padding-left: 32px;
+    }
+  }
+
+  /* Fixed, not sticky: it floats above the scrollable content, so there is
+   * something behind it for the blur to blur. */
+  .topbar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: var(--z-topbar);
+    display: flex;
+    align-items: center;
+    height: var(--topbar-height);
+    border-bottom: 1px solid var(--color-border);
+    background-color: color-mix(in oklab, var(--navbar-bg) 60%, transparent);
+    backdrop-filter: blur(10px);
+  }
+
+  .topbar-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    width: 100%;
+    padding: 0 8px;
+  }
+
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    justify-self: start;
+  }
+
+  /* The center cell is .col-search (see search.css). */
+  .topbar-grid > .col-search {
+    justify-self: center;
+  }
+
+  .topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    justify-self: end;
+  }
+
+  .topbar-pot-link {
+    overflow: hidden;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-family: var(--font-sans);
+    font-size: 18px;
+    line-height: 28px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: background-color 0.15s;
+  }
+
+  .topbar-pot-link:hover {
+    background-color: var(--color-hover-bg);
+  }
+
+  /* The round "add card" button next to the title search. */
+  .new-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9999px;
+    background-color: var(--new-button-bg);
+    color: white;
+    transition: background-color 0.15s;
+  }
+
+  .new-button:hover {
+    background-color: var(--new-button-hover-bg);
+  }
+}

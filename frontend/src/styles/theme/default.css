@@ -94,6 +94,10 @@
     /* Destructive actions and error messages. */
     --danger-color: #dc3545;
 
+    /* The round "add card" button in the TopBar. */
+    --new-button-bg: hsl(144, 30%, 50%);
+    --new-button-hover-bg: hsl(153, 10%, 50%);
+
     /* --- Reserved: declared so presets and user.css can set them, but no
      *     component reads them yet. Move a token up when it gets wired. --- */
     --card-backside: light-dark(#e5e5e5, #545860);
@@ -113,6 +117,18 @@
     --color-hover-border: light-dark(#777777, #666666);
     --color-active-bg: light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.16));
     --color-active-border: light-dark(#666666, #777777);
+
+    /* Height of the fixed TopBar. Everything that must clear it uses this. */
+    --topbar-height: 40px;
+
+    /* Every z-index shared across components, lowest first. Local stacking
+     * inside one component (e.g. card-grid.css) stays literal. */
+    --z-sidebar-backdrop: 20;
+    --z-sidebar: 30;
+    --z-topbar: 40;
+    --z-popup: 50; /* dialogs, dropdown menus, search suggestions */
+    --z-footer: 300;
+    --z-page-menu: 300;
   }
 }
 

@@ -39,14 +39,14 @@ function SidebarPotRow(props: SidebarPotRowProps) {
   });
 
   return (
-    <li ref={ref} classList={{ "opacity-40": isDragging() }}>
-      <A
-        href={`/${props.pot.name}`}
-        activeClass="bg-active-bg"
-        class="flex items-center gap-2 rounded-md px-2 py-1.5 text-base transition-colors hover:bg-hover-bg"
-      >
-        <GalleryVerticalEnd size={18} class="shrink-0" />
-        <span class="truncate">{props.pot.title}</span>
+    <li
+      ref={ref}
+      class="sidebar-pot"
+      data-dragging={isDragging() ? "" : undefined}
+    >
+      <A href={`/${props.pot.name}`} class="sidebar-link">
+        <GalleryVerticalEnd size={18} />
+        <span class="title">{props.pot.title}</span>
       </A>
     </li>
   );
@@ -70,7 +70,7 @@ export default function SidebarPotList() {
   return (
     <Show when={orderedPots().length > 0}>
       <DragDropProvider sensors={sensors} onDragEnd={handleDragEnd}>
-        <ul class="flex flex-col gap-1 p-2">
+        <ul class="sidebar-pot-list">
           <For each={orderedPots()}>
             {(pot, index) => <SidebarPotRow pot={pot} index={index()} />}
           </For>

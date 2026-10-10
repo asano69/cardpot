@@ -55,7 +55,7 @@ export default function TitleSearch(props: TitleSearchProps) {
   };
 
   return (
-    <div class="navbar-form hidden md:block">
+    <div class="navbar-form">
       <form
         class="search-form"
         role="search"

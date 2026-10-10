@@ -1,0 +1,113 @@
+/* Public classes: .sidebar, .sidebar-backdrop, .sidebar-body,
+ * .sidebar-logo, .sidebar-nav, .sidebar-link, .sidebar-pot-list,
+ * .sidebar-pot, .sidebar-footer.
+ * The overlay sidebar (see components/layout/Sidebar.tsx and
+ * SidebarPotList.tsx). It is open while it has [data-open]. */
+@layer components {
+  /* Transparent layer that only catches clicks outside the sidebar. */
+  .sidebar-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: var(--z-sidebar-backdrop);
+    pointer-events: none;
+  }
+
+  .sidebar-backdrop[data-open] {
+    pointer-events: auto;
+  }
+
+  /* Translated off-screen while closed. Its shadow only exists while open,
+   * so the blur does not bleed into the viewport from past the left edge. */
+  .sidebar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: var(--z-sidebar);
+    display: flex;
+    flex-direction: column;
+    width: 16rem;
+    height: 100%;
+    min-height: 0;
+    border-right: 1px solid var(--color-border);
+    background-color: var(--body-bg);
+    transform: translateX(-100%);
+    transition: transform 0.2s ease-in-out;
+  }
+
+  .sidebar[data-open] {
+    transform: none;
+    box-shadow: var(--shadow-popover);
+  }
+
+  /* The top padding keeps the first item clear of the fixed TopBar. */
+  .sidebar-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    padding-top: var(--topbar-height);
+    overflow-y: auto;
+  }
+
+  .sidebar-logo {
+    padding: 8px 16px;
+  }
+
+  .sidebar-nav {
+    padding: 0 8px;
+  }
+
+  .sidebar-pot-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+  }
+
+  .sidebar-pot[data-dragging] {
+    opacity: 0.4;
+  }
+
+  /* A plain text row: an icon followed by a title, with only a hover/active
+   * tint. The active row is marked by the router with .active. */
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 16px;
+    line-height: 24px;
+    color: var(--page-text-color);
+    transition: background-color 0.15s;
+  }
+
+  .sidebar-link.active {
+    background-color: var(--color-active-bg);
+  }
+
+  .sidebar-link:hover {
+    background-color: var(--color-hover-bg);
+  }
+
+  .sidebar-link > svg {
+    flex-shrink: 0;
+  }
+
+  .sidebar-link .title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sidebar-footer {
+    flex-shrink: 0;
+    margin-top: auto;
+    padding: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--color-border);
+  }
+}

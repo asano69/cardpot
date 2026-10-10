@@ -75,6 +75,9 @@ src/styles/components/quick-launch.css
 - ここは `fixed`/`z-index`/`backdrop-blur`/レスポンシブ（`md:hidden`, `hidden md:block`）が集中する。メディアクエリへの書き換えを要する。
 - `z-index` の値はこの時点で**一覧化して変数化**（`--z-topbar` など）。散在するz-indexは詳細度と並ぶ混乱の元。
 - ブレークポイントは1か所（`@custom-media` は未対応ブラウザがあるので、素直に `768px` を共通コメントで管理）。
+  => `components/layout.css` の冒頭コメントで管理（768px = md、1024px = lg）。`search.css` の `.navbar-form` も同じ値。
+- z-index は `theme/default.css` の `--z-*` に一覧化済み（sidebar-backdrop 20 / sidebar 30 / topbar 40 / popup 50 / footer 300 / page-menu 300）。TopBar の高さは `--topbar-height`。`editorTheme.ts` のエディタ内部の z-index と、`card-grid.css` の局所的な値は対象外。
+- 開閉・ドラッグ中の状態クラスは `data-open` / `data-dragging` に置換済み（Sidebar, SidebarPotList）。
 
 ## Phase 3: ページ単位
 

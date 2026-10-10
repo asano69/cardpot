@@ -5,7 +5,7 @@
  * classes by the component. */
 @layer components {
   .menu-content {
-    z-index: 50;
+    z-index: var(--z-popup);
     min-width: 160px;
     padding: 4px;
     border: 1px solid var(--color-border);

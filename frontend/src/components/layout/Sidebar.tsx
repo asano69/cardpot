@@ -25,6 +25,9 @@ export interface SidebarProps {
 
 export default function Sidebar(props: SidebarProps) {
   const version = useVersion();
+  // Both elements below show their open state through [data-open] (see
+  // styles/components/sidebar.css).
+  const openAttr = () => (props.open ? "" : undefined);
 
   return (
     <>
@@ -33,49 +36,31 @@ export default function Sidebar(props: SidebarProps) {
           only catches clicks outside the sidebar to close it. It is
           disabled while the sidebar is closed. */}
       <div
-        class="absolute inset-0 z-20"
-        classList={{ "pointer-events-none": !props.open }}
+        class="sidebar-backdrop"
+        data-open={openAttr()}
         onClick={() => props.onClose()}
       />
 
       {/* Always mounted (not conditionally rendered via <Show>) so the
-          transform transition below actually animates open <-> closed
-          instead of the element just appearing/disappearing. It's
-          translated off-screen when closed. */}
-      <aside
-        aria-hidden={!props.open}
-        classList={{
-          // Shadow only while actually visible: it's dropped entirely
-          // once closed instead of just relying on -translate-x-full to
-          // carry it off-screen, since the shadow's blur radius would
-          // otherwise still bleed a few pixels into the viewport from
-          // just past the left edge.
-          "shadow-popover": props.open,
-          "-translate-x-full": !props.open,
-        }}
-        class="absolute inset-y-0 left-0 z-30 flex h-full min-h-0 w-64 flex-col border-r border-border bg-bg transition-transform duration-200 ease-in-out"
-      >
-        {/* Scrollable middle section: nav items plus the pot list.
-            min-h-0 + overflow-y-auto is what lets a long pot list
-            scroll on its own instead of pushing the footer below off
-            the sidebar. */}
-        {/* Same pt-10 as MainLayout's <main>: TopBar is now fixed and
-            floats over this column too, so its own top item needs the
-            same offset to stay clear of the header. */}
-        <div class="flex min-h-0 flex-1 flex-col overflow-y-auto pt-10">
+          transform transition actually animates open <-> closed instead of
+          the element just appearing/disappearing. It's translated
+          off-screen when closed, and its shadow is dropped then too, so the
+          shadow's blur does not bleed into the viewport. */}
+      <aside class="sidebar" data-open={openAttr()} aria-hidden={!props.open}>
+        {/* Scrollable middle section: nav items plus the pot list, so a
+            long pot list scrolls on its own instead of pushing the footer
+            below off the sidebar. TopBar is fixed and floats over this
+            column too, so its own top item needs an offset to stay clear
+            of the header. */}
+        <div class="sidebar-body">
           {/* The way back to the pot list. */}
-          <div class="px-4 py-2">
+          <div class="sidebar-logo">
             <Logo linkable showTitle />
           </div>
-          <nav class="px-2 text-md">
+          <nav class="sidebar-nav">
             <For each={NAV_ITEMS}>
               {(item) => (
-                <A
-                  href={item.href}
-                  end
-                  activeClass="bg-active-bg"
-                  class="flex items-center gap-2 rounded-md px-2 py-2.5 text-text transition-colors hover:bg-hover-bg"
-                >
+                <A href={item.href} end class="sidebar-link">
                   <item.icon size={20} />
                   {item.label}
                 </A>
@@ -86,10 +71,9 @@ export default function Sidebar(props: SidebarProps) {
           <SidebarPotList />
         </div>
 
-        {/* mt-auto pins this to the bottom of the sidebar regardless of
-            how tall the content above ends up being. shrink-0 keeps it
-            from being squeezed by the scrollable section above. */}
-        <footer class="mt-auto shrink-0 p-2 text-border font-mono text-xs">
+        {/* Pinned to the bottom of the sidebar regardless of how tall the
+            content above ends up being, and never squeezed by it. */}
+        <footer class="sidebar-footer">
           <Show when={version()}>v{version()}</Show>
         </footer>
       </aside>

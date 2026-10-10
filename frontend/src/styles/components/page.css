@@ -44,7 +44,7 @@
     top: 45px;
     font-size: 13px;
     text-align: left;
-    z-index: 300;
+    z-index: var(--z-page-menu);
     grid-area: menu;
   }
 

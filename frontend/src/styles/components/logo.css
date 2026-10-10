@@ -1,0 +1,44 @@
+/* Public classes: .logo-box, .logo-group, .logo-link, .logo-button, .logo,
+ * .logo-version.
+ * The app icon with its optional title and version (see components/Logo.tsx).
+ * .logo is the title text. */
+@layer components {
+  .logo-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* The icon and the title, as a plain container or (with .logo-link) as the
+   * link home. */
+  .logo-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo-link {
+    padding: 4px 8px;
+    border-radius: 9999px;
+    transition: background-color 0.15s;
+  }
+
+  .logo-link:hover {
+    background-color: var(--color-hover-bg);
+  }
+
+  /* A button that adds no box of its own around the icon and the title. */
+  .logo-button {
+    display: contents;
+  }
+
+  .logo {
+    font-family: var(--font-display);
+  }
+
+  .logo-version {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 16px;
+  }
+}

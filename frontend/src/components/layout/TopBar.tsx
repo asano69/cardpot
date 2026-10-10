@@ -12,10 +12,6 @@ import { topBarActions, topBarPotLink } from "@/lib/topBarSlot";
 export interface TopBarProps {
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
-  // Extra classes for the outer <header>, so callers can control the
-  // bar's height/padding (e.g. "h-10 py-0") without editing this
-  // component. Falls back to the original spacing when omitted.
-  class?: string;
 }
 
 // The hamburger button here only toggles the Sidebar (owned by
@@ -29,21 +25,17 @@ export default function TopBar(props: TopBarProps) {
   const addCardHref = () => {
     const slug = topBarPotLink()!.slug;
     const title = query().trim();
-    return title
-      ? `/${slug}/${titleToSegment(title)}`
-      : `/${slug}/new`;
+    return title ? `/${slug}/${titleToSegment(title)}` : `/${slug}/new`;
   };
 
   return (
-    <header
-      // fixed (not sticky): TopBar must float above the scrollable
-      // content rather than sit in normal flex flow, or there is
-      // nothing visually behind it for backdrop-blur to blur (see
-      // MainLayout's matching pt-10 on <main>/Sidebar's nav).
-      class={`fixed inset-x-0 top-0 z-40 flex items-center border-b border-border bg-nav/70 backdrop-blur-[10px] ${props.class}`}
-    >
-      <div class="grid w-full grid-cols-[1fr_auto_1fr] items-center px-2">
-        <div class="flex items-center  justify-self-start">
+    // The header is fixed (not sticky): TopBar must float above the
+    // scrollable content rather than sit in normal flex flow, or there is
+    // nothing visually behind it for its backdrop blur to blur (see
+    // .topbar in styles/components/layout.css).
+    <header class="topbar">
+      <div class="topbar-grid">
+        <div class="topbar-left">
           {/* The sidebar is always collapsed by default, so this
               toggle is shown on every device. Its icon is the current
               pot's cover, mirroring the user icon on the right. */}
@@ -52,7 +44,7 @@ export default function TopBar(props: TopBarProps) {
             onClick={() => props.onToggleSidebar()}
             aria-label="Toggle sidebar"
             aria-expanded={props.sidebarOpen}
-            class="icon-btn flex items-center justify-center"
+            class="icon-btn"
           >
             <PotIcon src={topBarPotLink()?.cover} />
           </button>
@@ -60,10 +52,7 @@ export default function TopBar(props: TopBarProps) {
               (see CardList/CardForm's useTopBarPotLink call). Links
               back to that pot's card list. */}
           <Show when={topBarPotLink()}>
-            <A
-              href={`/${topBarPotLink()!.slug}`}
-              class="truncate rounded-full px-3 py-1 font-sans text-lg font-bold transition-colors hover:bg-hover-bg"
-            >
+            <A href={`/${topBarPotLink()!.slug}`} class="topbar-pot-link">
               {topBarPotLink()!.name}
             </A>
           </Show>
@@ -75,13 +64,13 @@ export default function TopBar(props: TopBarProps) {
             duplicated as per-page controls. Only shown while a pot is in
             context -- there's nothing to add to or search from the pots
             list itself. */}
-        <div class="col-search justify-self-center">
+        <div class="col-search">
           <Show when={topBarPotLink()}>
             <A
               href={addCardHref()}
               aria-label="Add card"
               title="New"
-              class="new-button flex h-8 w-8 items-center justify-center rounded-full bg-[hsl(144,30%,50%)] text-white transition-colors hover:bg-[hsl(153,10%,50%)]"
+              class="new-button"
             >
               <Plus size={20} strokeWidth={4} />
             </A>
@@ -93,7 +82,7 @@ export default function TopBar(props: TopBarProps) {
           </Show>
         </div>
 
-        <nav class="flex items-center gap-1 justify-self-end">
+        <nav class="topbar-actions">
           {/* Per-page actions slot (see lib/topBarSlot.ts): renders
               whatever the currently mounted page registered via
               useTopBarActions, e.g. CardForm's pin/delete buttons.

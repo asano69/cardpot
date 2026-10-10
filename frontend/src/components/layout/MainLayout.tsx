@@ -10,49 +10,28 @@ export default function MainLayout(props: ParentProps) {
   const toggleSidebar = () => setSidebarOpen((open) => !open);
 
   return (
-    // h-screen + overflow-hidden bounds this to the viewport height, so
-    // Sidebar and <main> below can each scroll independently instead of
-    // the whole page scrolling as one.
-    <div class="app relative flex h-screen flex-col overflow-hidden bg-bg">
-      {/* TopBar with logo and sidebar toggle. Height/spacing is
-          controlled here (not inside TopBar) via the `class` prop, so
-          this is the one place to tweak the bar's size. */}
-      <TopBar
-        sidebarOpen={sidebarOpen()}
-        onToggleSidebar={toggleSidebar}
-        class="h-10"
-      />
+    // .app is bounded to the viewport height, so Sidebar and <main> below
+    // can each scroll independently instead of the whole page scrolling as
+    // one (see styles/components/layout.css).
+    <div class="app">
+      {/* TopBar with logo and sidebar toggle. Its height comes from the
+          --topbar-height token, so there is nothing to size here. */}
+      <TopBar sidebarOpen={sidebarOpen()} onToggleSidebar={toggleSidebar} />
 
-      {/* Main content area. min-h-0 lets its flex children (Sidebar,
-          <main>) shrink to this row's height instead of growing to fit
-          their content, which is what makes their own overflow-y-auto
-          actually scroll instead of pushing the whole page. relative
-          gives Sidebar's mobile overlay a positioning context that
-          starts below TopBar instead of covering the whole viewport. */}
-      <div class="relative flex min-h-0 flex-1">
+      {/* Main content area. It is the positioning context of the
+          sidebar overlay, so the overlay starts below TopBar instead of
+          covering the whole viewport. */}
+      <div class="app-body">
         <Sidebar open={sidebarOpen()} onClose={() => setSidebarOpen(false)} />
 
-        {/* Main content. flex flex-col lets a page that wants to fill
-            the remaining height (e.g. the note editor) do so via
-            flex-1, while pages with normal document flow (Home, the
-            notes list) are unaffected: they just grow past this height
-            and main's own overflow-y-auto still scrolls them. */}
-        {/* pt-10 matches TopBar's fixed h-10: TopBar no longer takes
-            up flex space (it floats via `fixed`), so this reserves
-            the same visual gap while letting main's own scrolled
-            content actually pass underneath the translucent header,
-            which is what makes its backdrop-blur visible. */}
-        <main class="flex min-h-0 flex-1 flex-col overflow-y-auto mt-7">
-          {/* Horizontal padding shrinks to almost nothing on narrow
-              (phone-width) screens, since every pixel of width matters
-              there, and grows back once there's room to spare.
-              pt-4 keeps a gap below the sticky TopBar -- this lives
-              here rather than on TopBar itself, since a margin there
-              would also push down Sidebar, which sits in the same row
-              as this <main>. */}
-          <div class="mx-auto flex w-full max-w-7xl flex-1 flex-col px-1 pt-8 md:px-6 lg:px-8">
-            {props.children}
-          </div>
+        {/* Main content. A page that wants to fill the remaining height
+            (e.g. the note editor) can do so with flex, while pages with
+            normal document flow just grow past this height and main's own
+            scrolling takes over. TopBar floats above (it is fixed), so
+            scrolled content passes underneath its translucent
+            background, which is what makes its backdrop blur visible. */}
+        <main class="app-main">
+          <div class="app-content">{props.children}</div>
         </main>
       </div>
 
