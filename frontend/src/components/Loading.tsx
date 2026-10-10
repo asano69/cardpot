@@ -2,13 +2,13 @@
 // e.g. as the fallback of a <Show> around a createResource(). Kept as its
 // own component so every route that fetches data shares the same look.
 //
-// It stays invisible for the first moments (see "loading-delay" in
-// styles/components.css), so a short wait shows nothing instead of a
+// It stays invisible for the first moments (see ".loading" in
+// styles/components/loading.css), so a short wait shows nothing instead of a
 // spinner that flashes and disappears.
 export default function Loading() {
   return (
-    <div class="loading-delay flex w-full items-center justify-center py-12">
-      <div class="h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-neutral-500 dark:border-neutral-700 dark:border-t-neutral-300" />
+    <div class="loading">
+      <div class="loading-spinner" />
     </div>
   );
 }

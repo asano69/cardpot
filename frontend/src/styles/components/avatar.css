@@ -1,0 +1,29 @@
+/* Public classes: .avatar, .avatar-img, .avatar-fallback.
+ * A round 32px image with a fallback, used by the user menu and the pot
+ * icon (Kobalte's Image: .avatar is the root, .avatar-img the <img>, and
+ * .avatar-fallback what shows while the image is missing or failed). */
+@layer components {
+  .avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+    border-radius: 9999px;
+    background-color: var(--color-hover-bg);
+  }
+
+  .avatar-img {
+    width: 32px;
+    height: 32px;
+    max-width: none;
+    object-fit: cover;
+  }
+
+  .avatar-fallback {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 700;
+  }
+}

@@ -1,22 +1,59 @@
+/* Public classes: .icon-btn, .btn.
+ * Both are layout-neutral: callers never add utilities to them. Spacing
+ * between buttons is set by the parent. */
 @layer components {
   /* Shared tap target for icon-only buttons/links (TopBar, UserMenu,
-   * Notes list, Editor). p-2 instead of p-1 roughly doubles the hit
-   * area around each icon without changing its visual size. */
+   * dialogs, page menu). The padding roughly doubles the hit area around
+   * each icon without changing its visual size. */
   .icon-btn {
-    @apply rounded-full p-2 transition-colors hover:bg-hover-bg;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    border-radius: 9999px;
+    transition: background-color 0.15s;
+  }
+
+  .icon-btn:hover {
+    background-color: var(--color-hover-bg);
   }
 
   /* inline-flex + gap lay out an optional leading icon next to the label,
    * so call sites never need to add layout utilities to a .btn. */
   .btn {
-    @apply inline-flex items-center gap-1.5
-         my-1.5 cursor-pointer appearance-none rounded-md px-3 py-[7px]
-         font-sans text-base font-semibold
-         transition-colors transition-shadow duration-150
-         disabled:cursor-not-allowed disabled:opacity-40
-         shadow-card
-         border border-border bg-field text-text
-         enabled:hover:bg-hover-bg
-         enabled:active:bg-active-bg enabled:active:border-active-border;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0;
+    padding: 7px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background-color: var(--color-field);
+    box-shadow: var(--shadow-card);
+    color: var(--page-text-color);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+    appearance: none;
+    cursor: pointer;
+    transition:
+      background-color 0.15s,
+      border-color 0.15s,
+      box-shadow 0.15s;
+  }
+
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+
+  .btn:enabled:hover {
+    background-color: var(--color-hover-bg);
+  }
+
+  .btn:enabled:active {
+    border-color: var(--color-active-border);
+    background-color: var(--color-active-bg);
   }
 }

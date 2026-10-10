@@ -30,6 +30,11 @@
     transition: background-color 0.15s;
   }
 
+  /* A label that pushes a trailing icon (e.g. a check mark) to the right. */
+  .menu-item-label {
+    flex: 1;
+  }
+
   .menu-item[data-highlighted],
   .menu-item:hover {
     background-color: var(--color-hover-bg);

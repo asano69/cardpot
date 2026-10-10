@@ -43,6 +43,19 @@
     }
   }
 
+  /* Text for screen readers only, e.g. the close button's label. */
+  .alert .close-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
   .alert-dismissible {
     padding-right: 35px;
   }

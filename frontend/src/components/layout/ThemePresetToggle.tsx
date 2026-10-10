@@ -34,7 +34,7 @@ export default function ThemePresetToggle() {
                 onSelect={() => setPreset(option.value)}
                 class="menu-item"
               >
-                <span class="flex-1">{option.label}</span>
+                <span class="menu-item-label">{option.label}</span>
                 {currentPreset() === option.value && <Check size={16} />}
               </DropdownMenu.Item>
             )}

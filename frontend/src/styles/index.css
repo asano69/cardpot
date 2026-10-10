@@ -11,6 +11,7 @@
 @import "./theme/default.css";
 @import "./base.css";
 @import "./components/controls.css";
+@import "./components/avatar.css";
 @import "./components/loading.css";
 @import "./components/card-grid.css";
 @import "./components/menu.css";

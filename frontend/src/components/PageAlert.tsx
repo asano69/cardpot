@@ -29,7 +29,7 @@ export default function PageAlert(props: PageAlertProps) {
         {props.onClose && (
           <button type="button" class="close" onClick={() => props.onClose?.()}>
             <span aria-hidden="true">×</span>
-            <span class="sr-only">Close alert</span>
+            <span class="close-label">Close alert</span>
           </button>
         )}
         {props.children}

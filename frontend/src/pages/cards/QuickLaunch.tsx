@@ -39,7 +39,7 @@ function QuickMenu(props: QuickMenuProps) {
                   onSelect={() => setSelected(option)}
                   class="menu-item"
                 >
-                  <span class="flex-1">{option}</span>
+                  <span class="menu-item-label">{option}</span>
                   {selected() === option && <Check size={16} />}
                 </DropdownMenu.Item>
               )}

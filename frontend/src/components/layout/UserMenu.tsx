@@ -52,23 +52,13 @@ export default function UserMenu() {
 
   return (
     <DropdownMenu>
-      <DropdownMenu.Trigger
-        aria-label="Open menu"
-        class="icon-btn flex items-center justify-center"
-      >
+      <DropdownMenu.Trigger aria-label="Open menu" class="icon-btn">
         {/* The user's avatar cropped to a circle. While it is missing,
             loading or failed, Kobalte shows the fallback: the user's
             initial. */}
-        <Image
-          fallbackDelay={0}
-          class="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-hover-bg"
-        >
-          <Image.Img
-            src={avatarURL()}
-            alt=""
-            class="h-full w-full object-cover"
-          />
-          <Image.Fallback class="text-sm font-bold">
+        <Image fallbackDelay={0} class="avatar">
+          <Image.Img src={avatarURL()} alt="" class="avatar-img" />
+          <Image.Fallback class="avatar-fallback">
             {userInitial()}
           </Image.Fallback>
         </Image>
@@ -92,7 +82,7 @@ export default function UserMenu() {
           <DropdownMenu.Sub gutter={4} shift={-4}>
             <DropdownMenu.SubTrigger class="menu-item">
               <Dynamic component={activeTheme().icon} size={16} />
-              <span class="flex-1">Theme</span>
+              <span class="menu-item-label">Theme</span>
               <ChevronRight size={16} />
             </DropdownMenu.SubTrigger>
             <DropdownMenu.Portal>
@@ -104,7 +94,7 @@ export default function UserMenu() {
                       class="menu-item"
                     >
                       <option.icon size={16} />
-                      <span class="flex-1">{option.label}</span>
+                      <span class="menu-item-label">{option.label}</span>
                       <Show when={currentMode() === option.value}>
                         <Check size={16} />
                       </Show>

@@ -12,11 +12,8 @@ export interface PotIconProps {
 // Kobalte shows the fallback: the app's logo.
 export default function PotIcon(props: PotIconProps) {
   return (
-    <Image
-      fallbackDelay={0}
-      class="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-hover-bg"
-    >
-      <Image.Img src={props.src} alt="" class="h-full w-full object-cover" />
+    <Image fallbackDelay={0} class="avatar">
+      <Image.Img src={props.src} alt="" class="avatar-img" />
       <Image.Fallback>
         <LogoIcon size={26} />
       </Image.Fallback>
