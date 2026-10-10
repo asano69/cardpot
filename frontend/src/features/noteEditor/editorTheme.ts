@@ -5,15 +5,14 @@ import {
 } from "./plugins/decorations/hangingIndent";
 
 // All CodeMirror-specific styling lives here via EditorView.theme(),
-// not as plain CSS in styles/components.css. CodeMirror injects its
+// not as plain CSS in styles/components/*.css. CodeMirror injects its
 // own base theme as unlayered runtime <style>, and per the CSS
 // Cascade Layers spec, unlayered rules always beat rules inside
-// Tailwind's `@layer components` regardless of selector specificity
-// -- so CSS here previously needed !important just to apply at all
-// (see git history). Keeping every CodeMirror override in one
-// EditorView.theme() avoids that fight entirely and keeps
-// components.css focused on this app's own Tailwind-authored classes,
-// not a third-party editor's internals.
+// `@layer components` regardless of selector specificity -- so CSS
+// there would need !important just to apply at all. Keeping every
+// CodeMirror override in one EditorView.theme() avoids that fight
+// entirely and keeps components/*.css focused on this app's own
+// classes, not a third-party editor's internals.
 //
 // CSS custom properties from styles/theme.css (var(--color-*), etc.)
 // work the same way here as in plain CSS, so this still shares the

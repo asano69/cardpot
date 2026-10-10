@@ -1,6 +1,6 @@
 @layer base {
-  /* Minimal reset (the subset of the former Tailwind preflight this app
-   * relies on). */
+  /* Minimal reset: border-box sizing, no default margins, inherited
+   * fonts, and no list styles. */
   *,
   ::before,
   ::after {

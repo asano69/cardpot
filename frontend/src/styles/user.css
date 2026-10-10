@@ -7,15 +7,12 @@
  *
  * Loaded last in index.css as a plain `@import` (no `layer(...)`), so
  * per the CSS Cascade Layers spec it is unlayered and therefore always
- * wins over every Tailwind layer (theme/base/components/utilities)
- * regardless of selector specificity -- no `!important` needed.
+ * wins over every layer (preset/base/components) regardless of
+ * selector specificity -- no `!important` needed.
  *
  * Target STABLE, semantic class names a component exposes for this
  * purpose (e.g. .card-grid-item, .btn, .page-menu -- see
- * components.css), never Tailwind's generated utility classes (e.g.
- * bg-bg, px-2): those are an implementation detail that can change on
- * a rebuild, and a single element often carries several of them at
- * once, making a utility-class override easy to break accidentally.
+ * components/*.css), or the public tokens listed in tokens.txt.
  *
  * Empty by default -- add overrides below.
  */

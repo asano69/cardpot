@@ -3,7 +3,7 @@
  * .new-button.
  * The page skeleton (see components/layout/MainLayout.tsx and TopBar.tsx).
  *
- * Breakpoints: this app has two, 768px and 1024px (Tailwind's md and lg).
+ * Breakpoints: this app has two, 768px (md) and 1024px (lg).
  * Media queries cannot use custom properties, so the values are written out
  * here and in search.css; keep them in step. */
 @layer components {

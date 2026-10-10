@@ -3,19 +3,15 @@
 // for the simpler per-color override most users want). Injected as a
 // plain <style> with no @layer wrapper -- per the CSS Cascade Layers
 // spec, unlayered CSS always wins over any layered rule regardless of
-// selector specificity, so this automatically overrides Tailwind's
-// own utilities/components/base/theme layers (see
-// @import "tailwindcss"'s implicit `@layer theme, base, components,
-// utilities;` declaration) without needing !important or a
+// selector specificity, so this automatically overrides the app's own
+// layers (see the `@layer preset, base, components;` declaration in
+// styles/index.css) without needing !important or a
 // higher-specificity selector.
 //
 // Target STABLE, DOCUMENTED class names (e.g. .card-grid-item, .btn --
-// see styles/components.css) or a dedicated data-theme-slot attribute,
-// not Tailwind's generated utility classes (e.g. bg-bg): those are an
-// implementation detail that can change across a Tailwind version
-// bump or a rebuild, and a single element often carries several of
-// them at once, making a utility-class override easy to break
-// accidentally.
+// see styles/components/*.css) or a dedicated data-theme-slot
+// attribute, not internal markup details that can change with a
+// refactor.
 const STYLE_ELEMENT_ID = "theme-override";
 
 // Replaces (or creates) the single <style> element this module owns.
