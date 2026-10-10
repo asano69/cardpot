@@ -64,7 +64,7 @@ export const editorTheme = EditorView.theme({
   // not declare, so it is unreadable in dark mode. The text color token
   // follows the current mode.
   ".cm-cursor, .cm-dropCursor": {
-    borderLeftColor: "var(--color-text)",
+    borderLeftColor: "var(--page-text-color)",
   },
   // Selection color, drawn by drawSelection() (see index.tsx). The focused
   // focused selector is needed because CodeMirror's base theme sets
@@ -170,7 +170,7 @@ export const editorTheme = EditorView.theme({
   ".cm-line.line-title": {
     fontFamily: "var(--font-editor)",
     fontSize: "1.73rem",
-    color: "var(--color-line-title)",
+    color: "var(--line-title-color)",
     // A fixed unitless-looking px value, not "normal" -- matches the
     // line's own calc(1em + 1rem) elsewhere so an empty title line
     // and a text-filled one report the same caret height.
@@ -225,7 +225,7 @@ export const editorTheme = EditorView.theme({
     width: `${DOT_SIZE_PX}px`,
     height: `${DOT_SIZE_PX}px`,
     borderRadius: "50%",
-    backgroundColor: "var(--color-line-text)",
+    backgroundColor: "var(--page-text-color)",
   },
 
   // Menu shown above a selection (see plugins/interactions/selectionMenu.ts).
@@ -235,7 +235,7 @@ export const editorTheme = EditorView.theme({
     padding: "2px",
     border: "1px solid var(--color-border)",
     borderRadius: "6px",
-    backgroundColor: "var(--color-card)",
+    backgroundColor: "var(--card-bg)",
     boxShadow: "var(--shadow-popover)",
   },
   ".selection-menu button": {
@@ -243,7 +243,7 @@ export const editorTheme = EditorView.theme({
     borderRadius: "4px",
     fontFamily: "var(--font-sans)",
     fontSize: "13px",
-    color: "var(--color-text)",
+    color: "var(--page-text-color)",
     cursor: "pointer",
   },
   ".selection-menu button:hover:not(:disabled)": {
@@ -263,7 +263,7 @@ export const editorTheme = EditorView.theme({
     padding: "2px",
     border: "1px solid var(--color-border)",
     borderRadius: "6px",
-    backgroundColor: "var(--color-card)",
+    backgroundColor: "var(--card-bg)",
     boxShadow: "var(--shadow-popover)",
   },
   ".cm-tooltip.cm-tooltip-autocomplete.title-completion > ul": {
@@ -273,12 +273,12 @@ export const editorTheme = EditorView.theme({
   ".cm-tooltip.cm-tooltip-autocomplete.title-completion > ul > li": {
     padding: "4px 8px",
     borderRadius: "4px",
-    color: "var(--color-text)",
+    color: "var(--page-text-color)",
   },
   ".cm-tooltip.cm-tooltip-autocomplete.title-completion > ul > li[aria-selected]":
     {
       backgroundColor: "var(--color-hover-bg)",
-      color: "var(--color-text)",
+      color: "var(--page-text-color)",
     },
 
   // "[[x]]" (Strong node).
@@ -435,6 +435,6 @@ export const editorTheme = EditorView.theme({
   // background).
   ".quote": {
     fontStyle: "italic",
-    color: "var(--color-line-text)",
+    color: "var(--page-text-color)",
   },
 });

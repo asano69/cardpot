@@ -27,8 +27,8 @@
   .status-bar > div {
     border-top: 1px solid var(--color-border);
     border-left: 1px solid var(--color-border);
-    background-color: var(--color-nav);
-    color: var(--color-text);
+    background-color: var(--navbar-bg);
+    color: var(--page-text-color);
     font-size: 12px;
     padding: 0 2px;
     line-height: 20px;

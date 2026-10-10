@@ -14,9 +14,12 @@
    ファイルごとのクラス数を数え、着手順の根拠にする。
 2. **Stylelint導入**: `max-nesting-depth: 1`、未使用クラス検出、色リテラル禁止（トークン経由のみ）。以降の置換が機械的に検証される。
 3. **リセットCSSを先に自作**: `base.css` に、Tailwind preflight相当の最小限（`box-sizing: border-box`、margin 0、`button/input` の `font: inherit`、`img` の `display: block; max-width: 100%`、リストのスタイル除去）を書く。Tailwindが生きている間は二重になるが無害。**これを後回しにすると最終段で見た目が一斉に崩れる**。
-4. **CSS変数ブリッジの整理**: `@theme inline` の `--color-*` は、プレーンCSSでは `var(--color-border)` で直接使える。まず `--color-bg: var(--body-bg)` 系のエイリアスの扱いを決める（公開トークンを直接使うか、アプリ内エイリアスを `:root` に残すか）。
+4. **CSS変数ブリッジの整理**: `@theme inline` の `--color-*` は、プレーンCSSでは `var(--color-border)` で直接使える。まず `--color-bg: var(--body-bg)` 系のエイリアスの扱いを決める（公開トークンを直接使うか、アプリ内エイリアスを `:root` に残すか）。  
+=> 公開トークンを直接使う。--color-* の別名は Phase 5 で @theme と一緒に消す
+
 5. **ファイル配置の決定**: `styles/components/<部品>.css`、1部品1ファイル。`index.css` にimportを足していく。
 
+```shell
 19:22 % scripts/tailwind_inventory.sh
    77 src/components/dialogs/ComboboxDialog.tsx
    56 src/components/dialogs/QueryDialog.tsx
@@ -66,6 +69,7 @@ src/styles/components/menu.css
 
 src/styles/components/quick-launch.css
   7:30  ⚠  Disallowed hex color "#363c49"  color-no-hex
+```
 
 ## Phase 1: すでに混在している共通部品（効果が最大）
 

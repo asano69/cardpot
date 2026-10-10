@@ -120,7 +120,7 @@
   --ifm-color-emphasis-300: var(--color-border);
   --ifm-color-emphasis-100: var(--color-hover-bg);
   --ifm-background-surface-color: var(--color-field);
-  --ifm-font-color-base: var(--color-text);
+  --ifm-font-color-base: var(--page-text-color);
 }
 
 

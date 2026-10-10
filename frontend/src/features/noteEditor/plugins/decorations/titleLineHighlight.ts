@@ -43,7 +43,7 @@ export const editorTheme = EditorView.theme({
   ".cm-line.line-title": {
     fontFamily: "var(--font-sans)",
     fontSize: "1.73rem",
-    color: "var(--color-line-title)",
+    color: "var(--line-title-color)",
     lineHeight: "42px",
     paddingBottom: "21px",
   },
