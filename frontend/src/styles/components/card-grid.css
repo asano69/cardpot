@@ -1,0 +1,225 @@
+@layer components {
+  /* Page-card grid, ported directly from Cosense's own page-list card
+   * (see `.grid li.page-list-item` in app.css). Layout, colors and
+   * real thing. Light/dark colors are the literal fallback values
+   * Cosense uses for its default/default-dark themes (--card-bg,
+   * --card-title-bg, --card-title-color, --card-description-color). */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(147px, 1fr));
+    gap: clamp(8px, 1.5svw, 16px);
+  }
+
+  /* Bar of dropdown menus right above .card-grid (see
+   * pages/cards/QuickLaunch.tsx). The gap between menus is set here, by
+   * the parent, so .btn itself stays layout-neutral. */
+  .quick-launch {
+    color: var(--tool-color, #363c49);
+    font-size: 14px;
+    margin-bottom: 12px;
+
+    .flex-box {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+  }
+
+  .card-grid-item {
+    position: relative;
+    aspect-ratio: 1 / 1.1;
+  }
+
+  /* A card for a page that does not exist yet (see "New Links" in
+   * RelatedCards.tsx), faded like Cosense's empty page-list-item. */
+  .card-grid-item.empty {
+    opacity: 0.5;
+  }
+
+  .card-grid-item a {
+    position: relative;
+    display: block;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    background-color: var(--color-card);
+    box-shadow: 0 2px 0 light-dark(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.2));
+    border-radius: 2px;
+    color: var(--color-text);
+    word-break: break-word;
+    text-decoration: none;
+    transition: box-shadow 0.1s;
+  }
+
+  .card-grid-item a:hover {
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.23);
+  }
+
+  /* Whole-card hover tint. It is stacked above .content (see below) so
+   * that it also tints the thumbnail, which would otherwise paint over
+   * it and stay untinted. A translucent color is required: an opaque
+   * color here would hide the title/description/thumbnail instead of
+   * tinting them. pointer-events: none keeps it out of the way of
+   * clicks and dnd-kit's drag handling. */
+  .card-grid-item a .hover {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    opacity: 0;
+    background-color: light-dark(
+      rgba(0, 0, 0, 0.04),
+      rgba(255, 255, 255, 0.06)
+    );
+    transition: opacity 0.1s;
+    pointer-events: none;
+  }
+
+  .card-grid-item a:hover .hover {
+    opacity: 1;
+  }
+
+  /* calc(100% - 5px) matches Cosense's own .content sizing; the 5px
+   * gap is what keeps .description's column layout below from
+   * touching the card's bottom edge. */
+  .card-grid-item .content {
+    /* Stacked below .hover (see its own comment) and .pin: position:
+     * relative is what makes this z-index take effect. */
+    position: relative;
+    z-index: 0;
+    height: calc(100% - 5px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .card-grid-item .header {
+    width: 100%;
+    border-top: 4px solid var(--color-card-title-bg);
+    padding: 10px 12px;
+  }
+
+  .card-grid-item .title {
+    font-size: 13px;
+    font-weight: bold;
+    line-height: 20px;
+    max-height: 60px;
+    margin: 0;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+  }
+
+  /* column-width/column-count lay overflow text out sideways into a
+   * second (clipped) column instead of letting it grow past the
+   * card's bottom edge, so long content gets a clean cut instead of
+   * being sliced mid-line. flex-shrink:16 and min-height:0 let this
+   * box actually shrink inside the column flex parent -- flex items
+   * default to min-height:auto, which would otherwise refuse to
+   * shrink and force an ugly overflow despite overflow:hidden here. */
+  .card-grid-item .description {
+    flex: 1 1 auto;
+    flex-shrink: 16;
+    min-height: 0;
+    height: inherit;
+    padding: 0 12px;
+    font-size: 12px;
+    line-height: 20px;
+    white-space: pre-line;
+    column-count: 1;
+    column-gap: 2em;
+    column-width: 10em;
+    overflow: hidden;
+    color: light-dark(#808080, #c4c4c4);
+  }
+
+  /* Notation inside a card's description (see
+   * features/cardDescription). Links and hashtags share one color;
+   * only external links are underlined. Named "grid-*" so they stay
+   * separate from the note editor's own "cm-*" classes. */
+  .card-grid-item .description .grid-wikilink,
+  .card-grid-item .description .grid-external-link,
+  .card-grid-item .description .grid-hashtag {
+    color: light-dark(#396bdd, #80c9fe);
+  }
+
+  .card-grid-item .description .grid-external-link {
+    text-decoration: underline;
+  }
+
+  .card-grid-item .description .grid-inline-code {
+    font-family: var(--font-mono);
+    color: #342d9c;
+    font-size: 0.95em;
+    background-color: light-dark(
+      rgba(175, 184, 193, 0.2),
+      rgba(110, 118, 129, 0.4)
+    );
+    border-radius: 3px;
+    padding: 0 0.2em;
+  }
+
+  /* A wiki link whose target is dead (see features/cardDescription). Must
+   * stay after the .grid-wikilink rules above, which have the same
+   * specificity. */
+  .card-grid-item .description .grid-empty {
+    color: #fd7373;
+  }
+
+  /* Skeleton lines shown in place of the description of an empty card
+   * (see CardItem.tsx): five bars, the last one shorter. They are plain
+   * divs, so no image is needed. */
+  .card-grid-item .line-img div {
+    height: 4px;
+    margin: 8px 0;
+    background-color: light-dark(#e9eaeb, #4a4d55);
+  }
+
+  .card-grid-item .line-img div:last-of-type {
+    width: 70%;
+  }
+
+  /* Preview for a card whose document contains an image (see
+   * CardItem.tsx). Replaces .description entirely rather than sharing
+   * space with it -- the card is too small for both. The image is
+   * full width and pinned to the top; a tall image is cut off by
+   * .content's overflow: hidden. Class names follow Cosense's own
+   * `.grid li.page-list-item a .icon img`. */
+  .card-grid-item .icon {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .card-grid-item .icon img {
+    display: block;
+    width: 100%;
+    margin: 0 auto;
+    border-radius: 2px;
+    padding: 0 5px;
+  }
+
+  /* Folded-corner indicator for pinned cards (see CardForm's pin
+   * toggle). A diagonal split: the upper-left triangle is the "fold"
+   * (--color-border), the lower-right triangle matches the page
+   * background (--color-bg), so the corner reads as peeled back
+   * rather than a flat badge sitting on top of the card. */
+  .card-grid-item .pin {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 14px;
+    width: 14px;
+    border-radius: 0 2px 0 4px;
+    background: linear-gradient(
+      45deg,
+      var(--color-pined) 50%,
+      var(--color-bg) 50%
+    );
+    z-index: 2;
+    pointer-events: none;
+  }
+}

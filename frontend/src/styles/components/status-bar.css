@@ -1,0 +1,70 @@
+@layer components {
+  /* Bottom-of-viewport status bar, symmetric with TopBar: TopBar owns
+   * the top edge, this owns the bottom edge. Structure and naming
+   * ported from Cosense's own status bar (.footer > .status-bar > div
+   * > .item, see components/layout/Footer.tsx). The outer two layers
+   * carry no border/background of their own -- only the innermost box
+   * (a page's own contribution via lib/footerSlot.ts) does, so an
+   * empty slot renders nothing visible instead of a stray bar across
+   * the bottom of the screen. */
+  .footer {
+    position: fixed;
+    bottom: 0;
+    z-index: 300;
+    width: 100%;
+    pointer-events: none;
+  }
+
+  .status-bar {
+    display: flex;
+    justify-content: flex-end;
+    height: 20px;
+    pointer-events: none;
+  }
+
+  /* pointer-events: auto restores interactivity for the box itself,
+   * since the two wrapper layers above opt out of it. */
+  .status-bar > div {
+    border-top: 1px solid var(--color-border);
+    border-left: 1px solid var(--color-border);
+    background-color: var(--color-nav);
+    color: var(--color-text);
+    font-size: 12px;
+    padding: 0 2px;
+    line-height: 20px;
+    cursor: default;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+  }
+
+  .status-bar .item {
+    margin: 0 2px;
+    display: inline-flex;
+    align-items: center;
+    height: 100%;
+  }
+
+  /* CardForm's footer slot: the open card's title, truncated instead
+   * of wrapping. margin-right: auto pushes it to the left edge of the
+   * status bar (page-list-status's "N pages" box, by contrast, is a
+   * plain flex child that .status-bar's justify-content: flex-end
+   * pushes right) -- only one of the two is ever mounted at a time,
+   * so they never actually compete for space. border: none overrides
+   * the top/left border every other .status-bar box gets, since a
+   * left-aligned box touching the viewport's left edge has no
+   * adjacent box to visually separate from. */
+  .status-bar > div.page-title {
+    display: inline-block;
+    max-width: 250px;
+    border: none;
+    border-top-right-radius: 3px;
+    margin-right: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+    padding-left: 5px;
+  }
+}

@@ -1,0 +1,163 @@
+@layer components {
+  /* Cards and labels appear from top to bottom: each row starts a little
+   * later than the one above, and each card a little later than the one
+   * before it in its row. The delays are set per element with the
+   * --row and --i variables below. Only transform and opacity are
+   * animated, so nothing around the list is pushed. */
+  @keyframes related-appear {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* Space reserved below the note editor (see noteEditor/index.tsx),
+   * named and sized after Cosense's own .related-page-list. The
+   * min-height is what actually guarantees the gap: even a note whose
+   * text fills the whole viewport still leaves this much room below
+   * the editor, so the caret/insertion point never ends up flush
+   * against the bottom edge. */
+  .related-page-list {
+    overflow: hidden;
+    margin-top: 24px;
+    min-height: 300px;
+
+    /* "both" keeps the element hidden during its delay. */
+    ul.grid > li {
+      animation: related-appear 0.3s ease-out both;
+      animation-delay: calc(var(--row, 0) * 80ms + var(--i, 0) * 30ms);
+    }
+
+    ul.grid > li:nth-child(1) { --i: 0; }
+    ul.grid > li:nth-child(2) { --i: 1; }
+    ul.grid > li:nth-child(3) { --i: 2; }
+    ul.grid > li:nth-child(4) { --i: 3; }
+    ul.grid > li:nth-child(5) { --i: 4; }
+    ul.grid > li:nth-child(6) { --i: 5; }
+    ul.grid > li:nth-child(7) { --i: 6; }
+    ul.grid > li:nth-child(n + 8) { --i: 7; }
+
+    .links-container > div:nth-child(1) { --row: 0; }
+    .links-container > div:nth-child(2) { --row: 1; }
+    .links-container > div:nth-child(3) { --row: 2; }
+    .links-container > div:nth-child(4) { --row: 3; }
+    .links-container > div:nth-child(n + 5) { --row: 4; }
+
+    /* "New Links" always comes after the 1 hop / 2 hop rows, however many
+     * of them there are, so it gets its own extra delay on top of its row's. */
+    .links-container > div.links-new ul.grid > li {
+      animation-delay: calc(
+        var(--row, 0) * 80ms + var(--i, 0) * 30ms + 200ms
+      );
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      ul.grid > li {
+        animation: none;
+      }
+    }
+
+    ul.grid {
+      list-style: none;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(146px, 1fr));
+      gap: clamp(8px, 1.5svw, 16px);
+      margin: 0;
+    }
+
+    .links-container {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+      margin-bottom: 48px;
+    }
+
+    /* The label is one grid cell, the same size as a card. Its arrow is
+     * positioned absolutely, so it sticks out of the cell's right edge
+     * without taking any width from it. */
+    .grid li.relation-label {
+      position: relative;
+      aspect-ratio: 1 / 1.1;
+      clear: left;
+    }
+
+    .relation-label a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+      font-size: 14px;
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      background-color: var(--relation-label-bg, #9babc1);
+      color: var(--relation-label-text, #fff);
+      border-radius: 3px;
+      padding: 8px;
+      word-break: break-word;
+      text-decoration: none;
+    }
+
+    .relation-label .title {
+      max-height: 56px;
+      display: block;
+      overflow: hidden;
+    }
+
+    /* flex: none keeps the icon from being squeezed when the title is long. */
+    .relation-label .kamon {
+      display: block;
+      flex: none;
+      margin: 8px auto;
+    }
+
+    .relation-label .arrow {
+      display: block;
+      position: absolute;
+      width: 0;
+      height: 0;
+      left: 100%;
+      top: calc(50% - 7px);
+      border-style: solid;
+      border-width: 7px 5px;
+      border-color: rgba(0, 0, 0, 0);
+      border-left-color: var(--relation-label-bg, #9babc1);
+    }
+
+    .relation-label.links a {
+      background-color: var(--relation-label-links-bg, #3d72f5);
+      color: var(--relation-label-links-text, #fff);
+    }
+
+    .relation-label.links .arrow {
+      border-left-color: var(--relation-label-links-bg, #3d72f5);
+    }
+
+    .relation-label.empty-links a {
+      background-color: var(--relation-label-empty-bg, #fd7373);
+      color: var(--relation-label-empty-text, #fff);
+    }
+
+    .relation-label.empty-links .arrow {
+      border-left-color: var(--relation-label-empty-bg, #fd7373);
+    }
+
+    div.links-2-hop ul.grid:hover .relation-label a {
+      background-color: var(--relation-label-links-bg, #5e8af7);
+      color: var(--relation-label-links-text, #fff);
+      transition: background-color 0.1s;
+    }
+
+    div.links-2-hop ul.grid:hover .relation-label .arrow {
+      border-left-color: var(--relation-label-links-bg, #5e8af7);
+      transition: border-left-color 0.1s;
+    }
+  }
+}

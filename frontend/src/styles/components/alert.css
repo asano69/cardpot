@@ -1,0 +1,70 @@
+@layer components {
+  /* Banner above the note editor (see CardForm.tsx), styled like
+   * Cosense's .alert. Only the info variant is used so far. */
+  .alert {
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+
+    a {
+      font-weight: bold;
+      text-decoration: underline;
+    }
+
+    /* The action button sits right of the message. The gap is set here,
+     * by the parent, so .btn itself stays layout-neutral. */
+    > .btn {
+      margin: 0 0 0 1em;
+    }
+
+    > p {
+      margin: 0;
+    }
+
+    .close {
+      float: right;
+      position: relative;
+      top: -2px;
+      right: -21px;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: #000;
+      font-size: 21px;
+      font-weight: bold;
+      line-height: 1;
+      opacity: 0.2;
+      cursor: pointer;
+    }
+
+    .close:hover {
+      opacity: 0.5;
+    }
+  }
+
+  .alert-dismissible {
+    padding-right: 35px;
+  }
+
+  /* The button sits below the message and may wrap, since it names two
+   * titles. */
+  .replace-page-links-alert > .btn {
+    display: block;
+    margin: 8px 0 0 0;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .alert-info {
+    background-color: #d9edf7;
+    border-color: hsl(190, 65.2%, 84%);
+    color: #31708f;
+  }
+
+  .alert-success {
+    background-color: #dff0d8;
+    border-color: hsl(92.5, 44.4%, 84.4%);
+    color: #3c763d;
+  }
+}

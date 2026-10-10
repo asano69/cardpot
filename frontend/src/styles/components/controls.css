@@ -1,0 +1,19 @@
+@layer components {
+  /* Shared tap target for icon-only buttons/links (TopBar, UserMenu,
+   * Notes list, Editor). p-2 instead of p-1 roughly doubles the hit
+   * area around each icon without changing its visual size. */
+  .icon-btn {
+    @apply rounded-full p-2 transition-colors hover:bg-hover-bg;
+  }
+
+  .btn {
+    @apply my-1.5 cursor-pointer appearance-none rounded-md px-3 py-[7px]
+         font-sans text-base font-semibold
+         transition-colors transition-shadow duration-150
+         disabled:cursor-not-allowed disabled:opacity-40
+         shadow-card
+         border border-border bg-field text-text
+         enabled:hover:bg-hover-bg
+         enabled:active:bg-active-bg enabled:active:border-active-border;
+  }
+}

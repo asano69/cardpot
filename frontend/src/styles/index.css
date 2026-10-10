@@ -10,7 +10,14 @@
  * lib/theme.ts's ThemePreset type for the matching data-theme value. */
 @import "./theme/default.css";
 @import "./base.css";
-@import "./components.css";
+@import "./components/controls.css";
+@import "./components/loading.css";
+@import "./components/card-grid.css";
+@import "./components/page.css";
+@import "./components/related.css";
+@import "./components/search.css";
+@import "./components/status-bar.css";
+@import "./components/alert.css";
 
 /* Unlayered on purpose -- must load last so it wins the cascade over
  * every layered rule above (see user.css's own comment). */

@@ -1,0 +1,16 @@
+@layer components {
+  /* Hidden until the wait is long enough to be worth showing (see
+   * components/Loading.tsx). "both" keeps it hidden during the delay. */
+  @keyframes loading-appear {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .loading-delay {
+    animation: loading-appear 0.2s ease-out 400ms both;
+  }
+}
