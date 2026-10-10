@@ -1,4 +1,75 @@
 @layer base {
+  /* Minimal reset equivalent to Tailwind's preflight. Tailwind still ships
+   * its own while it is in use, so this is redundant for now; it is what
+   * keeps the look unchanged once Tailwind is removed. */
+  *,
+  ::before,
+  ::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0 solid;
+  }
+
+  html {
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
+  ul,
+  ol {
+    list-style: none;
+  }
+
+  img,
+  svg,
+  video {
+    display: block;
+    max-width: 100%;
+  }
+
+  img,
+  video {
+    height: auto;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  table {
+    border-collapse: collapse;
+  }
+
+  [hidden] {
+    display: none;
+  }
+
   /* Every element inherits this family, so the card grid and UI labels
      never fall back to the editor's Roboto (--font-editor). */
   html {
