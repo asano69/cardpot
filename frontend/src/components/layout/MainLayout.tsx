@@ -42,7 +42,7 @@ export default function MainLayout(props: ParentProps) {
             the same visual gap while letting main's own scrolled
             content actually pass underneath the translucent header,
             which is what makes its backdrop-blur visible. */}
-        <main class="flex min-h-0 flex-1 flex-col overflow-y-auto pt-10">
+        <main class="flex min-h-0 flex-1 flex-col overflow-y-auto mt-7">
           {/* Horizontal padding shrinks to almost nothing on narrow
               (phone-width) screens, since every pixel of width matters
               there, and grows back once there's room to spare.
