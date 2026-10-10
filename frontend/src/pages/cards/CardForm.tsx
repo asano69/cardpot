@@ -1,21 +1,11 @@
 import { createSignal, createEffect, Show } from "solid-js";
-import { useParams, useNavigate, A } from "@solidjs/router";
+import { useParams, A } from "@solidjs/router";
 import type * as Y from "yjs";
 import DraftCardEditor from "@/features/noteEditor/DraftCardEditor";
 import ExistingCardEditor from "@/features/noteEditor/ExistingCardEditor";
-import { getSyntaxTreeJson } from "@/features/noteEditor/debug";
 import Loading from "@/components/Loading";
 import PageAlert from "@/components/PageAlert";
-import ActionsMenu from "@/components/menus/ActionsMenu";
-import QueryDialog from "@/components/dialogs/QueryDialog";
-import { Trash2, Pin, PinOff, Wrench, Funnel } from "@/lib/icons";
-import {
-  cardsById,
-  openCardBySlug,
-  removeCard,
-  setCardPinned,
-  setCardQuery,
-} from "@/lib/stores/cardsStore";
+import { cardsById, openCardBySlug } from "@/lib/stores/cardsStore";
 import {
   titleToSegment,
   titleToLowerKey,
@@ -32,6 +22,7 @@ import {
   renameAlertOf,
 } from "@/lib/stores/renameAlertStore";
 import { usePot } from "../pots/PotContext";
+import PageMenu from "./PageMenu";
 import { isRenameOfOpenCard, type SyncedCard } from "./cardUrlSync";
 
 type Draft = { initialTitle?: string };
@@ -42,7 +33,6 @@ type Draft = { initialTitle?: string };
 // wrong room id.
 export default function CardForm() {
   const params = useParams();
-  const navigate = useNavigate();
   const pot = usePot();
   const [cardId, setCardId] = createSignal<string>();
   const [draft, setDraft] = createSignal<Draft | undefined>(
@@ -97,7 +87,6 @@ export default function CardForm() {
   // on every card open, since ExistingCardEditor remounts per card
   // (keyed Show below) -- never stale across a card switch.
   const [contentSnapshot, setContentSnapshot] = createSignal<() => string>();
-  const [queryOpen, setQueryOpen] = createSignal(false);
   // Whether an existing card's editor is shown yet (see ExistingCardEditor's
   // onReady). The page menu waits for it, so it does not sit in a column that
   // is still narrow and then jump when the editor appears.
@@ -217,66 +206,6 @@ export default function CardForm() {
     setDraft(undefined);
   };
 
-  const handleDelete = async () => {
-    const id = cardId();
-    if (!id) return;
-    await removeCard(id);
-    navigate(`/${params.slug}`);
-  };
-
-  // Debug helper: opens the current card's raw Yjs text content
-  // (plain text, not the rendered editor view) as a text/plain blob
-  // in a new tab, so it can be inspected or copied without leaving
-  // the app's own dev tools. See ExistingCardEditor's
-  // onContentSnapshot for where this getter comes from.
-  const handleShowRawText = () => {
-    const getContent = contentSnapshot();
-    if (!getContent) return;
-    // charset=utf-8 must be explicit: Blob() itself always encodes a
-    // JS string as UTF-8 bytes, but without this in the MIME type the
-    // browser guesses the encoding when rendering the tab and can
-    // misread non-ASCII text (e.g. Japanese) as mojibake.
-    const blob = new Blob([getContent()], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    window.open(url, "_blank", "noopener,noreferrer");
-    // Revoking immediately can race the new tab's read of the blob
-    // URL in some browsers, so this waits well past a normal page
-    // load before freeing it.
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  };
-
-  // Debug helper: opens the current editor's syntax tree (see
-  // features/noteEditor/debug.ts) as a JSON blob in a new tab, the
-  // same way handleShowRawText does for the raw text. Replaces the
-  // need to run cardpotDebug.dumpTree() from the browser console.
-  const handleDumpSyntaxTree = () => {
-    const json = getSyntaxTreeJson();
-    if (!json) return;
-    const blob = new Blob([JSON.stringify(json, null, 2)], {
-      type: "application/json;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    window.open(url, "_blank", "noopener,noreferrer");
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  };
-
-  const query = () => cardsById[cardId() ?? ""]?.query ?? "";
-  const saveQuery = async (value: string) => {
-    const id = cardId();
-    if (id) await setCardQuery(id, value);
-  };
-
-  const pinned = () => cardsById[cardId() ?? ""]?.pin ?? false;
-  const togglePin = async () => {
-    const id = cardId();
-    if (!id) return;
-    try {
-      await setCardPinned(id, !pinned());
-    } catch {
-      // A failed pin mutation leaves the shared store unchanged.
-    }
-  };
-
   useTitle(() => {
     const potTitle = pot()?.title;
     const card = cardId() ? cardsById[cardId()!] : undefined;
@@ -390,66 +319,15 @@ export default function CardForm() {
             )}
           </Show>
         </div>
-        {/* Sticky vertical menu to the right of the editor: the open
-            card's pin/delete actions. Always rendered so the layout
-            does not shift when a draft becomes a real card; while
-            there is no card yet (a draft), the buttons are disabled. */}
-        <div class="page-menu" data-hidden={menuReady() ? undefined : ""}>
-          <button
-            type="button"
-            aria-label={pinned() ? "Unpin" : "Pin"}
-            class="tool-btn"
-            disabled={!cardId()}
-            onClick={togglePin}
-          >
-            {pinned() ? <PinOff size={22} /> : <Pin size={22} />}
-          </button>
-          <button
-            type="button"
-            aria-label="Delete"
-            class="tool-btn"
-            disabled={!cardId()}
-            onClick={handleDelete}
-          >
-            <Trash2 size={22} />
-          </button>
-          <button
-            type="button"
-            aria-label="Edit query"
-            class="tool-btn"
-            disabled={!cardId()}
-            onClick={() => setQueryOpen(true)}
-          >
-            <Funnel size={22} />
-          </button>
-          {/* Debug-only dropdown: exports either the card's raw Yjs
-              text (handleShowRawText) or its parsed syntax tree
-              (handleDumpSyntaxTree) as a blob in a new tab, replacing
-              the About button's old single-action click. */}
-          <ActionsMenu
-            label="Debug options"
-            triggerClass="tool-btn"
-            disabled={!cardId()}
-            items={[
-              {
-                label: "Show raw text",
-                icon: Wrench,
-                onSelect: handleShowRawText,
-              },
-              {
-                label: "Dump syntax tree",
-                icon: Wrench,
-                onSelect: handleDumpSyntaxTree,
-              },
-            ]}
-          />
-          <QueryDialog
-            open={queryOpen()}
-            onOpenChange={setQueryOpen}
-            initialValue={query()}
-            onSubmit={saveQuery}
-          />
-        </div>
+        {/* Always rendered so the layout does not shift when a draft
+            becomes a real card; while there is no card yet (a draft),
+            its buttons are disabled. */}
+        <PageMenu
+          cardId={cardId()}
+          potSlug={params.slug}
+          hidden={!menuReady()}
+          getContent={contentSnapshot()}
+        />
       </div>
     </Show>
   );
