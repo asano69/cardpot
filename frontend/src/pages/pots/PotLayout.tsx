@@ -8,6 +8,7 @@ import { useParams } from "@solidjs/router";
 
 import { fetchPotByName, potCoverURL } from "@/lib/api/pots";
 import { useTopBarPotLink } from "@/lib/topBarSlot";
+import { useFavicon } from "@/lib/useFavicon";
 import { ensurePotSynced, releasePot } from "@/lib/stores/cardsStore";
 import {
   markLinkAlivePotReady,
@@ -47,6 +48,10 @@ export default function PotLayout(props: ParentProps) {
         }
       : undefined,
   );
+
+  // The tab icon follows the open pot's cover. Leaving the pot restores
+  // the app's own icon (see useFavicon.ts).
+  useFavicon(() => (pot() ? potCoverURL(pot()!) : undefined));
 
   // Drops the pot's loaded cards once the user leaves it (another pot, or
   // the pot list). Moving between CardList and CardForm keeps this layout
