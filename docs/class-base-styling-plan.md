@@ -1,0 +1,82 @@
+# Tailwind → プレーンCSS 移行計画
+
+## 前提と方針
+
+- **Tailwindを入れたまま、1コンポーネントずつ置換**する。途中でビルドが壊れず、いつでも止められる。
+- 置換した単位でコミットする（1コンポーネント＝1コミット）。
+- 新規スタイルは今日からプレーンCSSで書く。**増やさないこと**が最優先。
+- 公開スタイルはすべて `@layer components`、ネストは1段まで。
+
+## Phase 0: 棚卸しと土台（コードはほぼ触らない）
+
+1. **使用状況の棚卸し**: ユーティリティを使っているtsxを洗い出す。
+   `grep -rlE 'class="[^"]*\b(flex|px-|py-|text-|bg-|border|rounded|gap-)' frontend/src --include=*.tsx`
+   ファイルごとのクラス数を数え、着手順の根拠にする。
+2. **Stylelint導入**: `max-nesting-depth: 1`、未使用クラス検出、色リテラル禁止（トークン経由のみ）。以降の置換が機械的に検証される。
+3. **リセットCSSを先に自作**: `base.css` に、Tailwind preflight相当の最小限（`box-sizing: border-box`、margin 0、`button/input` の `font: inherit`、`img` の `display: block; max-width: 100%`、リストのスタイル除去）を書く。Tailwindが生きている間は二重になるが無害。**これを後回しにすると最終段で見た目が一斉に崩れる**。
+4. **CSS変数ブリッジの整理**: `@theme inline` の `--color-*` は、プレーンCSSでは `var(--color-border)` で直接使える。まず `--color-bg: var(--body-bg)` 系のエイリアスの扱いを決める（公開トークンを直接使うか、アプリ内エイリアスを `:root` に残すか）。
+5. **ファイル配置の決定**: `styles/components/<部品>.css`、1部品1ファイル。`index.css` にimportを足していく。
+
+## Phase 1: すでに混在している共通部品（効果が最大）
+
+何度も使われる部品を先に直すと、後続の置換が楽になる。
+
+| 順 | 対象 | 理由 |
+|---|---|---|
+| 1 | `.btn` / `.icon-btn`（`controls.css`） | すでにCSS化済みだが `@apply` を使用。素のCSSに書き換え、`SaveButton` の直書きも `.btn` 系に統合 |
+| 2 | `menu.css` と `ActionsMenu` / `UserMenu` / `ThemePresetToggle` / `QuickLaunch` | クラスは既にある。残りのユーティリティ（`flex-1`、`flex items-center`）を除去 |
+| 3 | ダイアログ4種（`PromptDialog`/`ConfirmDialog`/`QueryDialog`/`ComboboxDialog`） | 構造がほぼ同一。`.dialog`, `.dialog-overlay`, `.dialog-content`, `.dialog-title` などを共通化して一括で置換。重複が最も多い箇所 |
+| 4 | `Loading`、`PageAlert` | 小さく独立。`Loading` はスピナーを `loading.css` に |
+
+## Phase 2: レイアウト骨格
+
+`MainLayout`、`TopBar`、`Sidebar`、`SidebarPotList`、`Footer`、`PotIcon`、`Logo`。
+
+- ここは `fixed`/`z-index`/`backdrop-blur`/レスポンシブ（`md:hidden`, `hidden md:block`）が集中する。メディアクエリへの書き換えを要する。
+- `z-index` の値はこの時点で**一覧化して変数化**（`--z-topbar` など）。散在するz-indexは詳細度と並ぶ混乱の元。
+- ブレークポイントは1か所（`@custom-media` は未対応ブラウザがあるので、素直に `768px` を共通コメントで管理）。
+
+## Phase 3: ページ単位
+
+1. `PotList` / `PotForm` / `PotGridItem`
+2. `CardList` / `CardItem`（`card-grid.css` は既に大半が完成。残りの `opacity-40`、`col-span-full h-px` を除去）
+3. `CardForm` / `RelatedCards`（`page-menu` の `flex flex-col gap-0.5` など）
+4. `Login`、`ApiDocs`、`Md2sb`（管理系は最後。壊れても影響が小さい）
+
+各ページで、`classList={{ "opacity-40": ... }}` のような状態クラスは `.dragging` や `[data-dragging]` に置換。
+
+## Phase 4: エディタ周辺の確認
+
+`editorTheme.ts` と `titleLineHighlight.ts` は既にTailwindではない。ただし次を確認する。
+
+- `titleLineHighlight.ts` に `editorTheme` が**重複定義**されている（`index.tsx` が import するのは `editorTheme.ts` 側）。この移行のついでに片方を削除。
+- `var(--color-*)` を使っている箇所が、エイリアス整理（Phase 0-4）後も解決されること。
+
+## Phase 5: Tailwind撤去
+
+すべてのtsxからユーティリティが消えたことを確認してから実施する。
+
+1. 確認: Phase 0 の grep が0件。
+2. `index.css` の `@import "tailwindcss"` を削除。
+3. `default.css` の `@theme` / `@theme inline` / `@custom-variant` を通常の `:root` に書き換え（`--font-*`、`--shadow-*` は `:root` へ）。
+4. `base.css` の `@apply` を素のCSSに。
+5. `vite.config.ts` から `@tailwindcss/vite` と `cssMinify: "esbuild"` の回避策を削除（Lightning CSSが復活するので、ビルド出力で順序崩れがないか確認）。
+6. `package.json` から `tailwindcss` / `@tailwindcss/vite` を削除。
+7. `CLAUDE.md` のスタイル規約を更新（Tailwind言及の削除、新ルールの記載）。
+
+## 各ステップの検証
+
+- **見た目**: ライト/ダーク、`default`/`blue` プリセット、モバイル幅（639px以下）の3軸で確認。
+- **機械的**: `bun run typecheck`、`bun run lint`、Stylelint、`bun run test`（`tokens.test.ts` が通ること）。
+- **ビルド**: 本番ビルドでも確認（過去にminifyで順序が変わった前例があるため、Phase 1と5の後は必ず）。
+
+## 注意点（落とし穴）
+
+- **Preflightの欠落**: Phase 0-3 で防ぐ。特に `button` の背景・枠線、`h1`〜`h3` のmargin、`ul` のlist-style。
+- **Kobalteの `data-*` 属性**: `data-[highlighted]:` は `[data-highlighted]` セレクタへ。`menu.css` に既に例がある。
+- **`dark:` バリアント**: 現状未使用だが、`light-dark()` に統一されているので問題なし。
+- **`space-x-*` や `divide-*`**: 使っている箇所があれば、親側で `gap` に置換（CLAUDE.mdの「親から制御」方針とも合う）。
+
+## 着手の最初の一歩
+
+Phase 0 の 1（棚卸し）と 3（リセットCSS）、2（Stylelint）の3点を1つのPRにまとめるのが良いと思います。棚卸しの結果で、Phase 1〜3の順序を実データに合わせて調整できます。棚卸しのスクリプト作成から、こちらで進めましょうか。
