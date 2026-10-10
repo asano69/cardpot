@@ -20,35 +20,19 @@
 5. **ファイル配置の決定**: `styles/components/<部品>.css`、1部品1ファイル。`index.css` にimportを足していく。
 
 ```shell
-19:22 % scripts/tailwind_inventory.sh
-   77 src/components/dialogs/ComboboxDialog.tsx
-   56 src/components/dialogs/QueryDialog.tsx
-   54 src/components/dialogs/PromptDialog.tsx
+
+asano@spica:~/projects/cardpot/frontend (main *%)
+19:51 % cd .. && scripts/tailwind_inventory.sh | head
    47 src/components/layout/Sidebar.tsx
    46 src/components/layout/TopBar.tsx
    45 src/features/md2sb/Md2sb.tsx
    37 src/pages/admin/ApiDocs.tsx
    37 src/pages/Login.tsx
-   31 src/components/dialogs/ConfirmDialog.tsx
    28 src/components/layout/MainLayout.tsx
    21 src/pages/pots/PotForm.tsx
    20 src/components/Logo.tsx
    18 src/components/layout/UserMenu.tsx
    17 src/components/layout/SidebarPotList.tsx
-   14 src/pages/pots/PotGridItem.tsx
-   14 src/components/Loading.tsx
-   11 src/components/PotIcon.tsx
-    5 src/pages/cards/CardForm.tsx
-    4 src/pages/pots/PotList.tsx
-    4 src/features/noteEditor/index.tsx
-    3 src/features/noteEditor/DraftCardEditor.tsx
-    2 src/pages/cards/CardList.tsx
-    2 src/components/layout/TitleSearch.tsx
-    1 src/pages/cards/RelatedCards.tsx
-    1 src/pages/cards/QuickLaunch.tsx
-    1 src/pages/cards/CardItem.tsx
-    1 src/components/layout/ThemePresetToggle.tsx
-    1 src/components/PageAlert.tsx
 19:25 % cd frontend && bun run lint:css
 $ stylelint "src/**/*.css"
 

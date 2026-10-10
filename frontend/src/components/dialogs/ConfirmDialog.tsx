@@ -43,17 +43,17 @@ export default function ConfirmDialog(props: ConfirmDialogProps) {
   return (
     <AlertDialog open={props.open} onOpenChange={handleOpenChange}>
       <AlertDialog.Portal>
-        <AlertDialog.Overlay class="fixed inset-0 z-50 bg-black/40" />
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <AlertDialog.Content class="w-full max-w-sm rounded-md border border-border bg-card p-6 shadow-popover">
-            <AlertDialog.Title class="text-lg font-sans">
+        <AlertDialog.Overlay class="dialog-overlay" />
+        <div class="dialog-positioner">
+          <AlertDialog.Content class="dialog-content">
+            <AlertDialog.Title class="dialog-title">
               {props.title}
             </AlertDialog.Title>
-            <AlertDialog.Description class="mt-2 text-sm text-[#dc3545]">
+            <AlertDialog.Description class="dialog-description">
               {props.description}
             </AlertDialog.Description>
-            {error() && <p class="mt-2 text-sm text-[#dc3545]">{error()}</p>}
-            <div class="mt-6 flex justify-end gap-2">
+            {error() && <p class="dialog-error">{error()}</p>}
+            <div class="dialog-actions">
               <AlertDialog.CloseButton type="button" class="btn">
                 <X size={16} />
                 Cancel

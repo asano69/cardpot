@@ -1,0 +1,164 @@
+/* Public classes: .dialog-overlay, .dialog-positioner, .dialog-content,
+ * .dialog-wide, .dialog-header, .dialog-title, .dialog-close, .dialog-form,
+ * .dialog-row, .dialog-field, .dialog-label, .dialog-input, .dialog-mono,
+ * .dialog-description, .dialog-error, .dialog-actions, .dialog-combobox-*,
+ * .dialog-listbox.
+ * The shared look of every modal dialog (PromptDialog, QueryDialog,
+ * ComboboxDialog, ConfirmDialog). Dialogs are rendered in a portal, so they
+ * cannot be styled through their trigger's parent. */
+@layer components {
+  .dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background-color: rgba(0, 0, 0, 0.4);
+  }
+
+  /* Centers the content. A sibling of the overlay, not its child. */
+  .dialog-positioner {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .dialog-content {
+    width: 100%;
+    max-width: 24rem;
+    padding: 1.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background-color: var(--card-bg);
+    box-shadow: var(--shadow-popover);
+  }
+
+  /* Modifier for dialogs that hold a larger field (QueryDialog). */
+  .dialog-wide {
+    max-width: 32rem;
+  }
+
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .dialog-title {
+    font-family: var(--font-sans);
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+
+  .dialog-close {
+    padding: 4px;
+    border-radius: 6px;
+    color: var(--page-text-color);
+    transition: background-color 0.15s;
+  }
+
+  .dialog-close:hover {
+    background-color: var(--color-hover-bg);
+  }
+
+  .dialog-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* A field and its inline submit button on one row. */
+  .dialog-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+
+    > .icon-btn {
+      flex-shrink: 0;
+    }
+  }
+
+  .dialog-field {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .dialog-label {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: var(--page-text-color);
+  }
+
+  .dialog-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background-color: var(--body-bg);
+    color: var(--page-text-color);
+  }
+
+  /* Modifier for code-like text (QueryDialog's textarea). */
+  .dialog-mono {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+  }
+
+  .dialog-description {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--danger-color);
+  }
+
+  .dialog-error {
+    font-size: 0.875rem;
+    color: var(--danger-color);
+  }
+
+  /* ConfirmDialog shows its error directly under the description. */
+  .dialog-content > .dialog-error {
+    margin-top: 0.5rem;
+  }
+
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+
+  /* ComboboxDialog: the control looks like .dialog-input, but the input
+   * inside it is bare so the trigger icon can sit next to it. */
+  .dialog-combobox-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background-color: var(--body-bg);
+  }
+
+  .dialog-combobox-input {
+    width: 100%;
+    background-color: transparent;
+    font-size: 0.875rem;
+    color: var(--page-text-color);
+    outline: none;
+  }
+
+  .dialog-combobox-trigger {
+    color: var(--color-border);
+  }
+
+  .dialog-listbox {
+    max-height: 15rem;
+    overflow-y: auto;
+  }
+}

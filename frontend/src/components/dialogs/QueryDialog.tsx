@@ -1,4 +1,3 @@
-// frontend/src/components/dialogs/QueryDialog.tsx
 import { createSignal, createEffect } from "solid-js";
 import { Dialog } from "@kobalte/core/dialog";
 import { TextField } from "@kobalte/core/text-field";
@@ -45,45 +44,42 @@ export default function QueryDialog(props: QueryDialogProps) {
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay class="fixed inset-0 z-50 bg-black/40" />
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <Dialog.Content class="w-full max-w-lg rounded-md border border-border bg-card p-6 shadow-popover">
-            <div class="mb-4 flex items-center justify-between">
-              <Dialog.Title class="text-lg font-sans">Query</Dialog.Title>
-              <Dialog.CloseButton
-                aria-label="Close"
-                class="rounded-md p-1 text-text transition-colors hover:bg-hover-bg"
-              >
+        <Dialog.Overlay class="dialog-overlay" />
+        <div class="dialog-positioner">
+          <Dialog.Content class="dialog-content dialog-wide">
+            <div class="dialog-header">
+              <Dialog.Title class="dialog-title">Query</Dialog.Title>
+              <Dialog.CloseButton aria-label="Close" class="dialog-close">
                 <X size={18} />
               </Dialog.CloseButton>
             </div>
-            <form onSubmit={handleSubmit} class="flex flex-col gap-4">
-              <div class="flex items-end gap-2">
+            <form onSubmit={handleSubmit} class="dialog-form">
+              <div class="dialog-row">
                 <TextField
                   value={value()}
                   onChange={setValue}
-                  class="flex min-w-0 flex-1 flex-col gap-1"
+                  class="dialog-field"
                 >
-                  <TextField.Label class="text-sm text-text">
+                  <TextField.Label class="dialog-label">
                     Datalog query
                   </TextField.Label>
                   <TextField.TextArea
                     autofocus
                     rows={10}
                     spellcheck={false}
-                    class="w-full rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text"
+                    class="dialog-input dialog-mono"
                   />
                 </TextField>
                 <button
                   type="submit"
                   aria-label={submitting() ? "Saving…" : "Save"}
-                  class="icon-btn shrink-0"
+                  class="icon-btn"
                   disabled={submitting()}
                 >
                   <Check size={20} />
                 </button>
               </div>
-              {error() && <p class="text-sm text-[#dc3545]">{error()}</p>}
+              {error() && <p class="dialog-error">{error()}</p>}
             </form>
           </Dialog.Content>
         </div>

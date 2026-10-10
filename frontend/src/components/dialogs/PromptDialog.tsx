@@ -54,37 +54,29 @@ export default function PromptDialog(props: PromptDialogProps) {
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay class="fixed inset-0 z-50 bg-black/40" />
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <Dialog.Content class="w-full max-w-sm rounded-md border border-border bg-card p-6 shadow-popover">
-            <div class="mb-4 flex items-center justify-between">
-              <Dialog.Title class="text-lg font-sans">
-                {props.title}
-              </Dialog.Title>
-              <Dialog.CloseButton
-                aria-label="Close"
-                class="rounded-md p-1 text-text transition-colors hover:bg-hover-bg"
-              >
+        <Dialog.Overlay class="dialog-overlay" />
+        <div class="dialog-positioner">
+          <Dialog.Content class="dialog-content">
+            <div class="dialog-header">
+              <Dialog.Title class="dialog-title">{props.title}</Dialog.Title>
+              <Dialog.CloseButton aria-label="Close" class="dialog-close">
                 <X size={18} />
               </Dialog.CloseButton>
             </div>
-            <form onSubmit={handleSubmit} class="flex flex-col gap-4">
+            <form onSubmit={handleSubmit} class="dialog-form">
               {/* Field and its inline save button share one row, same
                   pattern as ComboboxDialog: no separate full-width
                   Cancel/Save row anymore. */}
-              <div class="flex items-end gap-2">
+              <div class="dialog-row">
                 <TextField
                   value={value()}
                   onChange={setValue}
-                  class="flex min-w-0 flex-1 flex-col gap-1"
+                  class="dialog-field"
                 >
-                  <TextField.Label class="text-sm text-text">
+                  <TextField.Label class="dialog-label">
                     {props.label}
                   </TextField.Label>
-                  <TextField.Input
-                    autofocus
-                    class="w-full rounded-md border border-border bg-bg px-3 py-2 text-text"
-                  />
+                  <TextField.Input autofocus class="dialog-input" />
                 </TextField>
                 <button
                   type="submit"
@@ -93,13 +85,13 @@ export default function PromptDialog(props: PromptDialogProps) {
                       ? (props.submittingLabel ?? "Saving…")
                       : (props.submitLabel ?? "Save")
                   }
-                  class="icon-btn shrink-0"
+                  class="icon-btn"
                   disabled={submitting()}
                 >
                   <Check size={20} />
                 </button>
               </div>
-              {error() && <p class="text-sm text-[#dc3545]">{error()}</p>}
+              {error() && <p class="dialog-error">{error()}</p>}
             </form>
           </Dialog.Content>
         </div>

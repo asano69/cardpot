@@ -91,6 +91,9 @@
 
     --tool-color: light-dark(#848484, #535863);
 
+    /* Destructive actions and error messages. */
+    --danger-color: #dc3545;
+
     /* --- Reserved: declared so presets and user.css can set them, but no
      *     component reads them yet. Move a token up when it gets wired. --- */
     --card-backside: light-dark(#e5e5e5, #545860);
