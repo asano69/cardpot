@@ -1,6 +1,5 @@
 import { defineConfig, type Plugin, type ProxyOptions } from "vite";
 import solid from "vite-plugin-solid";
-import tailwindcss from "@tailwindcss/vite";
 
 // Single source of truth for this build: also read by __APP_NAME__ below
 // and by the index.html %APP_NAME% placeholder, so the value only has to
@@ -39,7 +38,7 @@ const wsProxy: ProxyOptions = {
 };
 
 export default defineConfig({
-  plugins: [solid(), tailwindcss(), injectAppNameHtml],
+  plugins: [solid(), injectAppNameHtml],
   // Resolves the "@/*" alias declared in tsconfig.json's "paths".
   resolve: {
     tsconfigPaths: true,
@@ -67,13 +66,5 @@ export default defineConfig({
   build: {
     outDir: "../internal/static/dist",
     emptyOutDir: true,
-    // Lightning CSS's minifier reorders same-specificity utility rules
-    // during optimization, which flips which rule wins the cascade.
-    // Tailwind v4 relies on source order to break specificity ties, so
-    // this broke Kobalte's menu background/border styles in production
-    // builds only (dev serves unminified CSS, so it never showed there).
-    // esbuild's minifier doesn't reorder rules, so it avoids the bug
-    // while still actually minifying the output (unlike cssMinify: false).
-    cssMinify: "esbuild",
   },
 });

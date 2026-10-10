@@ -1,51 +1,13 @@
-/* Semantic color tokens live in @theme so Tailwind generates matching
- * utilities (bg-bg, text-text, border-border, ...). Each token's
- * actual value is declared separately below (in :root and in the
- * [data-theme][data-mode] override blocks) and only re-exposed here
- * via `inline`, so Tailwind keeps referencing the CSS variable
- * instead of baking a static value in at build time.
+/* Every design token of the app is declared in :root below (and in the
+ * [data-theme][data-mode] override blocks of the presets).
  *
  * Two independent attributes on <html> select a token's value (see
  * lib/theme.ts):
  *   - data-theme: which color preset ("default", "blue", ...)
  *   - data-mode: "light" or "dark"
- * :root supplies the default preset's light values; every other
- * combination is an explicit [data-theme="X"][data-mode="Y"] override.
- * A combination with no override block simply falls back to :root,
- * which is why "default" only needs a dark block below, not a light
- * one.
+ * :root supplies the default preset's values; light-dark() picks the mode.
+ * A preset only declares the tokens that differ from :root.
  */
-
-/* Lets `dark:` utilities follow data-mode instead of Tailwind's
- * default prefers-color-scheme media query, for the rare case a
- * component wants a one-off dark override instead of a token. Unused
- * for now -- nothing in this app reaches for `dark:` yet, since
- * light-dark() already covers non-preset-specific mode differences
- * (see --shadow-card below). Kept here so it's available once needed. */
-@custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
-
-/* Tailwind utilities (bg-bg, bg-card, ...) read the public tokens below.
- * Only app tokens that have no public counterpart yet are declared
- * directly (see the "App tokens" block). */
-@theme inline {
-  --color-bg: var(--body-bg);
-  --color-text: var(--page-text-color);
-  --color-line-title: var(--line-title-color);
-  --color-line-text: var(--page-text-color);
-  --color-card: var(--card-bg);
-  --color-card-title-bg: var(--card-title-bg);
-  --color-pined: var(--card-pin-overhang-color);
-  --color-nav: var(--navbar-bg);
-
-  --color-panel: var(--color-panel);
-  --color-surface: var(--color-surface);
-  --color-field: var(--color-field);
-  --color-border: var(--color-border);
-  --color-hover-bg: var(--color-hover-bg);
-  --color-hover-border: var(--color-hover-border);
-  --color-active-bg: var(--color-active-bg);
-  --color-active-border: var(--color-active-border);
-}
 
 /* Public design tokens: the only values user.css and presets are meant to
  * override. Names follow Cosense's theme variables, so a Cosense theme can
@@ -129,6 +91,20 @@
     --z-popup: 50; /* dialogs, dropdown menus, search suggestions */
     --z-footer: 300;
     --z-page-menu: 300;
+
+    /* Fonts. */
+    --font-sans: "Open Sans", Helvetica, Arial, "Hiragino Sans", sans-serif;
+    --font-serif: "TeX Gyre Termes", "Nimbus Roman No9 L", Georgia, serif;
+    --font-mono: Menlo, Monaco, Consolas, "Courier New", monospace;
+    --font-editor: "Roboto", Helvetica, Arial, "Hiragino Sans", sans-serif;
+    --font-display: "Fraunces", "TeX Gyre Termes", Georgia, serif;
+
+    /* Shadows. They only vary between light and dark, so they are plain
+     * light-dark() calls instead of per-preset overrides. */
+    --shadow-card: 0 1px 0 light-dark(rgba(31, 35, 40, 0.04), rgba(0, 0, 0, 0.3));
+    --shadow-popover:
+      0 1px 3px light-dark(rgba(31, 35, 40, 0.12), rgba(0, 0, 0, 0.4)),
+      0 8px 24px light-dark(rgba(66, 74, 83, 0.12), rgba(0, 0, 0, 0.4));
   }
 }
 
@@ -154,21 +130,4 @@ html[data-mode="light"] {
 }
 html[data-mode="dark"] {
   color-scheme: dark;
-}
-
-@theme {
-  --font-sans: "Open Sans", Helvetica, Arial, "Hiragino Sans", sans-serif;
-  --font-serif: "TeX Gyre Termes", "Nimbus Roman No9 L", Georgia, serif;
-  --font-mono: Menlo, Monaco, Consolas, "Courier New", monospace;
-
-  --font-editor: "Roboto", Helvetica, Arial, "Hiragino Sans", sans-serif;
-  --font-display: "Fraunces", "TeX Gyre Termes", Georgia, serif;
-
-  /* Not per-preset -- these only vary between light/dark (via
-   * color-scheme, see html[data-mode] above), so they stay as plain
-   * light-dark() calls instead of a [data-theme][data-mode] override. */
-  --shadow-card: 0 1px 0 light-dark(rgba(31, 35, 40, 0.04), rgba(0, 0, 0, 0.3));
-  --shadow-popover:
-    0 1px 3px light-dark(rgba(31, 35, 40, 0.12), rgba(0, 0, 0, 0.4)),
-    0 8px 24px light-dark(rgba(66, 74, 83, 0.12), rgba(0, 0, 0, 0.4));
 }

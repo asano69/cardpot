@@ -120,6 +120,13 @@ src/styles/components/quick-launch.css
 6. `package.json` から `tailwindcss` / `@tailwindcss/vite` を削除。
 7. `CLAUDE.md` のスタイル規約を更新（Tailwind言及の削除、新ルールの記載）。
 
+=> 完了。
+- `index.css` は `@layer preset, base, components;` を自前で宣言する（Tailwind が宣言していた順序の代わり）。
+- `default.css` の `@theme` / `@theme inline` / `@custom-variant` を削除し、`--font-*` と `--shadow-*` は `@layer preset` の `:root` に移した。`--color-bg` などの別名は未使用のため削除した。
+- `base.css` の `body` は `@apply` を素のCSSに書き換えた。
+- `vite.config.ts` から `@tailwindcss/vite` と `cssMinify: "esbuild"` を削除した。
+- `stylelint.config.js` の Tailwind 用 `ignoreAtRules` を削除した。`scripts/tailwind_inventory.sh` は削除した。
+
 ## 各ステップの検証
 
 - **見た目**: ライト/ダーク、`default`/`blue` プリセット、モバイル幅（639px以下）の3軸で確認。

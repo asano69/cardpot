@@ -1,7 +1,6 @@
 @layer base {
-  /* Minimal reset equivalent to Tailwind's preflight. Tailwind still ships
-   * its own while it is in use, so this is redundant for now; it is what
-   * keeps the look unchanged once Tailwind is removed. */
+  /* Minimal reset (the subset of the former Tailwind preflight this app
+   * relies on). */
   *,
   ::before,
   ::after {
@@ -77,7 +76,11 @@
   }
 
   body {
-    @apply h-screen w-screen font-sans bg-bg text-text;
+    width: 100vw;
+    height: 100vh;
+    font-family: var(--font-sans);
+    background-color: var(--body-bg);
+    color: var(--page-text-color);
     font-size: 14px;
     line-height: 1.428571429;
     text-underline-offset: 0.3em;

@@ -1,27 +1,11 @@
-// Stylelint rules for the migration away from Tailwind (see
-// docs/class-base-styling-plan.md). Deliberately small: only rules that check
-// the plan's conventions, no style opinions.
+// Stylelint rules that check the styling conventions of CLAUDE.md.
+// Deliberately small: no style opinions.
 export default {
   rules: {
     // Public styles nest one level at most. Wrapper at-rules do not count.
     "max-nesting-depth": [1, { ignoreAtRules: ["layer", "media", "supports"] }],
 
-    // Tailwind's own at-rules, until Tailwind is removed (Phase 5).
-    "at-rule-no-unknown": [
-      true,
-      {
-        ignoreAtRules: [
-          "theme",
-          "apply",
-          "custom-variant",
-          "plugin",
-          "source",
-          "utility",
-          "variant",
-          "config",
-        ],
-      },
-    ],
+    "at-rule-no-unknown": true,
 
     // Colors come from tokens. Only a warning for now: existing files still
     // hold literals, and the migration removes them step by step. Raise it

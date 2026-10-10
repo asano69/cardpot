@@ -1,13 +1,13 @@
-@import "tailwindcss";
+/* Cascade layer order, lowest first. Unlayered CSS (user.css) always wins
+ * over every layer. */
+@layer preset, base, components;
 
-/* Import order matters: theme/base.css must come right after
- * tailwindcss so its @theme block extends Tailwind's defaults before
- * anything else consumes the resulting var(--color-*) tokens. It also
- * declares the "default" preset directly (see that file's own
- * comment). Adding a new preset is a new theme/*.css file imported
- * here, contributing only the [data-theme="x"][data-mode="y"]
- * override blocks base.css doesn't already cover -- see
- * lib/theme.ts's ThemePreset type for the matching data-theme value. */
+/* Import order matters: theme/default.css declares the tokens every other
+ * stylesheet consumes via var(), and the "default" preset. Adding a new
+ * preset is a new theme/*.css file imported here, contributing only the
+ * [data-theme="x"][data-mode="y"] override blocks default.css doesn't
+ * already cover -- see lib/theme.ts's ThemePreset type for the matching
+ * data-theme value. */
 @import "./theme/default.css";
 @import "./base.css";
 @import "./components/controls.css";

@@ -49,13 +49,13 @@ import (
 
 
 ## スタイル規約
-- ユーザCSSの対象になるクラスは styles/components/*.css の公開クラスのみ。
-- それ以外の内部スタイルはTailwindで書く。公開クラスと同じ要素にTailwindを混ぜない。
-- Tailwindを使っており、marginのような親/兄弟レイアウトに影響を及ぼすスタイルは親コンポーネントから使うようにするべき。
-
-1. 公開クラスの一覧を決める (今あるクラスを3分類するだけ。コードは触らない)。
-2. 公開クラスの要素から、同じ要素に混ざっているTailwindを外す。例えば .btn を使う要素には flex items-center gap-1.5 を足さず、必要なら内側にラッパーを作るか、.btn 自体に含める。
-3. 公開クラスのスタイルをCSS変数経由にする。
+- スタイルはプレーンCSSで書く。ユーティリティクラス（Tailwind等）は使わない。
+- 公開クラスは styles/components/*.css に1部品1ファイルで置く。すべて `@layer components` の中に書き、ネストは1段まで（Stylelintで検証）。
+- ユーザCSS（styles/user.css）の対象になるのは、公開クラスと公開トークン（styles/tokens.txt）のみ。
+- 色は `var(--...)` のトークン経由で使う。色リテラルは styles/theme/*.css に限る。
+- 状態は `data-*` 属性で表す（`data-open`, `data-dragging` など）。
+- marginのような親/兄弟レイアウトに影響するスタイルは、子ではなく親側（`gap` など）で指定する。
+- z-index は `--z-*` トークンを使う。
 
 ## Tech Stack
 ### backend
@@ -73,6 +73,6 @@ import (
 - CodeMirror6
 - googlechrome/workbox
 - Kobalte v0.13+
-- CSS Modules
+- Plain CSS (cascade layers)
 - clauderic/dnd-kit v0.5.0
 - jamiebuilds/tinykeys v4.0+
