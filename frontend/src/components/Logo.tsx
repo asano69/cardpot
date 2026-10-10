@@ -128,7 +128,7 @@ export default function Logo(props: LogoProps) {
 
   const size = () => props.size ?? 30;
   // Scales with the icon: at the old default size (40px), this works
-  // out to 24px, matching the previous fixed "text-2xl" class.
+  // out to 24px, matching the previous fixed title size.
   const titleFontSize = () => size() * 0.6;
 
   const icon = <LogoIcon size={size()} />;

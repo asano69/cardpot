@@ -14,8 +14,9 @@ BARE='flex|inline-flex|grid|block|inline-block|hidden|contents|absolute|fixed|re
 DASHED='flex|inset|top|right|bottom|left|z|m[trblxy]?|p[trblxy]?|w|h|min-w|min-h|max-w|max-h|gap|space-[xy]|items|justify|self|col|row|text|font|leading|bg|border|rounded|shadow|opacity|overflow|cursor|transition|duration|ease|animate|backdrop|outline|appearance|object|pointer-events|translate|whitespace|resize|shrink|grow'
 UTILITY="^(${VARIANT})*-?(${BARE}|(${DASHED})-[^ ]+)\$"
 
-# Public classes (see styles/components/*.css) that look like utilities.
-PUBLIC='^(col-search|col-page|flex-box)$'
+# Public classes (see styles/components/*.css) and inline style keys that look
+# like utilities.
+PUBLIC='^(col-search|col-page|flex-box|grid|font-size)$'
 
 for file in $(find src -name '*.tsx' | sort); do
   count=$(

@@ -106,7 +106,7 @@ src/styles/components/quick-launch.css
 - `editorTheme.ts` が読む `--color-border` / `--color-hover-bg` は `:root` に直接宣言された app トークンで、別名ではない。Phase 5 後も解決される。`@theme inline` 内の `--color-border: var(--color-border)` のような自己参照は、Phase 5 で `:root` に書き換えるときに**移さない**（移すと循環参照になる）。
 - Phase 3 の残りを置換: `noteEditor/index.tsx`（`.page` / `.editor`）と `DraftCardEditor.tsx`（エラー文は `.form-error`）。`flex-1 min-w-0` と `mb-4` は親の `.col-page` 側（`page.css`）に置いた。`outline-none` はフォーカスされない要素への指定で、CodeMirror 側は `editorTheme.ts` の `&.cm-focused` が処理済みのため削除。
 - 未対応: `editorTheme.ts` の色リテラル（`#342d9c` は `--code-color`、`#dc3545` は `--danger-color` に対応）。Stylelint の対象外（TS）なので、必要になったらトークン化する。
-- 確認: `scripts/tailwind_inventory.sh` が 0 件になること（Phase 5 の前提）。
+- 確認: `scripts/tailwind_inventory.sh` が 0 件になること（Phase 5 の前提）。残っていた 3 件（`Logo.tsx` のコメント中の `text-2xl` と `font-size` スタイルキー、`RelatedCards.tsx` の `grid` クラス）は誤検出だった。コメントは書き換え、`grid` と `font-size` はスクリプトの除外リストに追加した。
 
 ## Phase 5: Tailwind撤去
 
