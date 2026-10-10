@@ -204,7 +204,7 @@ export default function CardList() {
           <li
             ref={observeSentinel}
             aria-hidden="true"
-            class="col-span-full h-px"
+            class="card-grid-sentinel"
           />
         </ul>
       </DragDropProvider>

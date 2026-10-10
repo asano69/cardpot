@@ -52,7 +52,7 @@ export default function PotGridItem(props: PotGridItemProps) {
     <li
       ref={ref}
       class="card-grid-item"
-      classList={{ "opacity-40": isDragging() }}
+      data-dragging={isDragging() ? "" : undefined}
     >
       <A href={`/${props.pot.name}`}>
         <div class="content">
@@ -66,8 +66,8 @@ export default function PotGridItem(props: PotGridItemProps) {
             fallback={
               // The logo stands in for a cover, so it fills the tile (not
               // cropped to a circle like an avatar) and is faded.
-              <div class="flex min-h-0 flex-1 items-center justify-center p-3 opacity-40">
-                <LogoIcon class="h-full w-full" />
+              <div class="cover-fallback">
+                <LogoIcon />
               </div>
             }
           >
@@ -83,7 +83,7 @@ export default function PotGridItem(props: PotGridItemProps) {
           doesn't also trigger the link's navigation. Positioned over
           the top-right corner, matching where CardItem's pin
           indicator sits. */}
-      <div class="absolute top-1 right-1 z-10">
+      <div class="actions">
         <ActionsMenu
           label="Pot actions"
           items={[

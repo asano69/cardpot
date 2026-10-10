@@ -316,7 +316,7 @@ export default function CardForm() {
   return (
     <Show when={cardId() || draft()} fallback={<Loading />}>
       <div class="page-column">
-        <div class="col-page flex flex-col">
+        <div class="col-page">
           <Show when={mergeTarget()}>
             {(target) => (
               <PageAlert variant="info" class="merge-pages">
@@ -394,10 +394,7 @@ export default function CardForm() {
             card's pin/delete actions. Always rendered so the layout
             does not shift when a draft becomes a real card; while
             there is no card yet (a draft), the buttons are disabled. */}
-        <div
-          class="page-menu flex flex-col gap-0.5"
-          classList={{ invisible: !menuReady() }}
-        >
+        <div class="page-menu" data-hidden={menuReady() ? undefined : ""}>
           <button
             type="button"
             aria-label={pinned() ? "Unpin" : "Pin"}

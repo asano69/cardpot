@@ -1,0 +1,26 @@
+/* Public classes: .input, .input-mono, .form-error.
+ * Shared form controls (Login, PotForm, ApiDocs, Md2sb). Layout beyond the
+ * full width, such as flex sizing, is set by the parent. */
+@layer components {
+  .input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background-color: var(--body-bg);
+    color: var(--page-text-color);
+  }
+
+  /* Modifier for code-like text. */
+  .input-mono {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .form-error {
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--danger-color);
+  }
+}

@@ -36,7 +36,7 @@ export default function PotList() {
   };
 
   return (
-    <div class="flex w-full flex-col gap-4">
+    <div class="pot-list">
       <Show when={potsLoaded()} fallback={<Loading />}>
         <DragDropProvider sensors={sensors} onDragEnd={handleDragEnd}>
           <ul class="card-grid">

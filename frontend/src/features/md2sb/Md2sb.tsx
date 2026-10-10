@@ -32,28 +32,26 @@ export default function Md2sb() {
   const error = () => result().error || copyError();
 
   return (
-    // Fixed between TopBar (h-10) and Footer (20px) so the two panes fill
-    // the whole screen, instead of sitting inside MainLayout's max-w-7xl
-    // column.
-    <div class="fixed inset-x-0 top-10 bottom-5 flex flex-col gap-2 p-2">
-      <div class="flex items-center gap-3">
-        <h1 class="font-sans text-xl font-bold">Markdown to Scrapbox</h1>
-        {error() && <p class="text-sm text-[#dc3545]">{error()}</p>}
-        <button type="button" class="btn ml-auto" onClick={copy}>
+    // Fixed between TopBar and Footer (see .md2sb) so the two panes fill the
+    // whole screen, instead of sitting inside the app content column.
+    <div class="md2sb">
+      <div class="md2sb-header">
+        <h1 class="admin-title">Markdown to Scrapbox</h1>
+        {error() && <p class="form-error">{error()}</p>}
+        <button type="button" class="btn" onClick={copy}>
           {copied() ? "Copied" : "Copy"}
         </button>
       </div>
 
-      {/* Stacked on narrow screens, side by side from md up. min-h-0 lets
-          the grid shrink to the available height instead of growing with
-          its content. */}
-      <div class="grid min-h-0 flex-1 grid-cols-1 grid-rows-2 gap-2 md:grid-cols-2 md:grid-rows-1">
+      {/* Stacked on narrow screens, side by side from md up (see
+          .md2sb-panes). */}
+      <div class="md2sb-panes">
         <textarea
           value={input()}
           onInput={(e) => setInput(e.currentTarget.value)}
           placeholder="Markdown"
           spellcheck={false}
-          class="h-full w-full resize-none rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text"
+          class="input input-mono"
         />
 
         <textarea
@@ -61,7 +59,7 @@ export default function Md2sb() {
           readOnly
           placeholder="Scrapbox"
           spellcheck={false}
-          class="h-full w-full resize-none rounded-md border border-border bg-field px-3 py-2 font-mono text-sm text-text"
+          class="input input-mono"
         />
       </div>
     </div>

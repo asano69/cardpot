@@ -1,0 +1,32 @@
+/* Public classes: .login, .login-form, .login-logo.
+ * The login screen (see pages/Login.tsx). */
+@layer components {
+  .login {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 100vh;
+    padding: 0 24px;
+    background-color: var(--body-bg);
+    color: var(--page-text-color);
+  }
+
+  .login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    max-width: 24rem;
+    padding: 32px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background-color: var(--color-field);
+    box-shadow: var(--shadow-card);
+  }
+
+  .login-logo {
+    display: flex;
+    justify-content: center;
+  }
+}

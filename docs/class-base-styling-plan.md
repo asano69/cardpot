@@ -88,6 +88,12 @@ src/styles/components/quick-launch.css
 
 各ページで、`classList={{ "opacity-40": ... }}` のような状態クラスは `.dragging` や `[data-dragging]` に置換。
 
+=> 完了。状態クラスは `data-dragging`（CardItem, PotGridItem）、`data-quiet`（PotForm）、`data-hidden`（CardForm の `.page-menu`）に置換済み。
+- 共通部品は `components/form.css`（`.input`, `.input-mono`, `.form-error`）。ページ固有は `pots.css`, `login.css`, `admin.css`。
+- `card-grid.css` に `.card-grid-sentinel`, `.card-grid-item .cover-fallback`, `.card-grid-item .actions` を追加。`page.css` の `.col-page` / `.page-menu` はレイアウトを自身に取り込んだ。
+- `RelatedCards.tsx` にはユーティリティが無く、変更なし。
+- 残り: `DraftCardEditor.tsx` のエラー文と `noteEditor/index.tsx` の `page min-w-0 flex-1` / `editor text-text outline-none`（Phase 4 で扱う）。
+
 ## Phase 4: エディタ周辺の確認
 
 `editorTheme.ts` と `titleLineHighlight.ts` は既にTailwindではない。ただし次を確認する。

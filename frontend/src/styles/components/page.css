@@ -35,6 +35,8 @@
   }
 
   .col-page {
+    display: flex;
+    flex-direction: column;
     width: 100%;
     grid-area: page;
   }
@@ -42,10 +44,18 @@
   .page-menu {
     position: sticky;
     top: 45px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
     font-size: 13px;
     text-align: left;
     z-index: var(--z-page-menu);
     grid-area: menu;
+  }
+
+  /* Keeps its space but is not shown (see CardForm.tsx's menuReady). */
+  .page-menu[data-hidden] {
+    visibility: hidden;
   }
 
   /* Round icon-only button used inside the page menu dropdown

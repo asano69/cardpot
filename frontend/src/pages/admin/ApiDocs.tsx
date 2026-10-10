@@ -43,29 +43,29 @@ export default function ApiDocs() {
   };
 
   return (
-    <div class="mx-auto flex w-full max-w-3xl flex-col gap-4 py-8">
-      <h1 class="font-sans text-xl font-bold">API Debug</h1>
+    <div class="api-docs">
+      <h1 class="admin-title">API Debug</h1>
 
-      <form onSubmit={run} class="flex gap-2">
+      <form onSubmit={run} class="api-docs-form">
         <input
           type="text"
           value={url()}
           onInput={(e) => setUrl(e.currentTarget.value)}
           placeholder="/api/pages/pot/slug/links1hop"
-          class="flex-1 rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text"
+          class="input input-mono"
         />
         <button type="submit" class="btn" disabled={loading()}>
           {loading() ? "Running…" : "Go"}
         </button>
       </form>
 
-      {error() && <p class="text-sm text-[#dc3545]">{error()}</p>}
+      {error() && <p class="form-error">{error()}</p>}
 
       {status() !== undefined && (
-        <p class="font-mono text-sm text-text">Status: {status()}</p>
+        <p class="api-docs-status">Status: {status()}</p>
       )}
 
-      <pre class="max-h-[70vh] overflow-auto rounded-md border border-border bg-field p-3 font-mono text-xs text-text">
+      <pre class="api-docs-body">
         {body()}
       </pre>
     </div>

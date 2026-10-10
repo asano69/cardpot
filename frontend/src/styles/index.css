@@ -25,6 +25,10 @@
 @import "./components/layout.css";
 @import "./components/sidebar.css";
 @import "./components/logo.css";
+@import "./components/form.css";
+@import "./components/pots.css";
+@import "./components/login.css";
+@import "./components/admin.css";
 
 /* Unlayered on purpose -- must load last so it wins the cascade over
  * every layered rule above (see user.css's own comment). */

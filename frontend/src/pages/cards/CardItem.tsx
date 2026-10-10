@@ -50,7 +50,8 @@ export function CardItemView(props: CardItemViewProps) {
 
       ref={props.ref}
       class="card-grid-item"
-      classList={{ "opacity-40": props.dragging, empty: props.empty }}
+      classList={{ empty: props.empty }}
+      data-dragging={props.dragging ? "" : undefined}
     >
       <A
         ref={ripple}

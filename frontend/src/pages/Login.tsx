@@ -30,12 +30,9 @@ export default function Login() {
   };
 
   return (
-    <div class="flex min-h-screen w-full items-center justify-center bg-bg px-6 text-text">
-      <form
-        onSubmit={handleSubmit}
-        class="flex w-full max-w-sm flex-col gap-4 rounded-md border border-border bg-field p-8 shadow-card"
-      >
-        <div class="flex justify-center">
+    <div class="login">
+      <form onSubmit={handleSubmit} class="login-form">
+        <div class="login-logo">
           <Logo size={40} showTitle />
         </div>
         <input
@@ -45,7 +42,7 @@ export default function Login() {
           onInput={(e) => setEmail(e.currentTarget.value)}
           required
           autofocus
-          class="rounded-md border border-border bg-bg px-3 py-2 text-text"
+          class="input"
         />
         <input
           type="password"
@@ -53,9 +50,9 @@ export default function Login() {
           value={password()}
           onInput={(e) => setPassword(e.currentTarget.value)}
           required
-          class="rounded-md border border-border bg-bg px-3 py-2 text-text"
+          class="input"
         />
-        {error() && <p class="text-sm text-[#dc3545]">{error()}</p>}
+        {error() && <p class="form-error">{error()}</p>}
         <button type="submit" class="btn" disabled={pending()}>
           {pending() ? "Logging in…" : "Log in"}
         </button>

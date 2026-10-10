@@ -36,19 +36,17 @@ export default function PotForm(props: PotFormProps) {
 
   return (
     <>
-      {/* focus-within restores full opacity while actually typing. */}
+      {/* data-quiet tones the form down (see styles/components/pots.css);
+          typing restores it. */}
       <form
         onSubmit={handleSubmit}
-        class="flex items-center gap-2 transition-opacity focus-within:opacity-100"
-        classList={{ "opacity-50": props.hasExistingPots }}
+        class="pot-form"
+        data-quiet={props.hasExistingPots ? "" : undefined}
       >
-        <TextField value={title()} onChange={setTitle} class="flex-1">
+        <TextField value={title()} onChange={setTitle} class="pot-form-field">
           <TextField.Input
             placeholder="What pot do you want to think about?"
-            class="w-full rounded-md border border-border bg-field px-3 py-2 text-text"
-            classList={{
-              "border-transparent bg-transparent px-0": props.hasExistingPots,
-            }}
+            class="input"
           />
         </TextField>
         {/* Plus icon instead of an "Add" label, matching the delete
@@ -56,13 +54,13 @@ export default function PotForm(props: PotFormProps) {
         <button
           type="submit"
           aria-label={submitting() ? "Adding…" : "Add pot"}
-          class="icon-btn shrink-0"
+          class="icon-btn"
           disabled={submitting()}
         >
           <Plus size={20} />
         </button>
       </form>
-      {error() && <p class="text-sm text-[#dc3545]">{error()}</p>}
+      {error() && <p class="form-error">{error()}</p>}
     </>
   );
 }
