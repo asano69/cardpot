@@ -42,7 +42,7 @@
 
   /* Marks an action that destroys data (e.g. "Delete"). */
   .menu-item[data-destructive] {
-    color: #dc3545;
+    color: var(--danger-color);
   }
 
   .menu-group-label {

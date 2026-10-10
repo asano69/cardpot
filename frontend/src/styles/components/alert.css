@@ -30,7 +30,7 @@
       padding: 0;
       border: 0;
       background: none;
-      color: #000;
+      color: var(--page-text-color);
       font-size: 21px;
       font-weight: bold;
       line-height: 1;
@@ -70,14 +70,14 @@
   }
 
   .alert-info {
-    background-color: #d9edf7;
+    background-color: var(--alert-info-bg);
     border-color: hsl(190, 65.2%, 84%);
-    color: #31708f;
+    color: var(--alert-info-text);
   }
 
   .alert-success {
-    background-color: #dff0d8;
+    background-color: var(--alert-success-bg);
     border-color: hsl(92.5, 44.4%, 84.4%);
-    color: #3c763d;
+    color: var(--alert-success-text);
   }
 }

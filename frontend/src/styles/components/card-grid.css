@@ -136,7 +136,7 @@
 
   .card-grid-item .description .grid-inline-code {
     font-family: var(--font-mono);
-    color: #342d9c;
+    color: var(--card-description-code-color);
     font-size: 0.95em;
     background-color: light-dark(
       rgba(175, 184, 193, 0.2),
@@ -159,7 +159,7 @@
   .card-grid-item .line-img div {
     height: 4px;
     margin: 8px 0;
-    background-color: light-dark(#e9eaeb, #4a4d55);
+    background-color: var(--color-skeleton);
   }
 
   .card-grid-item .line-img div:last-of-type {

@@ -56,6 +56,15 @@
     /* Destructive actions and error messages. */
     --danger-color: #dc3545;
 
+    /* Placeholder bars of an empty card (see card-grid.css). */
+    --color-skeleton: light-dark(#e9eaeb, #4a4d55);
+
+    /* Banners above the note editor (see alert.css). */
+    --alert-info-bg: #d9edf7;
+    --alert-info-text: #31708f;
+    --alert-success-bg: #dff0d8;
+    --alert-success-text: #3c763d;
+
     /* The round "add card" button in the TopBar. */
     --new-button-bg: hsl(144, 30%, 50%);
     --new-button-hover-bg: hsl(153, 10%, 50%);

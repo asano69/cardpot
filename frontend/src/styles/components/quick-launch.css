@@ -4,7 +4,7 @@
    * pages/cards/QuickLaunch.tsx). The gap between menus is set here, by
    * the parent, so the triggers themselves stay layout-neutral. */
   .quick-launch {
-    color: var(--tool-color, #363c49);
+    color: var(--tool-color);
     font-size: 14px;
     margin-bottom: 12px;
 
