@@ -35,6 +35,10 @@ const SWITCH_KEYS = new Set(["Convert", "NonConvert"]);
 const KEYS_AFTER_SWITCH = 3;
 const STUCK_MS = 10_000;
 
+// Key names (event.key or event.code) of keys that can switch the IME.
+const IME_KEY_RE =
+  /^(Convert|NonConvert|KanaMode|Hiragana|Katakana|HiraganaKatakana|Romaji|Zenkaku|Hankaku|ZenkakuHankaku|Eisu|Lang\d|Unidentified|Compose|Dead)$/;
+
 let nextId = 1;
 
 function isEnabled(): boolean {
@@ -62,7 +66,8 @@ class ImeDebug implements PluginValue {
   private keysToWatch = 0;
   private stuckTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly observer: MutationObserver;
-  private readonly listeners: [EventTarget, string, EventListener][] = [];
+  private readonly listeners: [EventTarget, string, EventListener, boolean][] =
+    [];
 
   constructor(private readonly view: EditorView) {
     const dom = view.contentDOM;
@@ -86,6 +91,20 @@ class ImeDebug implements PluginValue {
         ...this.snapshot(),
         movedTo: describe((e as FocusEvent).relatedTarget),
       }),
+    );
+    // Raw IME-related keys, seen at the window in the capture phase: this does
+    // not depend on where the focus is or on what the editor does with the key.
+    this.listen(
+      window,
+      "keydown",
+      (e) => this.onRawKey(e as KeyboardEvent),
+      true,
+    );
+    this.listen(
+      window,
+      "keyup",
+      (e) => this.onRawKey(e as KeyboardEvent),
+      true,
     );
     this.listen(window, "blur", () => this.log("window blur"));
     this.listen(window, "focus", () => this.log("window focus"));
@@ -130,14 +149,33 @@ class ImeDebug implements PluginValue {
     });
     clearTimeout(this.stuckTimer);
     this.observer.disconnect();
-    for (const [target, type, fn] of this.listeners) {
-      target.removeEventListener(type, fn);
+    for (const [target, type, fn, capture] of this.listeners) {
+      target.removeEventListener(type, fn, capture);
     }
   }
 
-  private listen(target: EventTarget, type: string, fn: EventListener) {
-    target.addEventListener(type, fn);
-    this.listeners.push([target, type, fn]);
+  private listen(
+    target: EventTarget,
+    type: string,
+    fn: EventListener,
+    capture = false,
+  ) {
+    target.addEventListener(type, fn, capture);
+    this.listeners.push([target, type, fn, capture]);
+  }
+
+  // Logs keys that can switch the IME, under whatever name the browser gives
+  // them. "Process" (keyCode 229) is left out: it fires for every key while
+  // the IME is on (see onKeyDown for the keys right after a switch key).
+  private onRawKey(e: KeyboardEvent) {
+    if (!IME_KEY_RE.test(e.key) && !IME_KEY_RE.test(e.code)) return;
+    this.log(`raw ${e.type}`, {
+      key: e.key,
+      code: e.code,
+      keyCode: e.keyCode,
+      isComposing: e.isComposing,
+      target: describe(e.target),
+    });
   }
 
   // What CodeMirror and the browser each believe right now.
