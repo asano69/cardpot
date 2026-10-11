@@ -168,7 +168,15 @@ class ImeDebug implements PluginValue {
   // them. "Process" (keyCode 229) is left out: it fires for every key while
   // the IME is on (see onKeyDown for the keys right after a switch key).
   private onRawKey(e: KeyboardEvent) {
-    if (!IME_KEY_RE.test(e.key) && !IME_KEY_RE.test(e.code)) return;
+    // keyCode 229 is how the browser reports a key the IME has processed
+    // ("Process"), so it also shows whether the IME saw the switch key.
+    if (
+      !IME_KEY_RE.test(e.key) &&
+      !IME_KEY_RE.test(e.code) &&
+      e.keyCode !== 229
+    ) {
+      return;
+    }
     this.log(`raw ${e.type}`, {
       key: e.key,
       code: e.code,
@@ -233,11 +241,12 @@ class ImeDebug implements PluginValue {
       isComposing: e.isComposing,
     };
     if (SWITCH_KEYS.has(e.key)) {
-      this.keysToWatch = KEYS_AFTER_SWITCH;
       this.log("switch key", { ...detail, ...this.snapshot() });
-    } else if (this.keysToWatch > 0) {
-      this.keysToWatch--;
-      this.log("key after switch", detail);
+    } else {
+      // The switch key itself may never reach the page while the editor has
+      // focus (the IME consumes it), so every key is logged instead of only
+      // the ones after it.
+      this.log("key", detail);
     }
   }
 
