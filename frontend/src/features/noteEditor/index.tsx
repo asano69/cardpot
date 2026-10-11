@@ -53,6 +53,7 @@ import { selectionMenu } from "./plugins/interactions/selectionMenu";
 import { titleCompletion } from "./plugins/interactions/titleCompletion";
 import type { TitleCandidate } from "@/lib/models/card";
 import { registerDebugView } from "./debug";
+import { imeDebug } from "./imeDebug";
 
 export interface NoteEditorProps {
   ydoc: Y.Doc;
@@ -114,6 +115,8 @@ export default function NoteEditor(props: NoteEditorProps) {
       doc: ytext.toString(),
       extensions: [
         EditorView.lineWrapping,
+        // Debug-only IME logging (see imeDebug.ts).
+        imeDebug(),
         // Draws the cursor/selection itself (via coordsAtPos) instead
         // of relying on the browser's native contenteditable caret.
         // Needed because IndentMarkWidget replaces an indent character

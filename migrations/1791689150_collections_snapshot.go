@@ -1067,6 +1067,17 @@ func init() {
 						"required": false,
 						"system": false,
 						"type": "text"
+					},
+					{
+						"help": "",
+						"hidden": false,
+						"id": "json2277716423",
+						"maxSize": 0,
+						"name": "properties",
+						"presentable": false,
+						"required": false,
+						"system": false,
+						"type": "json"
 					}
 				],
 				"id": "pbc_2527524235",
