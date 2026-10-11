@@ -174,7 +174,9 @@ class ImeDebug implements PluginValue {
       code: e.code,
       keyCode: e.keyCode,
       isComposing: e.isComposing,
+      repeat: e.repeat,
       target: describe(e.target),
+      ...this.snapshot(),
     });
   }
 
