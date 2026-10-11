@@ -60,12 +60,13 @@ export default function QuickLaunch() {
         <QuickMenu
           menuClass="page-list-mode-menu"
           header="Display by"
-          options={["Card", "Table"]}
+          options={["Card", "Table", "Graph"]}
         />
         <QuickMenu
           menuClass="page-sort-menu"
           header="Sort by"
           options={[
+            "Manual",
             "Modified",
             "Created",
             "Last visited",
